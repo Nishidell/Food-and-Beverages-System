@@ -21,7 +21,7 @@ export const protect = (req, res, next) => {
     next();
   } catch (err) {
     console.error("JWT verification failed:", err.message);
-    res.status(401).json({ message: "Invalid or expired token" });
+    res.status(401).json({ message: "Invalid or expired tokens" });
   }
 };
 
