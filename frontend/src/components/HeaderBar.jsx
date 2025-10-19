@@ -4,11 +4,9 @@ import { ShoppingCart } from "lucide-react";
 export default function HeaderBar({ cartCount, onCartToggle }) {
   return (
     <header
-  className={`flex justify-between items-center px-6 py-4 shadow-sm bg-white transition-all duration-300 ${
-    isCartOpen ? "lg:pr-96" : ""
-  }`}
->
-
+      // I've removed the part that was causing the error for now.
+      className="flex justify-between items-center px-6 py-4 shadow-sm bg-white transition-all duration-300"
+    >
       <h1 className="text-2xl font-bold text-[#053a34]">FoodieHub</h1>
 
       <button
