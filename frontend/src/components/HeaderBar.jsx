@@ -1,16 +1,27 @@
 import React from "react";
+import { ShoppingCart } from "lucide-react";
 
-export default function HeaderBar() {
+export default function HeaderBar({ cartCount, onCartToggle }) {
   return (
-    <header className="bg-[#053a34] text-white">
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-3">
-        <button className="text-sm">← Back</button>
-        <h1 className="font-semibold">Guest Menu</h1>
-        <div className="flex items-center gap-3 text-sm">
-          <div>Sat, Oct 18, 2025</div>
-          <button className="bg-[#F6B24B] text-black px-2 py-1 rounded">🛒</button>
-        </div>
-      </div>
+    <header
+  className={`flex justify-between items-center px-6 py-4 shadow-sm bg-white transition-all duration-300 ${
+    isCartOpen ? "lg:pr-96" : ""
+  }`}
+>
+
+      <h1 className="text-2xl font-bold text-[#053a34]">FoodieHub</h1>
+
+      <button
+        onClick={onCartToggle}
+        className="relative bg-[#F6B24B] text-[#053a34] p-3 rounded-full shadow-md hover:bg-[#f7c36e] transition"
+      >
+        <ShoppingCart size={22} />
+        {cartCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1.5 rounded-full">
+            {cartCount}
+          </span>
+        )}
+      </button>
     </header>
   );
 }
