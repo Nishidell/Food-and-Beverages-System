@@ -1,130 +1,40 @@
-import React, { useState } from "react";
+import React from 'react';
+import { useState, useEffect } from 'react';
 
-const CartPanel = ({ cart = [], updateCart = () => {}, isCartOpen = false, closeCart = () => {} }) => {
-
-  const [orderType, setOrderType] = useState("dine-in");
-  const [orderNumber, setOrderNumber] = useState("");
-
-  const increaseQty = (id) => {
-    updateCart(
-      cart.map((item) =>
-        item.id === id ? { ...item, qty: item.qty + 1 } : item
-      )
-    );
-  };
-
-  const decreaseQty = (id) => {
-    updateCart(
-      cart.map((item) =>
-        item.id === id && item.qty > 1
-          ? { ...item, qty: item.qty - 1 }
-          : item
-      )
-    );
-  };
-
-  const removeItem = (id) => {
-    updateCart(cart.filter((item) => item.id !== id));
-  };
-
-  const clearCart = () => updateCart([]);
-
-  const subtotal = Array.isArray(cart)
-    ? cart.reduce((acc, item) => acc + item.price * item.qty, 0)
-    : 0;
-
-  const serviceCharge = subtotal * 0.1;
-  const vat = subtotal * 0.12;
-  const totalAmount = subtotal + serviceCharge + vat;
+const CartPanel = ({ cartItems = [], onUpdateQuantity }) => {
+  // Calculate the total price of the items in the cart
+  const totalPrice = cartItems.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
 
   return (
-    <div
-      className={`fixed top-0 right-0 h-full w-[350px] bg-white shadow-lg p-4 overflow-y-auto transform transition-transform duration-300 z-20 ${
-        isCartOpen ? "translate-x-0" : "translate-x-full"
-      }`}
-    >
-       {/* Header with small close button */}
-      <div className="flex items-start justify-between mb-3">
-        <h2 className="text-lg font-semibold">Your Order</h2>
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <h2 className="text-2xl font-bold mb-6">My Order</h2>
 
-        {/* Small X button — always visible inside the cart (desktop & mobile) */}
-        <button
-          onClick={closeCart}
-          aria-label="Close cart"
-          className="ml-3 text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-full p-1.5 shadow-sm"
-          style={{ lineHeight: 0 }} // keeps the X compact
-        >
-          <span className="text-sm font-medium">✕</span>
-        </button>
-      </div>
-      
-
-      {/* Order type */}
-      <div className="mb-3 flex gap-3">
-        <button
-          className={`px-3 py-1 rounded ${
-            orderType === "dine-in" ? "bg-green-700 text-white" : "bg-gray-200"
-          }`}
-          onClick={() => setOrderType("dine-in")}
-        >
-          Dine-In
-        </button>
-        <button
-          className={`px-3 py-1 rounded ${
-            orderType === "room-service" ? "bg-green-700 text-white" : "bg-gray-200"
-          }`}
-          onClick={() => setOrderType("room-service")}
-        >
-          Room Service
-        </button>
-      </div>
-
-      {/* Table or room number */}
-      <input
-        type="text"
-        className="w-full p-2 border rounded mb-3"
-        placeholder={
-          orderType === "dine-in" ? "Enter Table Number" : "Enter Room Number"
-        }
-        value={orderNumber}
-        onChange={(e) => setOrderNumber(e.target.value)}
-      />
-
-      {/* Cart items */}
-      {Array.isArray(cart) && cart.length === 0 ? (
+      {cartItems.length === 0 ? (
         <p className="text-gray-500">Your cart is empty.</p>
       ) : (
-        <div className="space-y-2">
-          {cart.map((item) => (
-            <div
-              key={item.id}
-              className="flex justify-between items-center bg-gray-50 p-2 rounded shadow-sm"
-            >
+        <div className="space-y-4">
+          {cartItems.map((item) => (
+            <div key={item.item_id} className="flex justify-between items-center">
               <div>
                 <p className="font-semibold">{item.name}</p>
-                <p className="text-sm text-gray-600">
-                  ₱{item.price} × {item.qty}
-                </p>
+                <p className="text-sm text-gray-500">${parseFloat(item.price).toFixed(2)}</p>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => decreaseQty(item.id)}
-                  className="px-2 bg-gray-200 rounded"
+                  onClick={() => onUpdateQuantity(item.item_id, item.quantity - 1)}
+                  className="bg-gray-200 px-2 rounded-md font-bold"
                 >
                   -
                 </button>
-                <span>{item.qty}</span>
+                <span>{item.quantity}</span>
                 <button
-                  onClick={() => increaseQty(item.id)}
-                  className="px-2 bg-gray-200 rounded"
+                  onClick={() => onUpdateQuantity(item.item_id, item.quantity + 1)}
+                  className="bg-gray-200 px-2 rounded-md font-bold"
                 >
                   +
-                </button>
-                <button
-                  onClick={() => removeItem(item.id)}
-                  className="text-red-500 text-sm"
-                >
-                  ✕
                 </button>
               </div>
             </div>
@@ -132,23 +42,17 @@ const CartPanel = ({ cart = [], updateCart = () => {}, isCartOpen = false, close
         </div>
       )}
 
-      {/* Totals */}
-      <div className="border-t pt-2 text-sm mt-3">
-        <p>Subtotal: ₱{subtotal.toFixed(2)}</p>
-        <p>Service Charge (10%): ₱{serviceCharge.toFixed(2)}</p>
-        <p>VAT (12%): ₱{vat.toFixed(2)}</p>
-        <p className="font-semibold mt-2">Total: ₱{totalAmount.toFixed(2)}</p>
+      {/* Display the calculated total */}
+      <div className="border-t pt-4 mt-6">
+        <div className="flex justify-between font-bold text-lg">
+          <span>Total</span>
+          <span>${totalPrice.toFixed(2)}</span>
+        </div>
+        <button className="w-full bg-green-500 text-white font-bold py-3 rounded mt-4 hover:bg-green-600 transition-colors">
+          Place Order
+        </button>
       </div>
-
-      <button
-        onClick={clearCart}
-        className="w-full mt-4 bg-red-500 text-white py-2 rounded hover:bg-red-600"
-      >
-        Clear Cart
-      </button>
-
     </div>
-    
   );
 };
 

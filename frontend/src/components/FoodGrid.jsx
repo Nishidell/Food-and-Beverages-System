@@ -1,50 +1,31 @@
-import React from "react";
+import React from 'react';
 
-const FoodGrid = ({ addToCart, activeCategory }) => {
-  const menuItems = [
-    { id: 1, name: "Buffalo Wings", price: 360, image: "/images/wings.jpg", category: "Appetizers" },
-    { id: 2, name: "Crispy Calamari", price: 420, image: "/images/calamari.jpg", category: "Appetizers" },
-    { id: 3, name: "Caesar Salad", price: 380, image: "/images/salad.jpg", category: "Main Course" },
-    { id: 4, name: "Chocolate Cake", price: 250, image: "/images/cake.jpg", category: "Desserts" },
-    { id: 5, name: "Mango Shake", price: 180, image: "/images/shake.jpg", category: "Drinks" },
-  ];
-
-  // Filter items by active category
-  const filteredItems =
-    activeCategory === "All"
-      ? menuItems
-      : menuItems.filter((item) => item.category === activeCategory);
+const FoodGrid = ({ items, onAddToCart }) => {
+  if (!items || items.length === 0) {
+    return <p className="text-center mt-8">Loading menu...</p>;
+  }
 
   return (
-    <div>
-      {filteredItems.length === 0 ? (
-        <p className="text-center text-gray-500 mt-8">
-          No items found in this category.
-        </p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {filteredItems.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white rounded-lg shadow p-3 hover:shadow-md transition"
-            >
-              <img
-                src={item.image}
-                alt={item.name}
-                className="rounded-lg w-full h-32 object-cover"
-              />
-              <h3 className="mt-2 font-semibold">{item.name}</h3>
-              <p className="text-sm">₱{item.price}</p>
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-8">
+      {items.map((item) => (
+        <div key={item.item_id} className="bg-white rounded-lg shadow-md overflow-hidden">
+          {/* ... img, h3, p tags ... */}
+          <div className="p-4">
+            <h3 className="text-lg font-semibold">{item.name}</h3>
+            <p className="text-gray-500 text-sm mt-1 h-10 overflow-hidden">{item.description}</p>
+            <div className="flex justify-between items-center mt-4">
+              <span className="font-bold text-lg">${parseFloat(item.price).toFixed(2)}</span>
+              {/* Add the onClick handler here */}
               <button
-                onClick={() => addToCart(item)}
-                className="mt-2 bg-green-800 text-white text-sm py-1 px-3 rounded hover:bg-green-900"
+                onClick={() => {console.log('Adding item:', item); onAddToCart(item)}}
+                className="bg-orange-500 text-white font-bold py-2 px-4 rounded hover:bg-orange-600 transition-colors"
               >
-                Add to Order
+                Add
               </button>
             </div>
-          ))}
+          </div>
         </div>
-      )}
+      ))}
     </div>
   );
 };

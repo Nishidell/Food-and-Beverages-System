@@ -1,4 +1,5 @@
 import React from 'react';
+import { useState, useEffect } from 'react';
 import HeaderBar from '../components/HeaderBar';
 import PromoBanner from '../components/PromoBanner';
 import CategoryTabs from '../components/CategoryTabs';
@@ -6,22 +7,69 @@ import FoodGrid from '../components/FoodGrid';
 import CartPanel from '../components/CartPanel';
 
 function MenuPage() {
-  // All the logic for fetching data and managing the cart will go here later
+  const [items, setItems] = useState([]);
+  const [error, setError] = useState(null);
+  const [cartItems, setCartItems] = useState([]);
+
+  useEffect(() => {
+    const fetchItems = async () => {
+      try {
+        const response = await fetch('http://localhost:3000/api/items');
+        if (!response.ok) {
+          throw new Error('Failed to fetch data from the server.');
+        }
+        const data = await response.json();
+        setItems(data);
+      } catch (err) {
+        setError(err.message);
+        console.error("Error fetching items:", err);
+      }
+    };
+
+    fetchItems();
+  }, []);
+
+  const handleAddToCart = (clickedItem) => {
+    setCartItems((prevItems) => {
+      const isItemInCart = prevItems.find((item) => item.item_id === clickedItem.item_id);
+      if (isItemInCart) {
+        return prevItems.map((item) =>
+          item.item_id === clickedItem.item_id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      }
+      return [...prevItems, { ...clickedItem, quantity: 1 }];
+    });
+  };
+
+  const handleUpdateQuantity = (itemId, newQuantity) => {
+    if (newQuantity <= 0) {
+      setCartItems((prevItems) => prevItems.filter((item) => item.item_id !== itemId));
+    } else {
+      setCartItems((prevItems) =>
+        prevItems.map((item) =>
+          item.item_id === itemId ? { ...item, quantity: newQuantity } : item
+        )
+      );
+    }
+  };
+
   return (
     <div className="bg-gray-100 min-h-screen">
       <HeaderBar />
       <main className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-12 gap-8">
-          {/* Main Content */}
+          {/* --- THIS IS THE LINE THAT WAS FIXED --- */}
           <div className="col-span-12 lg:col-span-8">
             <PromoBanner />
             <CategoryTabs />
-            <FoodGrid />
+            {error && <p className="text-red-500">Error: {error}</p>}
+            <FoodGrid items={items} onAddToCart={handleAddToCart} />
           </div>
 
-          {/* Cart Panel */}
           <div className="col-span-12 lg:col-span-4">
-            <CartPanel />
+            <CartPanel cartItems={cartItems} onUpdateQuantity={handleUpdateQuantity} />
           </div>
         </div>
       </main>
