@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 
-const CartPanel = ({ cart = [], updateCart = () => {}, isCartOpen = false }) => {
+const CartPanel = ({ cart = [], updateCart = () => {}, isCartOpen = false, closeCart = () => {} }) => {
+
   const [orderType, setOrderType] = useState("dine-in");
   const [orderNumber, setOrderNumber] = useState("");
 
@@ -38,11 +39,25 @@ const CartPanel = ({ cart = [], updateCart = () => {}, isCartOpen = false }) => 
 
   return (
     <div
-      className={`fixed top-0 right-0 h-full w-[350px] bg-white shadow-lg p-4 overflow-y-auto transform transition-transform duration-300 ${
+      className={`fixed top-0 right-0 h-full w-[350px] bg-white shadow-lg p-4 overflow-y-auto transform transition-transform duration-300 z-20 ${
         isCartOpen ? "translate-x-0" : "translate-x-full"
       }`}
     >
-      <h2 className="text-lg font-semibold mb-3">Your Order</h2>
+       {/* Header with small close button */}
+      <div className="flex items-start justify-between mb-3">
+        <h2 className="text-lg font-semibold">Your Order</h2>
+
+        {/* Small X button — always visible inside the cart (desktop & mobile) */}
+        <button
+          onClick={closeCart}
+          aria-label="Close cart"
+          className="ml-3 text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-full p-1.5 shadow-sm"
+          style={{ lineHeight: 0 }} // keeps the X compact
+        >
+          <span className="text-sm font-medium">✕</span>
+        </button>
+      </div>
+      
 
       {/* Order type */}
       <div className="mb-3 flex gap-3">

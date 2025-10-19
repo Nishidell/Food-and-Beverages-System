@@ -62,6 +62,7 @@ export default function App() {
         cart={cartItems}
         updateCart={updateCart}
         isCartOpen={isCartOpen}
+        closeCart={() => setIsCartOpen(false)}
       />
 
       {/* Overlay for mobile */}
