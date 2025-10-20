@@ -7,9 +7,7 @@ export const createOrder = async (req, res) => {
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
-
-        const { items } = req.body;
-        const customer_id = req.user.id;
+       const { customer_id, total_price, items } = req.body;
         let total_amount = 0;
 
         // Step 1: Validate stock and calculate total amount
