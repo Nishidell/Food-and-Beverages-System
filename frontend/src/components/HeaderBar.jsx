@@ -1,13 +1,26 @@
-import React from "react";
-import { ShoppingCart } from "lucide-react";
 
-export default function HeaderBar({ cartCount, onCartToggle }) {
+import React from 'react';
+import { ShoppingCart, Search } from 'lucide-react';
+
+// Receive the new props for search
+export default function HeaderBar({ cartCount, onCartToggle, searchTerm, onSearchChange }) {
   return (
-    <header
-      // I've removed the part that was causing the error for now.
-      className="flex justify-between items-center px-6 py-4 shadow-sm bg-white transition-all duration-300"
-    >
+    <header className="flex justify-between items-center px-6 py-4 shadow-sm bg-white sticky top-0 z-10">
       <h1 className="text-2xl font-bold text-[#053a34]">FoodieHub</h1>
+
+      <div className="relative w-full max-w-md mx-4">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <Search className="text-gray-400" size={20} />
+        </div>
+        <input
+          type="text"
+          placeholder="Search for food..."
+          className="w-full pl-10 pr-4 py-2 border rounded-full bg-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-400"
+          // --- CONNECT THE INPUT TO REACT STATE ---
+          value={searchTerm}
+          onChange={onSearchChange}
+        />
+      </div>
 
       <button
         onClick={onCartToggle}
