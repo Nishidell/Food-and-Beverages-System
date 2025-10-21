@@ -5,7 +5,8 @@ import pool from "../config/mysql.js";
 // @access  Public
 export const getAllItems = async (req, res) => {
     try {
-        const [items] = await pool.query("SELECT item_id, item_name, category, price, stock FROM menu_items");
+        // --- CHANGE: Add image_url to the SELECT statement ---
+        const [items] = await pool.query("SELECT item_id, item_name, category, price, stock, image_url FROM menu_items");
         res.json(items);
     } catch (error) {
         res.status(500).json({ message: "Error fetching menu items", error: error.message });
@@ -18,7 +19,8 @@ export const getAllItems = async (req, res) => {
 export const getItemById = async (req, res) => {
     try {
         const { id } = req.params;
-        const [items] = await pool.query("SELECT item_id, item_name, category, price, stock FROM menu_items WHERE item_id = ?", [id]);
+        // --- CHANGE: Add image_url to the SELECT statement ---
+        const [items] = await pool.query("SELECT item_id, item_name, category, price, stock, image_url FROM menu_items WHERE item_id = ?", [id]);
         if (items.length === 0) {
             return res.status(404).json({ message: "Menu item not found" });
         }
@@ -32,21 +34,25 @@ export const getItemById = async (req, res) => {
 // @route   POST /api/admin/items
 // @access  Admin
 export const createMenuItem = async (req, res) => {
+    // --- CHANGE: Add image_url to the destructuring ---
+    const { item_name, category, price, stock, image_url } = req.body;
+
+    if (!item_name || !category || !price || stock === undefined) {
+        return res.status(400).json({ message: 'Please provide all required fields.' });
+    }
+
     try {
-        const { item_name, category, price, stock } = req.body;
-        if (!item_name || !price) {
-            return res.status(400).json({ message: "Item name and price are required" });
-        }
+        // --- CHANGE: Add image_url to the INSERT statement ---
+        const sql = "INSERT INTO menu_items (item_name, category, price, stock, image_url) VALUES (?, ?, ?, ?, ?)";
+        const [result] = await pool.query(sql, [item_name, category, price, stock, image_url]);
 
-        const sql = "INSERT INTO menu_items (item_name, category, price, stock) VALUES (?, ?, ?, ?)";
-        const [result] = await pool.query(sql, [item_name, category, price, stock || 0]);
+        const newItemId = result.insertId;
+        const [newItem] = await pool.query("SELECT * FROM menu_items WHERE item_id = ?", [newItemId]);
 
-        res.status(201).json({
-            item_id: result.insertId,
-            message: "Menu item created successfully"
-        });
+        res.status(201).json(newItem[0]);
     } catch (error) {
-        res.status(500).json({ message: "Error creating menu item", error: error.message });
+        console.error("Error creating item:", error);
+        res.status(500).json({ message: "Failed to create menu item", error: error.message });
     }
 };
 
@@ -54,20 +60,33 @@ export const createMenuItem = async (req, res) => {
 // @route   PUT /api/admin/items/:id
 // @access  Admin
 export const updateMenuItem = async (req, res) => {
+    const { id } = req.params;
+    // --- CHANGE: Add image_url to the destructuring ---
+    const { item_name, category, price, stock, image_url } = req.body;
+
+    if (!item_name || !category || !price || stock === undefined) {
+        return res.status(400).json({ message: 'Please provide all required fields.' });
+    }
+
     try {
-        const { id } = req.params;
-        const { item_name, category, price, stock } = req.body;
-        if (!item_name || !price) {
-            return res.status(400).json({ message: "Item name and price are required" });
-        }
-        const sql = "UPDATE menu_items SET item_name = ?, category = ?, price = ?, stock = ? WHERE item_id = ?";
-        const [result] = await pool.query(sql, [item_name, category, price, stock, id]);
+        // --- CHANGE: Add image_url to the UPDATE statement ---
+        const sql = `
+      UPDATE menu_items 
+      SET item_name = ?, category = ?, price = ?, stock = ?, image_url = ?
+      WHERE item_id = ?
+    `;
+        const [result] = await pool.query(sql, [item_name, category, price, stock, image_url, id]);
+
         if (result.affectedRows === 0) {
-            return res.status(404).json({ message: "Menu item not found" });
+            return res.status(404).json({ message: 'Item not found' });
         }
-        res.json({ message: "Menu item updated successfully" });
+
+        const [updatedItem] = await pool.query("SELECT * FROM menu_items WHERE item_id = ?", [id]);
+        res.status(200).json(updatedItem[0]);
+
     } catch (error) {
-        res.status(500).json({ message: "Server error updating item", error: error.message });
+        console.error("Error updating item:", error);
+        res.status(500).json({ message: "Failed to update menu item", error: error.message });
     }
 };
 
@@ -75,16 +94,22 @@ export const updateMenuItem = async (req, res) => {
 // @route   DELETE /api/admin/items/:id
 // @access  Admin
 export const deleteMenuItem = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const [result] = await pool.query("DELETE FROM menu_items WHERE item_id = ?", [id]);
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: "Menu item not found" });
-        }
-        res.json({ message: "Menu item deleted successfully" });
-    } catch (error) {
-        res.status(500).json({ message: "Server error deleting item", error: error.message });
+  const { id } = req.params; // Get the item_id from the URL
+
+  try {
+    const sql = "DELETE FROM menu_items WHERE item_id = ?";
+    const [result] = await pool.query(sql, [id]);
+
+    if (result.affectedRows === 0) {
+      // If no rows were deleted, the item was not found
+      return res.status(404).json({ message: 'Item not found' });
     }
+
+    res.status(200).json({ message: 'Item deleted successfully' });
+  } catch (error) {
+    console.error("Error deleting item:", error);
+    res.status(500).json({ message: "Failed to delete menu item", error: error.message });
+  }
 };
 
 // --- NEW HELPER FUNCTIONS FOR STOCK MANAGEMENT ---

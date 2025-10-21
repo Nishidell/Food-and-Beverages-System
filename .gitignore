@@ -1,0 +1,45 @@
+# =============================
+# Node.js / React Full Stack Project
+# =============================
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# Build and dist output
+dist/
+frontend/dist/
+backend/dist/
+build/
+frontend/build/
+backend/build/
+
+# Environment files
+.env
+backend/.env
+frontend/.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor settings
+.vscode/
+.idea/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.swp
+
+# Lock files (optional)
+package-lock.json
+yarn.lock
+
+# Coverage & reports
+coverage/
+*.lcov

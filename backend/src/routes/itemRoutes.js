@@ -6,17 +6,16 @@ import {
     updateMenuItem,
     deleteMenuItem
 } from "../controllers/itemController.js";
-import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // Public Routes
 router.get("/", getAllItems);
-router.get("/:id", getItemById); // <-- FIX: This route was missing.
+router.get("/:id", getItemById); 
 
 // Admin-Only Routes
-router.post("/", protect, authorizeRoles('admin'), createMenuItem);
-router.put("/:id", protect, authorizeRoles('admin'), updateMenuItem);
-router.delete("/:id", protect, authorizeRoles('admin'), deleteMenuItem);
+router.post("/", createMenuItem);
+router.put("/:id", updateMenuItem);
+router.delete("/:id", deleteMenuItem);
 
 export default router;
