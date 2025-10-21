@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast'; // <-- IMPORT TOAST
 import MenuManagementTable from './MenuManagementTable';
 import AddItemModal from './AddItemModal';
 
@@ -51,7 +52,6 @@ function AdminPage() {
   const [currentView, setCurrentView] = useState('orders');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  const uniqueCategories = ['All', ...new Set(menuItems.map(item => item.category))];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -85,23 +85,10 @@ function AdminPage() {
       if (!response.ok) throw new Error('Failed to save the item.');
       const newItem = await response.json();
       setMenuItems(prevItems => [...prevItems, newItem]);
+      toast.success('Item added successfully!'); // <-- USE TOAST
+      closeModal(); // <-- THIS FIXES THE BUG
     } catch (error) {
-      console.error('Save error:', error);
-      alert(error.message);
-    }
-  };
-
-  const handleDeleteItem = async (itemIdToDelete) => {
-    if (!window.confirm('Are you sure you want to delete this item?')) return;
-    try {
-      const response = await fetch(`http://localhost:3000/api/items/${itemIdToDelete}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to delete the item.');
-      setMenuItems(prevItems => prevItems.filter(item => item.item_id !== itemIdToDelete));
-    } catch (error) {
-      console.error('Delete error:', error);
-      alert(error.message);
+      toast.error(error.message); // <-- Use toast for errors too
     }
   };
 
@@ -113,12 +100,26 @@ function AdminPage() {
         body: JSON.stringify(itemData),
       });
       if (!response.ok) throw new Error('Failed to update item.');
-
       const updatedItem = await response.json();
       setMenuItems(prevItems => prevItems.map(item => item.item_id === updatedItem.item_id ? updatedItem : item));
+      toast.success('Item updated successfully!'); // <-- USE TOAST
       closeModal();
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message);
+    }
+  };
+
+  const handleDeleteItem = async (itemIdToDelete) => {
+    if (!window.confirm('Are you sure you want to delete this item?')) return;
+    try {
+      const response = await fetch(`http://localhost:3000/api/items/${itemIdToDelete}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete the item.');
+      setMenuItems(prevItems => prevItems.filter(item => item.item_id !== itemIdToDelete));
+      toast.success('Item deleted successfully!'); // <-- USE TOAST
+    } catch (error) {
+      toast.error(error.message);
     }
   };
 
@@ -139,13 +140,13 @@ const openModalForEdit = (item) => {
 
   // ... (loading/error checks)
   
- 
   
   if (loading) return <div className="p-8">Loading dashboard...</div>;
   if (error) return <div className="p-8 text-red-500">Error: {error}</div>;
+  
+  const uniqueCategories = ['All', ...new Set(menuItems.map(item => item.category))];
 
-
-  return (
+   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-4">Admin Dashboard</h1>
       <Link to="/" className="text-blue-500 hover:underline mb-8 block">&larr; Back to Menu</Link>
