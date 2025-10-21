@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import MenuManagementTable from './MenuManagementTable';
+import AddItemModal from './AddItemModal';
 
 // Order Management Table Component
 const OrderManagementTable = ({ orders }) => (
@@ -48,6 +49,9 @@ function AdminPage() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState('orders');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const uniqueCategories = ['All', ...new Set(menuItems.map(item => item.category))];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -101,10 +105,45 @@ function AdminPage() {
     }
   };
 
+  const handleUpdateItem = async (itemData) => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/items/${editingItem.item_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(itemData),
+      });
+      if (!response.ok) throw new Error('Failed to update item.');
+
+      const updatedItem = await response.json();
+      setMenuItems(prevItems => prevItems.map(item => item.item_id === updatedItem.item_id ? updatedItem : item));
+      closeModal();
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+const openModalForEdit = (item) => {
+    setEditingItem(item);
+    setIsModalOpen(true);
+  };
+  
+  const openModalForAdd = () => {
+    setEditingItem(null);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingItem(null);
+  };
+
+  // ... (loading/error checks)
+  
+ 
+  
   if (loading) return <div className="p-8">Loading dashboard...</div>;
   if (error) return <div className="p-8 text-red-500">Error: {error}</div>;
 
-  const uniqueCategories = ['All', ...new Set(menuItems.map(item => item.category))];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -140,12 +179,21 @@ function AdminPage() {
         {currentView === 'menu' && (
           <MenuManagementTable
             items={menuItems}
-            categories={uniqueCategories.filter(c => c !== 'All')}
-            onSaveNewItem={handleAddNewItem}
+            // --- FIX: Pass the correct functions ---
+            onAddItem={openModalForAdd}
+            onEditItem={openModalForEdit}
             onDeleteItem={handleDeleteItem}
           />
         )}
       </main>
+      {/* --- FIX: Render the AddItemModal here --- */}
+      <AddItemModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onSave={editingItem ? handleUpdateItem : handleAddNewItem}
+        itemToEdit={editingItem}
+        categories={uniqueCategories.filter(c => c !== 'All')}
+      />
     </div>
   );
 }

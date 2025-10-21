@@ -56,21 +56,32 @@ export const createMenuItem = async (req, res) => {
 // @route   PUT /api/admin/items/:id
 // @access  Admin
 export const updateMenuItem = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { item_name, category, price, stock } = req.body;
-        if (!item_name || !price) {
-            return res.status(400).json({ message: "Item name and price are required" });
-        }
-        const sql = "UPDATE menu_items SET item_name = ?, category = ?, price = ?, stock = ? WHERE item_id = ?";
-        const [result] = await pool.query(sql, [item_name, category, price, stock, id]);
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: "Menu item not found" });
-        }
-        res.json({ message: "Menu item updated successfully" });
-    } catch (error) {
-        res.status(500).json({ message: "Server error updating item", error: error.message });
+  const { id } = req.params;
+  const { item_name, category, price, stock } = req.body;
+
+  if (!item_name || !category || !price || stock === undefined) {
+    return res.status(400).json({ message: 'Please provide all required fields.' });
+  }
+
+  try {
+    const sql = `
+      UPDATE menu_items 
+      SET item_name = ?, category = ?, price = ?, stock = ? 
+      WHERE item_id = ?
+    `;
+    const [result] = await pool.query(sql, [item_name, category, price, stock, id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Item not found' });
     }
+
+    const [updatedItem] = await pool.query("SELECT * FROM menu_items WHERE item_id = ?", [id]);
+    res.status(200).json(updatedItem[0]);
+
+  } catch (error) {
+    console.error("Error updating item:", error);
+    res.status(500).json({ message: "Failed to update menu item", error: error.message });
+  }
 };
 
 // @desc    Delete a menu item

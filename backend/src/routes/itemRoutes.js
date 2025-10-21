@@ -11,7 +11,7 @@ const router = express.Router();
 
 // Public Routes
 router.get("/", getAllItems);
-router.get("/:id", getItemById); // <-- FIX: This route was missing.
+router.get("/:id", getItemById); 
 
 // Admin-Only Routes
 router.post("/", createMenuItem);
