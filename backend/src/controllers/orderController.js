@@ -1,4 +1,6 @@
 import pool from "../config/mysql.js";
+import { validateStock, adjustStock } from "./itemController.js"; 
+
 
 // @desc    Create a new order
 // @route   POST /api/orders
@@ -10,23 +12,14 @@ export const createOrder = async (req, res) => {
 
         const { items } = req.body;
         const customer_id = req.user.id;
-        let total_amount = 0;
 
-        // Step 1: Validate stock and calculate total amount
-        for (const item of items) {
-            const [rows] = await connection.query("SELECT price, stock FROM menu_items WHERE item_id = ?", [item.item_id]);
-            if (rows.length === 0) {
-                throw new Error(`Item with ID ${item.item_id} not found.`);
-            }
-            if (rows[0].stock < item.quantity) {
-                throw new Error(`Not enough stock for item ID ${item.item_id}. Available: ${rows[0].stock}, Requested: ${item.quantity}`);
-            }
-            total_amount += rows[0].price * item.quantity;
-        }
+        // Step 1: Validate stock using the helper function
+        await validateStock(items, connection);
 
-        // Step 2: Create the order
-        const orderSql = "INSERT INTO orders (customer_id, total_amount) VALUES (?, ?)";
-        const [orderResult] = await connection.query(orderSql, [customer_id, total_amount]);
+        // Step 2: Create the order record without the total_amount
+        // UPDATED: Removed total_amount from the INSERT statement
+        const orderSql = "INSERT INTO orders (customer_id) VALUES (?)";
+        const [orderResult] = await connection.query(orderSql, [customer_id]);
         const order_id = orderResult.insertId;
 
         // Step 3: Insert order details and deduct stock
@@ -36,10 +29,10 @@ export const createOrder = async (req, res) => {
 
             const detailSql = "INSERT INTO order_details (order_id, item_id, quantity, subtotal) VALUES (?, ?, ?, ?)";
             await connection.query(detailSql, [order_id, item.item_id, item.quantity, subtotal]);
-
-            const stockSql = "UPDATE menu_items SET stock = stock - ? WHERE item_id = ?";
-            await connection.query(stockSql, [item.quantity, item.item_id]);
         }
+        
+        // Step 4: Adjust stock using the helper function
+        await adjustStock(items, 'deduct', connection);
 
         await connection.commit();
         res.status(201).json({ order_id, message: "Order created successfully" });
