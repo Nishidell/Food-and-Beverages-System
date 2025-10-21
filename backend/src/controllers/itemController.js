@@ -32,22 +32,24 @@ export const getItemById = async (req, res) => {
 // @route   POST /api/admin/items
 // @access  Admin
 export const createMenuItem = async (req, res) => {
-    try {
-        const { item_name, category, price, stock } = req.body;
-        if (!item_name || !price) {
-            return res.status(400).json({ message: "Item name and price are required" });
-        }
+  const { item_name, category, price, stock } = req.body;
 
-        const sql = "INSERT INTO menu_items (item_name, category, price, stock) VALUES (?, ?, ?, ?)";
-        const [result] = await pool.query(sql, [item_name, category, price, stock || 0]);
+  if (!item_name || !category || !price || stock === undefined) {
+    return res.status(400).json({ message: 'Please provide all required fields.' });
+  }
 
-        res.status(201).json({
-            item_id: result.insertId,
-            message: "Menu item created successfully"
-        });
-    } catch (error) {
-        res.status(500).json({ message: "Error creating menu item", error: error.message });
-    }
+  try {
+    const sql = "INSERT INTO menu_items (item_name, category, price, stock) VALUES (?, ?, ?, ?)";
+    const [result] = await pool.query(sql, [item_name, category, price, stock]);
+
+    const newItemId = result.insertId;
+    const [newItem] = await pool.query("SELECT * FROM menu_items WHERE item_id = ?", [newItemId]);
+
+    res.status(201).json(newItem[0]);
+  } catch (error) {
+    console.error("Error creating item:", error);
+    res.status(500).json({ message: "Failed to create menu item", error: error.message });
+  }
 };
 
 // @desc    Update a menu item
