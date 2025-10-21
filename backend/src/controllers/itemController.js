@@ -5,7 +5,8 @@ import pool from "../config/mysql.js";
 // @access  Public
 export const getAllItems = async (req, res) => {
     try {
-        const [items] = await pool.query("SELECT item_id, item_name, category, price, stock FROM menu_items");
+        // --- CHANGE: Add image_url to the SELECT statement ---
+        const [items] = await pool.query("SELECT item_id, item_name, category, price, stock, image_url FROM menu_items");
         res.json(items);
     } catch (error) {
         res.status(500).json({ message: "Error fetching menu items", error: error.message });
@@ -18,7 +19,8 @@ export const getAllItems = async (req, res) => {
 export const getItemById = async (req, res) => {
     try {
         const { id } = req.params;
-        const [items] = await pool.query("SELECT item_id, item_name, category, price, stock FROM menu_items WHERE item_id = ?", [id]);
+        // --- CHANGE: Add image_url to the SELECT statement ---
+        const [items] = await pool.query("SELECT item_id, item_name, category, price, stock, image_url FROM menu_items WHERE item_id = ?", [id]);
         if (items.length === 0) {
             return res.status(404).json({ message: "Menu item not found" });
         }
@@ -32,56 +34,60 @@ export const getItemById = async (req, res) => {
 // @route   POST /api/admin/items
 // @access  Admin
 export const createMenuItem = async (req, res) => {
-  const { item_name, category, price, stock } = req.body;
+    // --- CHANGE: Add image_url to the destructuring ---
+    const { item_name, category, price, stock, image_url } = req.body;
 
-  if (!item_name || !category || !price || stock === undefined) {
-    return res.status(400).json({ message: 'Please provide all required fields.' });
-  }
+    if (!item_name || !category || !price || stock === undefined) {
+        return res.status(400).json({ message: 'Please provide all required fields.' });
+    }
 
-  try {
-    const sql = "INSERT INTO menu_items (item_name, category, price, stock) VALUES (?, ?, ?, ?)";
-    const [result] = await pool.query(sql, [item_name, category, price, stock]);
+    try {
+        // --- CHANGE: Add image_url to the INSERT statement ---
+        const sql = "INSERT INTO menu_items (item_name, category, price, stock, image_url) VALUES (?, ?, ?, ?, ?)";
+        const [result] = await pool.query(sql, [item_name, category, price, stock, image_url]);
 
-    const newItemId = result.insertId;
-    const [newItem] = await pool.query("SELECT * FROM menu_items WHERE item_id = ?", [newItemId]);
+        const newItemId = result.insertId;
+        const [newItem] = await pool.query("SELECT * FROM menu_items WHERE item_id = ?", [newItemId]);
 
-    res.status(201).json(newItem[0]);
-  } catch (error) {
-    console.error("Error creating item:", error);
-    res.status(500).json({ message: "Failed to create menu item", error: error.message });
-  }
+        res.status(201).json(newItem[0]);
+    } catch (error) {
+        console.error("Error creating item:", error);
+        res.status(500).json({ message: "Failed to create menu item", error: error.message });
+    }
 };
 
 // @desc    Update a menu item
 // @route   PUT /api/admin/items/:id
 // @access  Admin
 export const updateMenuItem = async (req, res) => {
-  const { id } = req.params;
-  const { item_name, category, price, stock } = req.body;
+    const { id } = req.params;
+    // --- CHANGE: Add image_url to the destructuring ---
+    const { item_name, category, price, stock, image_url } = req.body;
 
-  if (!item_name || !category || !price || stock === undefined) {
-    return res.status(400).json({ message: 'Please provide all required fields.' });
-  }
-
-  try {
-    const sql = `
-      UPDATE menu_items 
-      SET item_name = ?, category = ?, price = ?, stock = ? 
-      WHERE item_id = ?
-    `;
-    const [result] = await pool.query(sql, [item_name, category, price, stock, id]);
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Item not found' });
+    if (!item_name || !category || !price || stock === undefined) {
+        return res.status(400).json({ message: 'Please provide all required fields.' });
     }
 
-    const [updatedItem] = await pool.query("SELECT * FROM menu_items WHERE item_id = ?", [id]);
-    res.status(200).json(updatedItem[0]);
+    try {
+        // --- CHANGE: Add image_url to the UPDATE statement ---
+        const sql = `
+      UPDATE menu_items 
+      SET item_name = ?, category = ?, price = ?, stock = ?, image_url = ?
+      WHERE item_id = ?
+    `;
+        const [result] = await pool.query(sql, [item_name, category, price, stock, image_url, id]);
 
-  } catch (error) {
-    console.error("Error updating item:", error);
-    res.status(500).json({ message: "Failed to update menu item", error: error.message });
-  }
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Item not found' });
+        }
+
+        const [updatedItem] = await pool.query("SELECT * FROM menu_items WHERE item_id = ?", [id]);
+        res.status(200).json(updatedItem[0]);
+
+    } catch (error) {
+        console.error("Error updating item:", error);
+        res.status(500).json({ message: "Failed to update menu item", error: error.message });
+    }
 };
 
 // @desc    Delete a menu item

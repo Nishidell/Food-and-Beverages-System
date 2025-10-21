@@ -1,23 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { X, UploadCloud } from 'lucide-react';
 
 const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) => {
   const [formData, setFormData] = useState({
-    item_name: '', category: '', price: '', stock: '',
+    item_name: '',
+    description: '', // <-- Add description to state
+    category: '',
+    price: '',
+    stock: '',
+    image_url: '',
   });
-
+  const [uploading, setUploading] = useState(false);
   const isEditMode = Boolean(itemToEdit);
 
   useEffect(() => {
-    if (isEditMode && isOpen) {
-      setFormData({
-        item_name: itemToEdit.item_name || '',
-        category: itemToEdit.category || '',
-        price: itemToEdit.price || '',
-        stock: itemToEdit.stock || '',
-      });
-    } else {
-      setFormData({ item_name: '', category: '', price: '', stock: '' });
+    if (isOpen) {
+      if (isEditMode) {
+        setFormData({
+          item_name: itemToEdit.item_name || '',
+          description: itemToEdit.description || '', // <-- Pre-fill description
+          category: itemToEdit.category || '',
+          price: itemToEdit.price || '',
+          stock: itemToEdit.stock || '',
+          image_url: itemToEdit.image_url || '',
+        });
+      } else {
+        setFormData({ item_name: '', description: '', category: '', price: '', stock: '', image_url: '' });
+      }
     }
   }, [itemToEdit, isOpen]);
 
@@ -26,6 +36,38 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
   const handleChange = (e) => {
     const { id, value } = e.target;
     setFormData((prevData) => ({ ...prevData, [id]: value }));
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const uploadFormData = new FormData();
+    uploadFormData.append('image', file); // 'image' must match the backend upload.single('image')
+    setUploading(true);
+
+    try {
+      const response = await fetch('http://localhost:3000/api/upload', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Image upload failed');
+      }
+
+      // --- THIS IS THE FIX ---
+      // We now update the formData state with the path from the backend
+      setFormData(prevData => ({ ...prevData, image_url: data.image }));
+      toast.success('Image uploaded successfully!');
+      
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = (e) => {
@@ -46,6 +88,19 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
               <label htmlFor="item_name" className="block text-sm font-medium text-gray-700">Item Name</label>
               <input type="text" id="item_name" value={formData.item_name} onChange={handleChange} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"/>
             </div>
+
+            {/* 👇 ADD THE DESCRIPTION TEXTAREA HERE */}
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+              <textarea 
+                id="description" 
+                rows="3" 
+                value={formData.description} 
+                onChange={handleChange} 
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
+              ></textarea>
+            </div>
+
             <div>
               <label htmlFor="category" className="block text-sm font-medium text-gray-700">Category</label>
               <select id="category" value={formData.category} onChange={handleChange} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
@@ -61,10 +116,30 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
               <label htmlFor="stock" className="block text-sm font-medium text-gray-700">Stock</label>
               <input type="number" id="stock" value={formData.stock} onChange={handleChange} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"/>
             </div>
+            
+            {/* Image upload section (unchanged) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Image</label>
+              {formData.image_url && (
+                <img src={`http://localhost:3000${formData.image_url}`} alt="Preview" className="w-full h-32 object-cover rounded-md my-2"/>
+              )}
+              <label htmlFor="image-upload" className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md cursor-pointer">
+                <div className="space-y-1 text-center">
+                  <UploadCloud className="mx-auto h-12 w-12 text-gray-400" />
+                  <div className="flex text-sm text-gray-600">
+                    <p className="pl-1">{uploading ? 'Uploading...' : 'Upload a file'}</p>
+                  </div>
+                  <p className="text-xs text-gray-500">PNG, JPG, JPEG</p>
+                </div>
+              </label>
+              <input id="image-upload" name="image-upload" type="file" className="sr-only" onChange={handleFileUpload} />
+            </div>
           </div>
           <div className="mt-8 flex justify-end gap-4">
             <button type="button" onClick={onClose} className="py-2 px-4 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancel</button>
-            <button type="submit" className="py-2 px-4 bg-blue-500 text-white rounded-md hover:bg-blue-600">Save Item</button>
+            <button type="submit" className="py-2 px-4 bg-blue-500 text-white rounded-md hover:bg-blue-600" disabled={uploading}>
+              {uploading ? 'Waiting for upload...' : 'Save Item'}
+            </button>
           </div>
         </form>
       </div>

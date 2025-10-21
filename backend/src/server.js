@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import pool from "../src/config/mysql.js";
+import path from "path";
 
 // Middleware
 import { notFound, errorHandler } from "../src/middleware/errorMiddleware.js";
@@ -13,7 +14,7 @@ import itemRoutes from "../src/routes/itemRoutes.js";
 import orderRoutes from "../src/routes/orderRoutes.js";
 import paymentRoutes from "../src/routes/paymentRoutes.js";
 import adminRoutes from "../src/routes/adminRoutes.js";
-
+import uploadRoutes from './routes/uploadRoutes.js';
 
 dotenv.config();
 
@@ -42,6 +43,10 @@ app.use("/api/items", itemRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/admin", adminRoutes);
+
+app.use('/api/upload', uploadRoutes); // Upload Image route
+const __dirname = path.resolve();
+app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 
 // Error middleware
 app.use(notFound);

@@ -5,6 +5,7 @@ import PromoBanner from '../../components/PromoBanner';
 import CategoryTabs from '../../components/CategoryTabs';
 import FoodGrid from '../../components/FoodGrid';
 import CartPanel from '../../components/CartPanel';
+import ImageModal from '../../components/ImageModal';
 
 function MenuPage() {
   const [items, setItems] = useState([]);
@@ -15,6 +16,7 @@ function MenuPage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
   const categories = ['All', ...new Set(items.map(item => item.category))];
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -133,7 +135,11 @@ function MenuPage() {
             selectedCategory={selectedCategory}
             onSelectCategory={handleSelectCategory}
           />
-          <FoodGrid items={filteredItems} onAddToCart={handleAddToCart} />
+          <FoodGrid 
+            items={filteredItems} 
+            onAddToCart={handleAddToCart}
+            onImageClick={(imageUrl) => setSelectedImage(imageUrl)} // Pass the handler
+          />
         </div>
       </main>
 
@@ -144,6 +150,8 @@ function MenuPage() {
         isOpen={isCartOpen}
         onClose={toggleCart}
       />
+
+      <ImageModal imageUrl={selectedImage} onClose={() => setSelectedImage(null)} />
     </div>
   );
 }
