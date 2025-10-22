@@ -6,13 +6,16 @@ import { validateStock, adjustStock } from "./itemController.js";
 // @route   POST /api/orders
 // @access  Private (Customer)
 export const createOrder = async (req, res) => {
-    // This function is already working, so we leave it as is.
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
+        // --- THIS IS THE FIX ---
+        // Make sure customer_id is taken from req.body
+        const { customer_id, total_price, items } = req.body;
+        // --- END OF FIX ---
 
-        const { items } = req.body;
-        const customer_id = req.user.id;
+        let total_amount = 0;
+        // ... (rest of the function)
 
         // Step 1: Validate stock using the helper function
         await validateStock(items, connection);
