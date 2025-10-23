@@ -4,7 +4,7 @@ import { X, Trash2 } from 'lucide-react';
 const CartPanel = ({
   cartItems = [],
   onUpdateQuantity,
-  onPlaceOrder,
+  onPlaceOrder, // This function will now receive the grandTotal
   isOpen,
   onClose,
   orderType,
@@ -15,10 +15,24 @@ const CartPanel = ({
   deliveryLocation,
   setDeliveryLocation
 }) => {
-  const totalPrice = cartItems.reduce(
+  // --- CALCULATIONS ---
+  const SERVICE_RATE = 0.10; // Example: 10% tax/service charge
+  const VAT_RATE = 0.12; // Example: 12% VAT
+
+  const subtotal = cartItems.reduce(
     (total, item) => total + parseFloat(item.price) * item.quantity,
     0
   );
+  // Calculate taxes based on the subtotal
+  const serviceAmount = subtotal * SERVICE_RATE;
+  const vatAmount = subtotal * VAT_RATE;
+  const grandTotal = subtotal + serviceAmount + vatAmount;
+
+  // Function to call onPlaceOrder with the calculated grandTotal
+  const handlePlaceOrderClick = () => {
+    // We pass only the final grand total, which will be saved as total_amount in the backend
+    onPlaceOrder(grandTotal);
+  };
 
   return (
     <>
@@ -35,6 +49,7 @@ const CartPanel = ({
         }`}
       >
         <div className="p-6 flex flex-col h-full">
+          {/* Header */}
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold">My Order</h2>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-800">
@@ -42,7 +57,7 @@ const CartPanel = ({
             </button>
           </div>
 
-          {/* --- THIS IS THE RESTORED SECTION --- */}
+          {/* Order Type Buttons */}
           <div className="flex gap-2 mb-4">
             <button
               onClick={() => setOrderType('Dine-in')}
@@ -61,24 +76,25 @@ const CartPanel = ({
               Room Service
             </button>
           </div>
-          {/* --- END OF RESTORED SECTION --- */}
 
+          {/* Delivery Location Input */}
           <div className="mb-4">
             <label htmlFor="delivery_location" className="text-sm font-semibold text-gray-700">
               {orderType === 'Dine-in' ? 'Table Number' : 'Room Number'}
             </label>
             <input
               id="delivery_location"
-              type="text"
+              type="text" // Change back to text if needed, or keep number
               value={deliveryLocation}
               onChange={(e) => setDeliveryLocation(e.target.value)}
               className="mt-1 w-full border border-gray-300 rounded-md p-2"
-              placeholder={orderType === 'Dine-in' ? 'e.g., Table 5' : 'e.g., Room 101'}
+              placeholder={orderType === 'Dine-in' ? 'Example: 5' : 'Example: 101'}
               required
             />
           </div>
 
-          <div className="flex-1 overflow-y-auto pr-2">
+          {/* Cart Items List */}
+          <div className="flex-1 overflow-y-auto pr-2 mb-4">
             {cartItems.length === 0 ? (
               <p className="text-gray-500 text-center py-8">Your cart is empty.</p>
             ) : (
@@ -101,18 +117,41 @@ const CartPanel = ({
             )}
           </div>
 
+          {/* Footer Section */}
           <div>
+            {/* Instructions */}
             <div className="mt-4">
               <label htmlFor="instructions" className="text-sm font-semibold text-gray-700">Special Instructions</label>
               <textarea id="instructions" value={instructions} onChange={(e) => setInstructions(e.target.value)} rows="3" className="mt-1 w-full border border-gray-300 rounded-md p-2" placeholder="e.g. allergies, extra spicy, etc."></textarea>
             </div>
-            <div className="border-t pt-4 mt-4">
-              <div className="flex justify-between font-bold text-lg mb-4">
-                <span>Total</span>
-                <span>${totalPrice.toFixed(2)}</span>
+
+            {/* --- UPDATED FOOTER WITH CHARGES --- */}
+            <div className="border-t pt-4 mt-4 space-y-2">
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Subtotal</span>
+                <span>${subtotal.toFixed(2)}</span>
               </div>
-              <button onClick={onPlaceOrder} disabled={cartItems.length === 0 || !deliveryLocation} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-400">Place Order</button>
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Service Charge ({ (SERVICE_RATE * 100).toFixed(0) }%)</span>
+                <span>${serviceAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>VAT ({ (VAT_RATE * 100).toFixed(0) }%)</span>
+                <span>${vatAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between font-bold text-lg pt-2 border-t mt-2">
+                <span>Total amount</span>
+                <span>${grandTotal.toFixed(2)}</span>
+              </div>
+              <button
+                onClick={handlePlaceOrderClick} // Use the new handler
+                disabled={cartItems.length === 0 || !deliveryLocation}
+                className="w-full mt-4 bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-400"
+              >
+                Place Order
+              </button>
             </div>
+            {/* --- END OF UPDATED FOOTER --- */}
           </div>
         </div>
       </div>

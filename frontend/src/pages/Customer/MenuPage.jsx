@@ -15,9 +15,8 @@ function MenuPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
-  
-  // --- NEW STATES FOR CART ---
-  const [orderType, setOrderType] = useState('Dine-in'); 
+
+  const [orderType, setOrderType] = useState('Dine-in');
   const [instructions, setInstructions] = useState('');
   const [deliveryLocation, setDeliveryLocation] = useState('');
 
@@ -76,13 +75,11 @@ function MenuPage() {
     });
   };
 
-  // --- NEW FUNCTION TO REMOVE ITEM ---
   const handleRemoveItem = (itemIdToRemove) => {
     setCartItems(prevItems => prevItems.filter(item => item.item_id !== itemIdToRemove));
   };
 
   const handleUpdateQuantity = (itemId, newQuantity) => {
-    // UPDATED to use handleRemoveItem
     if (newQuantity <= 0) {
       handleRemoveItem(itemId);
     } else {
@@ -94,26 +91,24 @@ function MenuPage() {
     }
   };
 
-  // --- UPDATED to include orderType and instructions ---
-  const handlePlaceOrder = async () => {
+  // --- THIS FUNCTION IS UPDATED ---
+  const handlePlaceOrder = async (grandTotal) => { // Accept grandTotal as argument
     if (cartItems.length === 0 || !deliveryLocation) {
-      alert("Your cart is empty!");
+      alert("Please ensure your cart has items and you've entered a table/room number.");
       return;
     }
-    const totalPrice = cartItems.reduce(
-      (total, item) => total + parseFloat(item.price) * item.quantity,
-      0
-    );
+    // No need to recalculate total price here, we already have grandTotal
+
     const orderData = {
       customer_id: 1,
-      total_price: totalPrice,
-      order_type: orderType, // <-- ADDED
-      instructions: instructions, // <-- ADDED
+      total_price: grandTotal, // Use the grandTotal passed from CartPanel
+      order_type: orderType,
+      instructions: instructions,
       delivery_location: deliveryLocation,
       items: cartItems.map(item => ({
         item_id: item.item_id,
         quantity: item.quantity,
-        price: item.price
+        price: item.price // Send the original price per item
       }))
     };
     try {
@@ -128,17 +123,19 @@ function MenuPage() {
       }
       alert('Order placed successfully!');
       setCartItems([]);
-      setInstructions(''); // Clear instructions after order
+      setInstructions('');
+      setDeliveryLocation('');
     } catch (err) {
       console.error('Error placing order:', err);
       alert(`Error: ${err.message}`);
     }
   };
+  // --- END OF UPDATED FUNCTION ---
 
   return (
     <div className="bg-gray-100 min-h-screen">
-      <HeaderBar 
-        cartCount={cartCount} 
+      <HeaderBar
+        cartCount={cartCount}
         onCartToggle={toggleCart}
         searchTerm={searchTerm}
         onSearchChange={handleSearchChange}
@@ -146,24 +143,23 @@ function MenuPage() {
       <main className="container mx-auto px-4 py-8">
         <div>
           <PromoBanner />
-          <CategoryTabs 
+          <CategoryTabs
             categories={categories}
             selectedCategory={selectedCategory}
             onSelectCategory={handleSelectCategory}
           />
-          <FoodGrid 
-            items={filteredItems} 
+          <FoodGrid
+            items={filteredItems}
             onAddToCart={handleAddToCart}
             onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
           />
         </div>
       </main>
 
-      {/* --- PASS ALL NEW PROPS TO CARTPANEL --- */}
-      <CartPanel 
-        cartItems={cartItems} 
-        onUpdateQuantity={handleUpdateQuantity} 
-        onPlaceOrder={handlePlaceOrder}
+      <CartPanel
+        cartItems={cartItems}
+        onUpdateQuantity={handleUpdateQuantity}
+        onPlaceOrder={handlePlaceOrder} // This now expects grandTotal
         isOpen={isCartOpen}
         onClose={toggleCart}
         orderType={orderType}
