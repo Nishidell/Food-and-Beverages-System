@@ -13,6 +13,7 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
     price: '',
     stock: '',
     image_url: '',
+    description: '',
   });
   const [uploading, setUploading] = useState(false);
   const isEditMode = Boolean(itemToEdit);
@@ -32,6 +33,7 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
           price: itemToEdit.price || '',
           stock: itemToEdit.stock || '',
           image_url: itemToEdit.image_url || '',
+          description: itemToEdit.description || '',
         });
         setSelectedDropdownCategory(itemToEdit.category || '');
         setNewCategoryName('');
