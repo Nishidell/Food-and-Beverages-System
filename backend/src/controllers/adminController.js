@@ -6,7 +6,8 @@ import bcrypt from "bcryptjs";
 // @access  Admin
 export const getAllStaff = async (req, res) => {
     try {
-        const [staff] = await pool.query("SELECT staff_id, full_name, email, role, shift_schedule FROM staff");
+        // --- FIX: Select first_name, last_name ---
+        const [staff] = await pool.query("SELECT staff_id, first_name, last_name, email, role, shift_schedule FROM staff");
         res.json(staff);
     } catch (error) {
         res.status(500).json({ message: "Error fetching staff list", error: error.message });
@@ -30,10 +31,12 @@ export const getAllCustomers = async (req, res) => {
 // @access  Admin
 export const createStaff = async (req, res) => {
     try {
-        const { full_name, email, password, role, shift_schedule } = req.body;
+        // --- FIX: Read first_name, last_name ---
+        const { first_name, last_name, email, password, role, shift_schedule } = req.body;
 
-        if (!full_name || !email || !password || !role) {
-            return res.status(400).json({ message: "Full name, email, password, and role are required." });
+        // --- FIX: Update validation ---
+        if (!first_name || !last_name || !email || !password || !role) {
+            return res.status(400).json({ message: "First name, last name, email, password, and role are required." });
         }
 
         const [existingStaff] = await pool.query("SELECT * FROM staff WHERE email = ?", [email]);
@@ -44,8 +47,9 @@ export const createStaff = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        const sql = "INSERT INTO staff (full_name, email, password, role, shift_schedule) VALUES (?, ?, ?, ?, ?)";
-        const [result] = await pool.query(sql, [full_name, email, hashedPassword, role, shift_schedule || null]);
+        // --- FIX: Update SQL query ---
+        const sql = "INSERT INTO staff (first_name, last_name, email, password, role, shift_schedule) VALUES (?, ?, ?, ?, ?, ?)";
+        const [result] = await pool.query(sql, [first_name, last_name, email, hashedPassword, role, shift_schedule || null]);
 
         res.status(201).json({
             staff_id: result.insertId,
@@ -57,21 +61,23 @@ export const createStaff = async (req, res) => {
     }
 };
 
-
 // @desc    Update a staff member
 // @route   PUT /api/admin/staff/:id
 // @access  Admin
 export const updateStaff = async (req, res) => {
     try {
         const { id } = req.params;
-        const { full_name, email, role, shift_schedule } = req.body;
+        // --- FIX: Read first_name, last_name ---
+        const { first_name, last_name, email, role, shift_schedule } = req.body;
 
-        if (!full_name || !email || !role) {
-            return res.status(400).json({ message: "Full name, email, and role are required." });
+        // --- FIX: Update validation ---
+        if (!first_name || !last_name || !email || !role) {
+            return res.status(400).json({ message: "First name, last name, email, and role are required." });
         }
 
-        const sql = "UPDATE staff SET full_name = ?, email = ?, role = ?, shift_schedule = ? WHERE staff_id = ?";
-        const [result] = await pool.query(sql, [full_name, email, role, shift_schedule, id]);
+        // --- FIX: Update SQL query ---
+        const sql = "UPDATE staff SET first_name = ?, last_name = ?, email = ?, role = ?, shift_schedule = ? WHERE staff_id = ?";
+        const [result] = await pool.query(sql, [first_name, last_name, email, role, shift_schedule, id]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: "Staff member not found." });

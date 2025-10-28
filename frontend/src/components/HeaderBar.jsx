@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Search, User } from 'lucide-react'; // 1. Import User icon
-import { useAuth } from '../context/AuthContext'; // 2. Import useAuth
+import React from 'react';
+import { ShoppingCart, Search } from 'lucide-react';
+import ProfileDropdown from './ProfileDropdown'; // 1. Import ProfileDropdown
 
 //temporary color object
 const primaryColor = {
@@ -8,28 +8,6 @@ const primaryColor = {
 };
 
 export default function HeaderBar({ cartCount, onCartToggle, searchTerm, onSearchChange }) {
-  // 3. Get auth state and functions
-  const { user, isAuthenticated, logout } = useAuth();
-  
-  // 4. Add state to manage the dropdown
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  // 5. Add logic to close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
-      }
-    }
-    // Bind the event listener
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      // Unbind the event listener on clean up
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [dropdownRef]);
-
   return (
     <header style={primaryColor} className="grid grid-cols-3 items-center px-6 py-4 shadow-sm sticky top-0 z-10" >
 
@@ -53,8 +31,7 @@ export default function HeaderBar({ cartCount, onCartToggle, searchTerm, onSearc
       </div>
 
       {/* Right Column: Cart & Profile */}
-      <div className="justify-self-end flex items-center gap-4"> {/* 6. Use flex to group buttons */}
-        
+      <div className="justify-self-end flex items-center gap-4">        
         {/* Cart Button */}
         <button
           onClick={onCartToggle}
@@ -68,38 +45,8 @@ export default function HeaderBar({ cartCount, onCartToggle, searchTerm, onSearc
           )}
         </button>
 
-        {/* 7. NEW: Profile Dropdown Button */}
-        {isAuthenticated && user && (
-          <div className="relative" ref={dropdownRef}>
-            {/* Profile Icon Button */}
-            <button
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="bg-gray-200 text-primary p-3 rounded-full shadow-md hover:bg-gray-300 transition"
-            >
-              <User size={22} />
-            </button>
-
-            {/* Dropdown Menu */}
-            {isDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50 ring-1 ring-black ring-opacity-5">
-                <div className="px-4 py-3">
-                  <p className="text-sm text-gray-500">Welcome,</p>
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {/* Use user's name from the token */}
-                    {user.role === 'customer' ? 'Customer' : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                  </p>
-                </div>
-                <div className="border-t border-gray-100"></div>
-                <button
-                  onClick={logout} // Call the logout function from context
-                  className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                >
-                  Log Out
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+        {/* 2. Replace all the profile logic with the new component */}
+        <ProfileDropdown />
       </div>
     </header>
   );

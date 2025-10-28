@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import InternalNavBar from '../../components/InternalNavBar';
 
 function KitchenPage() {
   const [kitchenOrders, setKitchenOrders] = useState([]);
@@ -121,6 +122,8 @@ function KitchenPage() {
     return statusMatch && typeMatch;
   }) : []; // Ensure filteredOrders is always an array
   return (
+    <>
+    <InternalNavBar />
     <div className="bg-figma-cream min-h-screen px-4 py-8 text-figma-dark-green">
       <div className="container mx-auto">
         <h1 className="text-3xl font-bold mb-6 text-center">Kitchen Order Display</h1>
@@ -249,6 +252,7 @@ function KitchenPage() {
          </div>
       </div>
     </div>
+    </>
   );
 }
 
