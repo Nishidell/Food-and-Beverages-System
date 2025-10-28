@@ -41,11 +41,10 @@ const FoodGrid = ({ items, onAddToCart, onImageClick }) => {
 
           {/* All text inside padded area */}
           <div className="p-6 flex-1 flex flex-col">
+             <h3 className="text-2xl font-bold text-gray-800 mb-4">{item.item_name}</h3>
             <p className="text-lg text-green-900 mb-2">
               {item.description || 'No description available.'}
             </p>
-
-            <h3 className="text-2xl font-bold text-gray-800 mb-4">{item.item_name}</h3>
 
             <div className="mt-auto flex justify-between items-center">
               <p className="text-2xl font-semibold text-gray-900">

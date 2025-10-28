@@ -7,13 +7,15 @@ import pool from "../config/mysql.js";
 // @access  Public
 export const registerUser = async (req, res) => {
   try {
-    const { full_name, email, password, phone, role = "customer" } = req.body;
+    // Read potential fields for both roles
+    const { first_name, last_name, email, password, phone, role = "customer" } = req.body;
 
-    // Validate essential fields
-    if (!full_name || !email || !password) {
-      return res
-        .status(400)
-        .json({ message: "Full name, email, and password are required" });
+    // Validate essential fields based on role
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+    if (!first_name || !last_name) {
+       return res.status(400).json({ message: "First name and last name are required" });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -27,8 +29,8 @@ export const registerUser = async (req, res) => {
       }
 
       // Insert new customer into the database
-      const sql = "INSERT INTO customers (full_name, email, password, phone) VALUES (?, ?, ?, ?)";
-      const [result] = await pool.query(sql, [full_name, email, hashedPassword, phone || null]);
+      const sql = "INSERT INTO customers (first_name, last_name, email, password, phone) VALUES (?, ?, ?, ?, ?)";
+      const [result] = await pool.query(sql, [first_name, last_name, email, hashedPassword, phone || null]);
       
       return res.status(201).json({ customer_id: result.insertId, message: "Customer registered successfully" });
 
@@ -40,8 +42,9 @@ export const registerUser = async (req, res) => {
       }
 
       // Insert new staff member into the database
-      const sql = "INSERT INTO staff (full_name, email, password, role) VALUES (?, ?, ?, ?)";
-      const [result] = await pool.query(sql, [full_name, email, hashedPassword, role]);
+      // --- FIX: Use first_name and last_name for staff ---
+      const sql = "INSERT INTO staff (first_name, last_name, email, password, role) VALUES (?, ?, ?, ?, ?)";
+      const [result] = await pool.query(sql, [first_name, last_name, email, hashedPassword, role]);
       
       return res.status(201).json({ staff_id: result.insertId, message: "Staff member registered successfully" });
 
@@ -62,7 +65,6 @@ export const registerUser = async (req, res) => {
 // @access  Public
 export const loginUser = async (req, res) => {
   try {
-    // Standardized login using email and password for all roles
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -72,6 +74,7 @@ export const loginUser = async (req, res) => {
     let user = null;
     let userType = null;
     let userId = null;
+    let payload = {}; 
 
     // First, check if the email belongs to a customer
     const [customer] = await pool.query("SELECT * FROM customers WHERE email = ?", [email]);
@@ -79,28 +82,40 @@ export const loginUser = async (req, res) => {
       user = customer[0];
       userType = "customer";
       userId = user.customer_id;
+      payload = { 
+        id: userId, 
+        role: userType, 
+        firstName: user.first_name, 
+        lastName: user.last_name 
+      };
     } else {
       // If not a customer, check if the email belongs to a staff member
-      const [staff] = await pool.query("SELECT * FROM staff WHERE email = ?", [email]);
+      // --- FIX: Select first_name, last_name for staff ---
+      const [staff] = await pool.query("SELECT staff_id, first_name, last_name, email, password, role FROM staff WHERE email = ?", [email]);
       if (staff.length > 0) {
         user = staff[0];
-        userType = user.role; // This will be 'admin', 'waiter', or 'cashier'
+        userType = user.role; 
         userId = user.staff_id;
+        // --- FIX: Add staff first_name and last_name to payload ---
+        payload = { 
+          id: userId, 
+          role: userType, 
+          firstName: user.first_name, // Changed from fullName 
+          lastName: user.last_name  // Added
+        };
       }
     }
 
     // Verify user was found and password is correct
     if (user && (await bcrypt.compare(password, user.password))) {
-      // Create and sign a JWT
       const token = jwt.sign(
-        { id: userId, role: userType },
+        payload, 
         process.env.JWT_SECRET,
-        { expiresIn: "2h" } // Token expires in 2 hour
+        { expiresIn: "2h" } 
       );
       
       return res.json({ token });
     } else {
-      // If user not found or password incorrect, send a generic error message
       return res.status(401).json({ message: "Invalid credentials: User not found or password incorrect" });
     }
   } catch (error) {

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast'; // <-- IMPORT TOAST
 import MenuManagementTable from './MenuManagementTable';
 import AddItemModal from './AddItemModal';
+import InternalNavBar from '../../components/InternalNavBar';
 
 // Order Management Table Component
 const OrderManagementTable = ({ orders }) => (
@@ -171,9 +172,9 @@ const openModalForEdit = (item) => {
   );
 
    return (
+    <>
+    <InternalNavBar />
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-4">Admin Dashboard</h1>
-      <Link to="/" className="text-blue-500 hover:underline mb-8 block">&larr; Back to Menu</Link>
       
       {/* --- THIS IS THE CORRECTED NAVIGATION SECTION --- */}
       <nav className="flex space-x-4 border-b mb-8">
@@ -227,6 +228,7 @@ const openModalForEdit = (item) => {
         categories={uniqueCategories.filter(c => c !== 'All')}
       />
     </div>
+    </>
   );
 }
 

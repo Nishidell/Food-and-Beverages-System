@@ -1,8 +1,9 @@
 import pool from "../config/mysql.js";
-import { validateStock, adjustStock } from "./itemController.js"; 
+// --- MODIFIED: Import adjustStock ---
+import { validateStock, adjustStock } from "./itemController.js";
 
 
-// @desc    Create a new order
+// @desc    Create a new order (Deducts stock immediately)
 // @route   POST /api/orders
 // @access  Private (Customer)
 export const createOrder = async (req, res) => {
@@ -10,55 +11,61 @@ export const createOrder = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // --- FIX: Destructure all fields from the body ---
         const { customer_id, items, order_type, instructions, total_price, delivery_location } = req.body;
 
         if (!customer_id || !items || items.length === 0 || !delivery_location) {
             throw new Error("Missing required order information.");
         }
 
-        // --- FIX: Use total_price from the frontend and name it correctly for the DB ---
-        const total_amount = total_price; 
+        const total_amount = total_price;
 
-        // Step 2: Create the order, now including the order_type
-        const orderSql = "INSERT INTO orders (customer_id, total_amount, order_type, delivery_location) VALUES (?, ?, ?, ?)";
+        // --- 1. Validate stock ---
+        await validateStock(items, connection);
+
+        // --- 2. Create Order with 'Pending' status ---
+        const orderSql = "INSERT INTO orders (customer_id, total_amount, order_type, delivery_location, status) VALUES (?, ?, ?, ?, 'Pending')";
         const [orderResult] = await connection.query(orderSql, [customer_id, total_amount, order_type, delivery_location]);
         const order_id = orderResult.insertId;
 
-        // Step 3: Insert order details, now including the instructions
+        // --- 3. Insert order details ---
         for (const item of items) {
             const [rows] = await connection.query("SELECT price FROM menu_items WHERE item_id = ?", [item.item_id]);
             const subtotal = rows[0].price * item.quantity;
-            
-            // --- FIX: Correctly insert instructions into order_details ---
-            // Note: This applies the same instruction to all items.
+
             const detailSql = "INSERT INTO order_details (order_id, item_id, quantity, subtotal, instructions) VALUES (?, ?, ?, ?, ?)";
             await connection.query(detailSql, [order_id, item.item_id, item.quantity, subtotal, instructions]);
-
-            const stockSql = "UPDATE menu_items SET stock = stock - ? WHERE item_id = ?";
-            await connection.query(stockSql, [item.quantity, item.item_id]);
         }
-        
-        // Step 4: Adjust stock using the helper function
+
+        // --- 4. Deduct stock immediately ---
         await adjustStock(items, 'deduct', connection);
+        console.log(`Stock deducted for order ${order_id}`);
 
         await connection.commit();
-        res.status(201).json({ order_id, message: "Order created successfully" });
+
+        // --- 5. Return order_id and total_amount for the next step ---
+        res.status(201).json({
+            order_id,
+            total_amount,
+            message: "Order created successfully"
+        });
 
     } catch (error) {
         await connection.rollback();
-        console.error("CREATE ORDER ERROR:", error); // Log the full error for debugging
+        console.error("CREATE ORDER ERROR:", error);
         res.status(500).json({ message: "Failed to create order", error: error.message });
     } finally {
         connection.release();
     }
 };
+
+// --- REMOVED finalizeOrderAfterPayment function ---
+
 // @desc    Get all orders
 // @route   GET /api/orders
 // @access  Private
 export const getOrders = async (req, res) => {
-    // This function is also working, so we leave it.
     try {
+        // Simple query, no need to join payments for status here
         const [orders] = await pool.query('SELECT * FROM orders ORDER BY order_date DESC');
         res.json(orders);
     } catch (error) {
@@ -74,45 +81,48 @@ export const getOrderById = async (req, res) => {
     try {
         const { id } = req.params;
         const [orders] = await pool.query("SELECT * FROM orders WHERE order_id = ?", [id]);
-        
+
         if (orders.length === 0) {
             return res.status(404).json({ message: "Order not found" });
         }
         const order = orders[0];
 
-        // --- TEMPORARILY COMMENTED OUT FOR DEVELOPMENT ---
-        /*
-        // CRITICAL FIX: Ensure a customer can only view their own orders.
-        if (req.user.role === 'customer' && order.customer_id !== req.user.id) {
-            return res.status(403).json({ message: "Access forbidden: You can only view your own orders." });
-        }
-        */
-
         const [details] = await pool.query("SELECT od.*, mi.item_name FROM order_details od JOIN menu_items mi ON od.item_id = mi.item_id WHERE order_id = ?", [id]);
 
-        res.json({ ...order, details });
+        // Fetch payment info if exists
+        const [payments] = await pool.query("SELECT * FROM payments WHERE order_id = ?", [id]);
+
+        res.json({ ...order, details, payments }); // Include payments array
     } catch (error) {
         res.status(500).json({ message: "Error fetching order details", error: error.message });
     }
 };
 
-// @desc    Update order status
+// @desc    Update order operational status (e.g., Preparing, Served)
 // @route   PUT /api/orders/:id/status
 // @access  Private (Staff/Admin)
 export const updateOrderStatus = async (req, res) => {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status } = req.body; // Expecting 'Preparing', 'Ready', 'Served', 'Cancelled' etc.
     const connection = await pool.getConnection();
-    
+
     try {
         await connection.beginTransaction();
 
-        // --- We will assume for now that anyone can update the status ---
+        // --- Simplified Cancellation: Restore stock ONLY IF order was NOT already marked 'paid' in payments table ---
+        if (status.toLowerCase() === 'cancelled') {
+             // Check if a 'paid' payment record exists
+            const [payments] = await connection.query("SELECT * FROM payments WHERE order_id = ? AND payment_status = 'paid'", [id]);
 
-        if (status === 'cancelled') {
-            const [details] = await connection.query("SELECT item_id, quantity FROM order_details WHERE order_id = ?", [id]);
-            for (const item of details) {
-                await connection.query("UPDATE menu_items SET stock = stock + ? WHERE item_id = ?", [item.quantity, item.item_id]);
+            if (payments.length > 0) {
+                 console.warn(`Order ${id} was already paid. Cancellation requested, but stock NOT restored automatically. Manual adjustment/refund likely needed.`);
+                 // Decide if you want to prevent cancellation of paid orders entirely:
+                 // await connection.rollback();
+                 // return res.status(400).json({ message: "Cannot cancel an order that has already been paid." });
+            } else {
+                 console.log(`Restoring stock for cancelled unpaid order: ${id}`);
+                 const [details] = await connection.query("SELECT item_id, quantity FROM order_details WHERE order_id = ?", [id]);
+                 await adjustStock(details, 'restore', connection);
             }
         }
 
@@ -120,7 +130,7 @@ export const updateOrderStatus = async (req, res) => {
         if (result.affectedRows === 0) {
             throw new Error("Order not found");
         }
-        
+
         await connection.commit();
         res.json({ message: `Order status updated to ${status}` });
 
@@ -129,5 +139,52 @@ export const updateOrderStatus = async (req, res) => {
         res.status(500).json({ message: "Failed to update order status", error: error.message });
     } finally {
         connection.release();
+    }
+};
+
+
+// @desc    Get orders for the kitchen
+// @route   GET /api/orders/kitchen
+// @access  Private (Staff)
+export const getKitchenOrders = async (req, res) => {
+    try {
+        // --- SIMPLIFIED: Show orders in the kitchen pipeline regardless of payment ---
+        // (Because stock is already deducted)
+        const sql = `
+            SELECT o.*, c.first_name, c.last_name
+            FROM orders o
+            JOIN customers c ON o.customer_id = c.customer_id
+            WHERE o.status IN ('Pending', 'Preparing', 'Ready')
+            ORDER BY o.order_date ASC
+        `;
+
+        const [orders] = await pool.query(sql);
+
+        res.json(orders);
+
+    } catch (error) {
+        console.error("Error fetching kitchen orders:", error);
+        res.status(500).json({ message: "Error fetching kitchen orders", error: error.message });
+    }
+};
+
+// @desc    Get served/completed orders
+// @route   GET /api/orders/served
+// @access  Private (Staff)
+export const getServedOrders = async (req, res) => {
+    try {
+        // This remains the same
+        const sql = `
+            SELECT o.*, c.first_name, c.last_name
+            FROM orders o
+            JOIN customers c ON o.customer_id = c.customer_id
+            WHERE o.status = 'Served' OR o.status = 'Completed'
+            ORDER BY o.order_date DESC
+        `;
+        const [orders] = await pool.query(sql);
+        res.json(orders);
+    } catch (error) {
+        console.error("Error fetching served orders:", error);
+        res.status(500).json({ message: "Error fetching served orders", error: error.message });
     }
 };
