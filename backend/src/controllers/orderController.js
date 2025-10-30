@@ -78,25 +78,48 @@ export const getOrders = async (req, res) => {
 // @route   GET /api/orders/:id
 // @access  Private
 export const getOrderById = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const [orders] = await pool.query("SELECT * FROM orders WHERE order_id = ?", [id]);
+  try {
+    const { id } = req.params;
 
-        if (orders.length === 0) {
-            return res.status(404).json({ message: "Order not found" });
-        }
-        const order = orders[0];
-
-        const [details] = await pool.query("SELECT od.*, mi.item_name FROM order_details od JOIN menu_items mi ON od.item_id = mi.item_id WHERE order_id = ?", [id]);
-
-        // Fetch payment info if exists
-        const [payments] = await pool.query("SELECT * FROM payments WHERE order_id = ?", [id]);
-
-        res.json({ ...order, details, payments }); // Include payments array
-    } catch (error) {
-        res.status(500).json({ message: "Error fetching order details", error: error.message });
+    // Fetch order record
+    const [orders] = await pool.query("SELECT * FROM orders WHERE order_id = ?", [id]);
+    if (orders.length === 0) {
+      return res.status(404).json({ message: "Order not found" });
     }
+    const order = orders[0];
+
+    // Fetch ordered items
+        const [items] = await pool.query(
+    `SELECT mi.item_name, od.quantity, mi.price 
+    FROM order_details od 
+    JOIN menu_items mi ON od.item_id = mi.item_id 
+    WHERE od.order_id = ?`,
+    [id]
+    );
+
+
+    // Fetch payment info
+    const [payments] = await pool.query("SELECT * FROM payments WHERE order_id = ?", [id]);
+    const payment = payments[0] || {};
+
+    // Build clean response
+    res.json({
+      order_id: order.order_id,
+      order_date: order.order_date,
+      order_type: order.order_type,
+      delivery_location: order.delivery_location,
+      total_price: order.total_price,
+      status: order.status,
+      items,                              // for ReceiptModal
+      payment_method: payment.payment_method || "PayMongo",
+      payment_status: payment.payment_status || "paid",
+    });
+  } catch (error) {
+    console.error("Error fetching order details:", error);
+    res.status(500).json({ message: "Error fetching order details", error: error.message });
+  }
 };
+
 
 // @desc    Update order operational status (e.g., Preparing, Served)
 // @route   PUT /api/orders/:id/status
