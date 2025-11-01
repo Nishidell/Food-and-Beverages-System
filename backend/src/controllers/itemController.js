@@ -5,7 +5,20 @@ import pool from "../config/mysql.js";
 // @access  Public
 export const getAllItems = async (req, res) => {
     try {
-        const [items] = await pool.query("SELECT item_id, item_name, category, price, image_url, description FROM menu_items");
+        // --- FIX: JOIN with categories table ---
+        const sql = `
+            SELECT 
+                mi.item_id, 
+                mi.item_name, 
+                c.name AS category, 
+                mi.price, 
+                mi.image_url, 
+                mi.description,
+                mi.category_id
+            FROM menu_items mi
+            LEFT JOIN categories c ON mi.category_id = c.category_id
+        `;
+        const [items] = await pool.query(sql);
         
         const itemIds = items.map(item => item.item_id);
         if (itemIds.length > 0) {
@@ -34,7 +47,21 @@ export const getAllItems = async (req, res) => {
 export const getItemById = async (req, res) => {
     try {
         const { id } = req.params;
-        const [items] = await pool.query("SELECT item_id, item_name, category, price, image_url, description FROM menu_items WHERE item_id = ?", [id]);
+        // --- FIX: JOIN with categories table ---
+        const sql = `
+            SELECT 
+                mi.item_id, 
+                mi.item_name, 
+                c.name AS category, 
+                mi.price, 
+                mi.image_url, 
+                mi.description,
+                mi.category_id
+            FROM menu_items mi
+            LEFT JOIN categories c ON mi.category_id = c.category_id
+            WHERE mi.item_id = ?
+        `;
+        const [items] = await pool.query(sql, [id]);
         if (items.length === 0) {
             return res.status(404).json({ message: "Menu item not found" });
         }
@@ -60,10 +87,11 @@ export const getItemById = async (req, res) => {
 // @route   POST /api/admin/items
 // @access  Admin
 export const createMenuItem = async (req, res) => {
-    const { item_name, category, price, image_url, description, ingredients } = req.body; 
+    // --- FIX: Use category_id ---
+    const { item_name, category_id, price, image_url, description, ingredients } = req.body; 
 
-    if (!item_name || !category || !price || !description) { 
-        return res.status(400).json({ message: 'Please provide all required fields.' });
+    if (!item_name || !category_id || !price) { 
+        return res.status(400).json({ message: 'Please provide item name, category, and price.' });
     }
     
     if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
@@ -75,8 +103,9 @@ export const createMenuItem = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        const sql = "INSERT INTO menu_items (item_name, category, price, image_url, description) VALUES (?, ?, ?, ?, ?)";
-        const [result] = await connection.query(sql, [item_name, category, price, image_url, description]);
+        // --- FIX: Insert category_id ---
+        const sql = "INSERT INTO menu_items (item_name, category_id, price, image_url, description) VALUES (?, ?, ?, ?, ?)";
+        const [result] = await connection.query(sql, [item_name, category_id, price, image_url, description]);
         const newItemId = result.insertId;
 
         const recipeSql = "INSERT INTO menu_item_ingredients (menu_item_id, ingredient_id, quantity_consumed) VALUES ?";
@@ -102,10 +131,11 @@ export const createMenuItem = async (req, res) => {
 // @access  Admin
 export const updateMenuItem = async (req, res) => {
     const { id } = req.params;
-    const { item_name, category, price, image_url, description, ingredients } = req.body;
+    // --- FIX: Use category_id ---
+    const { item_name, category_id, price, image_url, description, ingredients } = req.body;
 
-    if (!item_name || !category || !price) { 
-        return res.status(400).json({ message: 'Please provide all required fields.' });
+    if (!item_name || !category_id || !price) { 
+        return res.status(400).json({ message: 'Please provide item name, category, and price.' });
     }
 
     if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
@@ -117,12 +147,13 @@ export const updateMenuItem = async (req, res) => {
     try {
         await connection.beginTransaction();
 
+        // --- FIX: Update category_id ---
         const sql = `
             UPDATE menu_items 
-            SET item_name = ?, category = ?, price = ?, image_url = ?, description = ? 
+            SET item_name = ?, category_id = ?, price = ?, image_url = ?, description = ? 
             WHERE item_id = ?
         `;
-        const [result] = await connection.query(sql, [item_name, category, price, image_url, description, id]);
+        const [result] = await connection.query(sql, [item_name, category_id, price, image_url, description, id]);
 
         if (result.affectedRows === 0) {
             await connection.rollback();
@@ -170,6 +201,7 @@ export const deleteMenuItem = async (req, res) => {
 
 
 // --- HELPER FUNCTIONS FOR STOCK MANAGEMENT ---
+// (These are unchanged)
 
 /**
  * @desc Validates if there is enough stock for a list of items.
@@ -199,7 +231,7 @@ export const validateStock = async (items, connection) => {
 
 /**
  * @desc Adjusts the stock for a list of items (deducts or restores).
- * @param {Array} items - Array of objects with item_id and quantity (from cart).
+ *play {Array} items - Array of objects with item_id and quantity (from cart).
  * @param {string} operation - Either 'deduct' or 'restore'.
  * @param {Object} connection - A database connection from a transaction.
  */
@@ -220,7 +252,6 @@ export const adjustStock = async (items, operation, connection) => {
     }
 };
 
-// --- ⭐️ NEW HELPER FUNCTION FOR ORDER LOGGING ⭐️ ---
 /**
  * @desc Logs an inventory change related to an order
  * @param {number} order_id - The ID of the order causing the change

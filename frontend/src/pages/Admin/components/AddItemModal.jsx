@@ -2,26 +2,27 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { X, UploadCloud, PlusCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
-import apiClient from '../../../utils/apiClient'; 
+import apiClient from '../../../utils/apiClient'; // <-- This should be here
 
+// --- 1. categories prop is now the fetched list: [{category_id: 1, name: "Appetizer"}, ...]
 const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) => {
   const { token } = useAuth();
 
   const [formData, setFormData] = useState({
     item_name: '',
     description: '',
-    category: '',
+    category_id: '', // <-- 2. CHANGED from 'category'
     price: '',
     image_url: '',
-    ingredients: [], 
+    ingredients: [],
   });
   const [uploading, setUploading] = useState(false);
   const isEditMode = Boolean(itemToEdit);
 
-  const [selectedDropdownCategory, setSelectedDropdownCategory] = useState('');
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const showNewCategoryInput = selectedDropdownCategory === 'ADD_NEW';
-
+  // --- 3. REMOVED all state related to "Add New Category" ---
+  // const [selectedDropdownCategory, setSelectedDropdownCategory] = useState('');
+  // const [newCategoryName, setNewCategoryName] = useState('');
+  // const showNewCategoryInput = selectedDropdownCategory === 'ADD_NEW';
 
   const [availableIngredients, setAvailableIngredients] = useState([]);
   const [selectedIngredientId, setSelectedIngredientId] = useState('');
@@ -31,19 +32,22 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
     if (isOpen) {
       const fetchIngredients = async () => {
         try {
-          const res = await apiClient('/inventory');
+          const res = await apiClient('/inventory', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
           if (!res.ok) throw new Error('Failed to fetch ingredients');
           const data = await res.json();
           setAvailableIngredients(data);
         } catch (err) {
-          toast.error(err.message);
+           if (err.message !== 'Session expired') {
+             toast.error(err.message);
+           }
         }
       };
 
       fetchIngredients();
 
       if (isEditMode) {
-        // Fetch the item's details again to get its recipe
         const fetchItemDetails = async () => {
           try {
             const res = await apiClient(`/items/${itemToEdit.item_id}`);
@@ -53,23 +57,24 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
             setFormData({
               item_name: data.item_name || '',
               description: data.description || '',
-              category: data.category || '',
+              category_id: data.category_id || '', // <-- 4. SET category_id
               price: data.price || '',
               image_url: data.image_url || '',
-              ingredients: data.ingredients.map(ing => ({ // Format for our state
+              ingredients: data.ingredients.map(ing => ({
                   ingredient_id: ing.ingredient_id,
                   name: ing.name,
                   quantity_consumed: ing.quantity_consumed,
                   unit_of_measurement: ing.unit_of_measurement
               })) || []
             });
-            setSelectedDropdownCategory(data.category || '');
+            // --- REMOVED ---
+            // setSelectedDropdownCategory(data.category || '');
           } catch (err) {
             toast.error(err.message);
-            setFormData({ // Fallback
+            setFormData({
               item_name: itemToEdit.item_name || '',
               description: itemToEdit.description || '',
-              category: itemToEdit.category || '',
+              category_id: itemToEdit.category_id || '', // <-- 4. SET category_id
               price: itemToEdit.price || '',
               image_url: itemToEdit.image_url || '',
               ingredients: []
@@ -80,11 +85,11 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
         
       } else {
         // Reset form for "Add New"
-        setFormData({ item_name: '', description: '', category: '', price: '', image_url: '', ingredients: [] });
-        setSelectedDropdownCategory('');
-        setNewCategoryName('');
+        setFormData({ item_name: '', description: '', category_id: '', price: '', image_url: '', ingredients: [] }); // <-- 4. SET category_id
+        // --- REMOVED ---
+        // setSelectedDropdownCategory('');
+        // setNewCategoryName('');
       }
-      // Reset recipe builder fields
       setSelectedIngredientId('');
       setIngredientQuantity('');
     }
@@ -97,25 +102,11 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
     const { id, value } = e.target;
     setFormData((prevData) => ({ ...prevData, [id]: value }));
   };
-
-  const handleCategoryDropdownChange = (e) => {
-    const value = e.target.value;
-    setSelectedDropdownCategory(value);
-    if (value !== 'ADD_NEW') {
-      setFormData(prev => ({ ...prev, category: value }));
-      setNewCategoryName('');
-    } else {
-      setFormData(prev => ({ ...prev, category: newCategoryName }));
-    }
-  };
-
-  const handleNewCategoryNameChange = (e) => {
-    const value = e.target.value;
-    setNewCategoryName(value);
-    setFormData(prev => ({ ...prev, category: value }));
-  };
+  
+  // --- 5. REMOVED handleCategoryDropdownChange and handleNewCategoryNameChange ---
 
   const handleFileUpload = async (e) => {
+      // ... (This function is unchanged) ...
       const file = e.target.files[0];
       if (!file) return;
       const uploadFormData = new FormData();
@@ -125,11 +116,10 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
         const response = await apiClient('/upload', {
           method: 'POST',
           headers: {
-            'Content-Type': null, // Tell apiClient to *not* set Content-Type
+            'Content-Type': null, 
           },
           body: uploadFormData,
         });
-        
         const data = await response.json();
         if (!response.ok) {
           throw new Error(data.message || 'Image upload failed');
@@ -137,30 +127,27 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
         setFormData(prevData => ({ ...prevData, image_url: data.image }));
         toast.success('Image uploaded successfully!');
       } catch (error) {
-        toast.error(error.message);
+         if (error.message !== 'Session expired') {
+          toast.error(error.message);
+        }
       } finally {
         setUploading(false);
       }
   };
 
-  // --- 6. NEW: HANDLERS FOR RECIPE BUILDER ---
+  // ... (Recipe handlers are unchanged) ...
   const handleAddIngredientToRecipe = () => {
     if (!selectedIngredientId || !ingredientQuantity || parseFloat(ingredientQuantity) <= 0) {
       toast.error('Please select an ingredient and enter a valid quantity.');
       return;
     }
-
     const ingredient = availableIngredients.find(ing => ing.ingredient_id === parseInt(selectedIngredientId));
     if (!ingredient) return;
-
-    // Check if already in recipe
     const isAlreadyAdded = formData.ingredients.some(ing => ing.ingredient_id === ingredient.ingredient_id);
     if (isAlreadyAdded) {
       toast.error(`${ingredient.name} is already in the recipe.`);
       return;
     }
-
-    // Add to recipe state
     setFormData(prev => ({
       ...prev,
       ingredients: [
@@ -173,8 +160,6 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
         }
       ]
     }));
-
-    // Reset fields
     setSelectedIngredientId('');
     setIngredientQuantity('');
   };
@@ -188,22 +173,21 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.category) {
-        toast.error('Please select or add a category.');
+    // --- 6. UPDATE VALIDATION ---
+    if (!formData.category_id) {
+        toast.error('Please select a category.');
         return;
     }
-    // --- 7. NEW: VALIDATE RECIPE ---
     if (formData.ingredients.length === 0) {
         toast.error('A menu item must have at least one ingredient in its recipe.');
         return;
     }
     
-    // Send the whole formData. The backend 'itemController'
-    // now expects the 'ingredients' array.
+    // onSave will now send formData with category_id
     onSave(formData);
   };
 
-  // --- STYLING (using inline styles to avoid Tailwind issues) ---
+  // ... (Styling objects are unchanged) ...
   const inputStyle = {
     marginTop: '4px',
     display: 'block',
@@ -229,6 +213,7 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
   };
   const cancelButtonStyle = { ...buttonStyle, backgroundColor: '#E5E7EB', color: '#1F2937' }; // gray-200
 
+
   return (
     <div style={{
       position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.75)', 
@@ -236,14 +221,13 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
     }}>
       <div style={{ 
         backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-        padding: '32px', width: '100%', maxWidth: '42rem' // max-w-2xl to fit recipe
+        padding: '32px', width: '100%', maxWidth: '42rem' 
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{isEditMode ? 'Edit Menu Item' : 'Add New Menu Item'}</h2>
           <button onClick={onClose} style={{ color: '#6B7280', border: 'none', background: 'none', cursor: 'pointer' }}><X size={24} /></button>
         </div>
         
-        {/* We use a form with two columns */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '24px' }}>
           
           {/* Column 1: Item Details */}
@@ -256,25 +240,33 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
               <label htmlFor="description" style={labelStyle}>Description</label>
               <textarea id="description" rows="3" value={formData.description} onChange={handleChange} style={inputStyle}></textarea>
             </div>
+            
+            {/* --- 7. SIMPLIFIED CATEGORY DROPDOWN --- */}
             <div>
-              <label htmlFor="categoryDropdown" style={labelStyle}>Category</label>
-              <select id="categoryDropdown" value={selectedDropdownCategory} onChange={handleCategoryDropdownChange} required={!showNewCategoryInput} style={inputStyle}>
+              <label htmlFor="category_id" style={labelStyle}>Category</label>
+              <select 
+                id="category_id" // Use category_id
+                value={formData.category_id} // Bind to category_id
+                onChange={handleChange} // Use generic handler
+                required 
+                style={inputStyle}
+              >
                 <option value="" disabled>Select a category</option>
-                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                <option value="ADD_NEW">-- Add New Category --</option>
+                {categories.map(cat => (
+                  <option key={cat.category_id} value={cat.category_id}>
+                    {cat.name}
+                  </option>
+                ))}
               </select>
             </div>
-            {showNewCategoryInput && (
-              <div>
-                <label htmlFor="newCategoryName" style={labelStyle}>New Category Name</label>
-                <input type="text" id="newCategoryName" value={newCategoryName} onChange={handleNewCategoryNameChange} required style={inputStyle} placeholder="Enter new category name" />
-              </div>
-            )}
+            {/* --- 8. REMOVED "Add New Category" Input --- */}
+
             <div>
               <label htmlFor="price" style={labelStyle}>Price</label>
               <input type="number" id="price" step="0.01" value={formData.price} onChange={handleChange} required style={inputStyle} />
             </div>
             <div>
+              {/* ... (Image upload JSX is unchanged) ... */}
               <label style={labelStyle}>Image</label>
               {formData.image_url && (
                 <img src={`http://localhost:3000${formData.image_url}`} alt="Preview" style={{ width: '100%', height: '128px', objectFit: 'cover', borderRadius: '0.375rem', margin: '8px 0' }} />
@@ -293,11 +285,10 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
             </div>
           </div>
 
-          {/* Column 2: Recipe Builder */}
+          {/* Column 2: Recipe Builder (Unchanged) */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', borderLeft: '1px solid #E5E7EB', paddingLeft: '24px' }}>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Recipe</h3>
             
-            {/* Recipe Add Form */}
             <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
               <div style={{ flex: 3 }}>
                 <label htmlFor="ingredient-select" style={labelStyle}>Ingredient</label>
@@ -317,7 +308,6 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
               </button>
             </div>
 
-            {/* Recipe List */}
             <div style={{ marginTop: '16px', flex: 1, overflowY: 'auto' }}>
               <h4 style={{ fontWeight: '600' }}>Ingredients in this Recipe:</h4>
               {formData.ingredients.length === 0 ? (
@@ -346,7 +336,7 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
           </div>
         </form>
         
-        {/* Main Form Buttons */}
+        {/* Main Form Buttons (Unchanged) */}
         <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'flex-end', gap: '16px', paddingTop: '24px', borderTop: '1px solid #E5E7EB' }}>
           <button type="button" onClick={onClose} style={cancelButtonStyle}>Cancel</button>
           <button type="submit" form="main-form" onClick={handleSubmit} style={{ ...buttonStyle, backgroundColor: '#1D4ED8' }} disabled={uploading}>

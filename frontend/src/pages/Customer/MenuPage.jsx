@@ -10,16 +10,16 @@ import ImageModal from './components/ImageModal';
 import PaymentModal from './components/PaymentModal';
 import ReceiptModal from './components/ReceiptModal';
 import toast from 'react-hot-toast';
-import apiClient from '../../utils/apiClient'; // <-- 1. IMPORT
+import apiClient from '../../utils/apiClient'; // <-- This should be here
 
 const primaryColor = { backgroundColor: '#0B3D2E' };
 
 function MenuPage() {
-  // ... (State definitions are unchanged) ...
   const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState([]); // <-- 1. ADD STATE FOR CATEGORIES
   const [error, setError] = useState(null);
   const [cartItems, setCartItems] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState(0); // <-- 2. CHANGE TO ID (0 = "All")
   const [searchTerm, setSearchTerm] = useState('');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -27,41 +27,51 @@ function MenuPage() {
   const [instructions, setInstructions] = useState('');
   const [deliveryLocation, setDeliveryLocation] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [pendingOrderTotal, setPendingOrderTotal] = useState(0);
   const [receiptDetails, setReceiptDetails] = useState(null);
 
-
   const { user, token, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // ... (cartCount, categories, and useEffects are unchanged) ...
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
-  const categories = ['All', ...new Set(items.map(item => item.category))];
+  // --- 3. REMOVE OLD CATEGORY LOGIC ---
+  // const categories = ['All', ...new Set(items.map(item => item.category))];
+
   useEffect(() => { setDeliveryLocation(''); }, [orderType]);
-
-
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        // --- 2. USE apiClient ---
-        const response = await apiClient('/items'); // Public route
-        if (!response.ok) throw new Error('Failed to fetch data from the server.');
-        const data = await response.json();
-        setItems(data);
+        // --- 4. FETCH ITEMS AND CATEGORIES ---
+        const [itemsResponse, categoriesResponse] = await Promise.all([
+          apiClient('/items'),
+          apiClient('/categories')
+        ]);
+
+        if (!itemsResponse.ok) throw new Error('Failed to fetch menu items.');
+        if (!categoriesResponse.ok) throw new Error('Failed to fetch categories.');
+
+        const itemsData = await itemsResponse.json();
+        const categoriesData = await categoriesResponse.json();
+        
+        setItems(itemsData);
+        setCategories(categoriesData); // <-- 5. SET CATEGORIES
+
       } catch (err) {
         setError(err.message);
-        console.error("Error fetching items:", err);
+        console.error("Error fetching data:", err);
       }
     };
     fetchItems();
   }, []);
 
-  // ... (Local handlers: handleSearchChange, toggleCart, etc. are unchanged) ...
   const handleSearchChange = (e) => setSearchTerm(e.target.value);
   const toggleCart = () => setIsCartOpen(!isCartOpen);
-  const handleSelectCategory = (category) => setSelectedCategory(category);
+  const handleSelectCategory = (category) => setSelectedCategory(category); // <-- This will now receive an ID
+
+  // ... (Add, Remove, Update cart handlers are unchanged) ...
   const handleAddToCart = (clickedItem) => {
     setCartItems(prevItems => {
       const isItemInCart = prevItems.find(item => item.item_id === clickedItem.item_id);
@@ -103,13 +113,11 @@ function MenuPage() {
     setIsPaymentModalOpen(true);
     setIsCartOpen(false);
   };
-
-
   const handleConfirmPayment = async (totalAmount, paymentInfo) => {
+    // ... (This function is unchanged, it still uses apiClient) ...
     setIsPaymentModalOpen(false);
     setIsPlacingOrder(true);
     toast.loading('Placing your order...');
-
     const orderData = {
       customer_id: user.id,
       total_price: totalAmount,
@@ -122,36 +130,26 @@ function MenuPage() {
         price: item.price
       }))
     };
-
     try {
-      // --- 3. USE apiClient ---
       const orderResponse = await apiClient('/orders', {
         method: 'POST',
-        // No headers needed
         body: JSON.stringify(orderData)
       });
       const orderResult = await orderResponse.json();
       if (!orderResponse.ok) throw new Error(orderResult.message || 'Failed to create order.');
-
       const newOrderId = orderResult.order_id;
       const orderTotal = orderResult.total_amount;
-
       toast.dismiss();
       toast.loading('Redirecting to PayMongo checkout...');
-
-      // --- 4. USE apiClient ---
       const paymentResponse = await apiClient(`/payments/${newOrderId}/paymongo`, {
         method: 'POST',
-        // No headers
         body: JSON.stringify({
           total_amount: orderTotal,
           payment_method: paymentInfo.selectedPaymentMethod
         })
       });
-
       const paymentResult = await paymentResponse.json();
       if (!paymentResponse.ok) throw new Error(paymentResult.message || 'Failed to create checkout.');
-
       if (paymentResult.checkoutUrl) {
         window.location.href = paymentResult.checkoutUrl;
       } else {
@@ -160,24 +158,23 @@ function MenuPage() {
     } catch (err) {
       console.error('Order/Payment Error:', err);
       toast.dismiss();
-       if (err.message !== 'Session expired') {
+      if (err.message !== 'Session expired') {
         toast.error(`Error: ${err.message}`);
       }
       setIsPlacingOrder(false);
     }
   };
-
-  // ... (handleCloseReceipt and filteredItems are unchanged) ...
   const handleCloseReceipt = () => {
     setIsReceiptModalOpen(false);
     setReceiptDetails(null);
   };
+
+  
+  // --- 6. UPDATE FILTER LOGIC ---
   const filteredItems = items
-    .filter(item => selectedCategory === 'All' || item.category === selectedCategory)
+    .filter(item => selectedCategory === 0 || item.category_id === selectedCategory) // <-- Use 0 for "All" and category_id
     .filter(item => item.item_name.toLowerCase().includes(searchTerm.toLowerCase()));
 
-
-  // ... (JSX return is unchanged) ...
   return (
     <div className="bg-gray-100 min-h-screen" style={primaryColor}>
       <HeaderBar
@@ -186,8 +183,10 @@ function MenuPage() {
         searchTerm={searchTerm}
         onSearchChange={handleSearchChange}
       />
+
       <main className="container mx-auto px-4 py-8">
         <PromoBanner />
+        {/* --- 7. PASS THE FETCHED CATEGORIES --- */}
         <CategoryTabs
           categories={categories}
           selectedCategory={selectedCategory}
@@ -199,6 +198,8 @@ function MenuPage() {
           onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
         />
       </main>
+
+      {/* ... (Rest of the JSX is unchanged) ... */}
       <CartPanel
         cartItems={cartItems}
         onUpdateQuantity={handleUpdateQuantity}

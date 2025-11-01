@@ -8,7 +8,7 @@ import StaffManagementTable from './components/StaffManagementTable';
 import StaffModal from './components/StaffModal';
 import InventoryLogsTable from './components/InventoryLogsTable';
 import { useAuth } from '../../context/AuthContext';
-import apiClient from '../../utils/apiClient'; 
+import apiClient from '../../utils/apiClient'; // <-- This should already be here
 
 // ... (OrderManagementTable component is unchanged) ...
 const OrderManagementTable = ({ orders }) => (
@@ -54,11 +54,11 @@ const OrderManagementTable = ({ orders }) => (
   </div>
 );
 
-
 function AdminPage() {
   const [orders, setOrders] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [staffList, setStaffList] = useState([]);
+  const [categories, setCategories] = useState([]); // <-- 1. ADD NEW STATE
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState('orders'); 
@@ -68,33 +68,36 @@ function AdminPage() {
   const [editingStaff, setEditingStaff] = useState(null);
   const [menuFilterCategory, setMenuFilterCategory] = useState('All');
 
-  const { token } = useAuth(); // We still need token to trigger useEffect
+  const { token } = useAuth();
   
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // --- 2. USE apiClient ---
-        // The apiClient automatically adds the token
-        const [ordersResponse, itemsResponse, staffResponse] = await Promise.all([
-          apiClient('/orders'), // No headers needed
-          apiClient('/items'),   // No headers needed
-          apiClient('/admin/staff') // No headers needed
+        
+        // --- 2. FETCH CATEGORIES ---
+        const [ordersResponse, itemsResponse, staffResponse, categoriesResponse] = await Promise.all([
+          apiClient('/orders'),
+          apiClient('/items'),
+          apiClient('/admin/staff'),
+          apiClient('/categories') // <-- Add this call
         ]);
         
-        if (!ordersResponse.ok || !itemsResponse.ok || !staffResponse.ok) {
+        if (!ordersResponse.ok || !itemsResponse.ok || !staffResponse.ok || !categoriesResponse.ok) {
            throw new Error('Failed to fetch data');
         }
         
         const ordersData = await ordersResponse.json();
         const itemsData = await itemsResponse.json();
         const staffData = await staffResponse.json();
+        const categoriesData = await categoriesResponse.json(); // <-- Get data
 
         setOrders(ordersData);
         setMenuItems(itemsData);
         setStaffList(staffData);
+        setCategories(categoriesData); // <-- 3. SET STATE
+        
       } catch (err) {
-        // If it's a 401, apiClient handles it. This catches other errors.
         if (err.message !== 'Session expired') {
           setError(err.message);
         }
@@ -107,6 +110,7 @@ function AdminPage() {
     }
   }, [token]);
 
+  // ... (All handler functions are unchanged) ...
   const handleAddNewItem = async (formData) => {
     const payload = {
       ...formData,
@@ -117,10 +121,8 @@ function AdminPage() {
     };
     
     try {
-      // --- 3. USE apiClient ---
       const response = await apiClient('/admin/items', { 
         method: 'POST',
-        // No headers needed, apiClient adds them
         body: JSON.stringify(payload),
       });
       if (!response.ok) {
@@ -128,7 +130,7 @@ function AdminPage() {
          throw new Error(errData.message || 'Failed to save the item.');
       }
       
-      const itemsResponse = await apiClient('/items'); // <-- USE apiClient
+      const itemsResponse = await apiClient('/items');
       const itemsData = await itemsResponse.json();
       setMenuItems(itemsData);
 
@@ -151,10 +153,8 @@ function AdminPage() {
     };
     
     try {
-      // --- 4. USE apiClient ---
       const response = await apiClient(`/admin/items/${editingItem.item_id}`, { 
         method: 'PUT',
-        // No headers needed
         body: JSON.stringify(payload),
       });
       if (!response.ok) {
@@ -162,7 +162,7 @@ function AdminPage() {
          throw new Error(errData.message || 'Failed to update item.');
       }
       
-      const itemsResponse = await apiClient('/items'); // <-- USE apiClient
+      const itemsResponse = await apiClient('/items');
       const itemsData = await itemsResponse.json();
       setMenuItems(itemsData);
 
@@ -179,10 +179,8 @@ function AdminPage() {
     if (!window.confirm('Are you sure you want to delete this item?')) return;
     
     try {
-      // --- 5. USE apiClient ---
       const response = await apiClient(`/admin/items/${itemIdToDelete}`, { 
         method: 'DELETE',
-        // No headers needed
       });
       if (!response.ok) {
          const errData = await response.json();
@@ -197,20 +195,20 @@ function AdminPage() {
     }
   };
 
-  // ... (openModalForEdit, openModalForAdd, closeModal are unchanged) ...
-  const openModalForEdit = (item) => {
+const openModalForEdit = (item) => {
     setEditingItem(item);
     setIsModalOpen(true);
   };
+  
   const openModalForAdd = () => {
     setEditingItem(null);
     setIsModalOpen(true);
   };
+
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingItem(null);
   };
-
 
   const handleMenuFilterChange = (category) => {
     setMenuFilterCategory(category);
@@ -222,18 +220,18 @@ function AdminPage() {
 
   const handleAddStaff = async (formData) => {
     try {
-      // --- 6. USE apiClient ---
       const response = await apiClient('/admin/staff', {
         method: 'POST',
-        // No headers
         body: JSON.stringify(formData),
       });
       if (!response.ok) {
         const errData = await response.json();
         throw new Error(errData.message || 'Failed to save the staff member.');
       }
-      
-      const listResponse = await apiClient('/admin/staff'); // <-- USE apiClient
+      const newStaff = await response.json(); 
+      const listResponse = await apiClient('/admin/staff', { 
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const updatedList = await listResponse.json();
       setStaffList(updatedList);
       
@@ -253,10 +251,8 @@ function AdminPage() {
     }
 
     try {
-      // --- 7. USE apiClient ---
       const response = await apiClient(`/admin/staff/${editingStaff.staff_id}`, {
         method: 'PUT',
-        // No headers
         body: JSON.stringify(payload),
       });
       if (!response.ok) {
@@ -264,7 +260,9 @@ function AdminPage() {
         throw new Error(errData.message || 'Failed to update staff member.');
       }
       
-      const listResponse = await apiClient('/admin/staff'); // <-- USE apiClient
+      const listResponse = await apiClient('/admin/staff', { 
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const updatedList = await listResponse.json();
       setStaffList(updatedList);
 
@@ -280,10 +278,8 @@ function AdminPage() {
   const handleDeleteStaff = async (staffIdToDelete) => {
     if (!window.confirm('Are you sure you want to delete this staff account?')) return;
     try {
-      // --- 8. USE apiClient ---
       const response = await apiClient(`/admin/staff/${staffIdToDelete}`, {
         method: 'DELETE',
-        // No headers
       });
       if (!response.ok) {
         const errData = await response.json();
@@ -298,27 +294,34 @@ function AdminPage() {
     }
   };
 
-  // ... (openStaffModalForEdit, openStaffModalForAdd, closeStaffModal are unchanged) ...
   const openStaffModalForEdit = (staff) => {
     setEditingStaff(staff);
     setIsStaffModalOpen(true);
   };
+  
   const openStaffModalForAdd = () => {
     setEditingStaff(null);
     setIsStaffModalOpen(true);
   };
+
   const closeStaffModal = () => {
     setIsStaffModalOpen(false);
     setEditingStaff(null);
   };
 
 
-  if (loading) return <div className="p-8">Loading dashboard...</div>;
+   if (loading) return <div className="p-8">Loading dashboard...</div>;
   if (error) return <div className="p-8 text-red-500">Error: {error}</div>;
   
-  const uniqueCategories = ['All', ...new Set(menuItems.map(item => item.category))];
-  const allCategories = ['All', ...new Set(menuItems.map(item => item.category))];
-  const categoriesForForm = allCategories.filter(c => c !== 'All');
+  // --- 4. REMOVE OLD LOGIC ---
+  // const uniqueCategories = ['All', ...new Set(menuItems.map(item => item.category))];
+  // const allCategories = ['All', ...new Set(menuItems.map(item => item.category))];
+  // const categoriesForForm = allCategories.filter(c => c !== 'All');
+  
+  // --- 5. UPDATE FILTER LOGIC ---
+  // We can still auto-generate the filter tabs from the *items* for the Admin page,
+  // as this is a good way to see what's in use.
+  const allCategoriesForFilter = ['All', ...new Set(menuItems.map(item => item.category))];
 
   const filteredMenuItems = menuItems.filter(item => 
     menuFilterCategory === 'All' || item.category === menuFilterCategory
@@ -379,7 +382,7 @@ function AdminPage() {
             <MenuManagementTable
               items={filteredMenuItems} 
               totalItems={filteredMenuItems.length} 
-              categories={allCategories} 
+              categories={allCategoriesForFilter} // <-- 6. Use the auto-gen list for *filtering*
               selectedCategory={menuFilterCategory}
               onFilterChange={handleMenuFilterChange}
               onClearFilters={handleClearFilters}
@@ -406,7 +409,7 @@ function AdminPage() {
           onClose={closeModal}
           onSave={editingItem ? handleUpdateItem : handleAddNewItem}
           itemToEdit={editingItem}
-          categories={uniqueCategories.filter(c => c !== 'All')}
+          categories={categories} // <-- 7. PASS THE FETCHED LIST TO THE MODAL
         />
 
         <StaffModal
