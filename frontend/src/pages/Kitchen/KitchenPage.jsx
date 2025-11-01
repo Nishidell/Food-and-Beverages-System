@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import InternalNavBar from '../../components/InternalNavBar';
+import InternalNavBar from './components/InternalNavBar';
 
 function KitchenPage() {
   const [kitchenOrders, setKitchenOrders] = useState([]);
@@ -64,7 +64,7 @@ function KitchenPage() {
       }
     };
 
-  // --- THIS IS THE RESTORED FUNCTION ---
+
   const handleUpdateStatus = async (orderId, newStatus) => {
     try {
       const response = await fetch(`http://localhost:3000/api/orders/${orderId}/status`, {
@@ -98,7 +98,7 @@ function KitchenPage() {
       toast.error(err.message);
     }
   };
-  // --- END OF RESTORED FUNCTION ---
+
 
   useEffect(() => {
     fetchAndPopulateOrders(true);
@@ -120,7 +120,7 @@ function KitchenPage() {
     const statusMatch = filterStatus === 'All' || (order.status && order.status.toLowerCase() === filterStatus.toLowerCase());
     const typeMatch = filterType === 'All Types' || (order.order_type && order.order_type.toLowerCase() === filterType.toLowerCase());
     return statusMatch && typeMatch;
-  }) : []; // Ensure filteredOrders is always an array
+  }) : []; 
   return (
     <>
     <InternalNavBar />
@@ -130,7 +130,7 @@ function KitchenPage() {
         
         {error && <p className="text-center text-red-500 text-sm mb-4">Error fetching updates: {error}</p>}
 
-        {/* --- NEW: Dropdown Filters Container --- */}
+        {/*  Dropdown Filters Container --- */}
         <div className="bg-figma-off-white p-4 rounded-lg shadow-md mb-6 flex flex-col md:flex-row justify-around items-center gap-4">
           {/* Filter by Status Dropdown */}
           <div className="flex flex-col w-full md:w-1/2 lg:w-1/3">

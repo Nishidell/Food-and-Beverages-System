@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext'; 
 
 const InventoryLogsTable = () => {
   const [logs, setLogs] = useState([]);

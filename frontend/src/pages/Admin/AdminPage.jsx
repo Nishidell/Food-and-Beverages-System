@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import MenuManagementTable from './MenuManagementTable';
-import AddItemModal from './AddItemModal';
-import AdminHeader from '../../components/AdminHeader';
-import StaffManagementTable from './StaffManagementTable';
+import MenuManagementTable from './components/MenuManagementTable';
+import AddItemModal from './components/AddItemModal';
+import AdminHeader from './components/AdminHeader';
+import StaffManagementTable from './components/StaffManagementTable';
+import StaffModal from './components/StaffModal';
+import InventoryLogsTable from './components/InventoryLogsTable';
 import { useAuth } from '../../context/AuthContext';
-import StaffModal from './StaffModal';
-import InventoryLogsTable from './InventoryLogsTable'; // --- 1. ADD THIS IMPORT ---
 
-// (The OrderManagementTable component is unchanged)
 const OrderManagementTable = ({ orders }) => (
   <div className="bg-white shadow-md rounded-lg overflow-hidden">
     <h2 className="text-2xl font-bold p-6">Order Management</h2>
@@ -54,12 +53,13 @@ const OrderManagementTable = ({ orders }) => (
 );
 
 function AdminPage() {
+  // ... (All state definitions are unchanged) ...
   const [orders, setOrders] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [staffList, setStaffList] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState('orders'); // Default view
+  const [currentView, setCurrentView] = useState('orders'); 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
@@ -67,7 +67,8 @@ function AdminPage() {
   const [menuFilterCategory, setMenuFilterCategory] = useState('All');
 
   const { token } = useAuth();
-
+  
+  // ... (useEffect and all handler functions are unchanged) ...
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -76,7 +77,6 @@ function AdminPage() {
           'Authorization': `Bearer ${token}`
         };
 
-        // We don't need to fetch logs here, the log component fetches its own data
         const [ordersResponse, itemsResponse, staffResponse] = await Promise.all([
           fetch('http://localhost:3000/api/orders'),
           fetch('http://localhost:3000/api/items'),
@@ -100,12 +100,8 @@ function AdminPage() {
     fetchData();
     }
   }, [token]);
-  
-  // (All handler functions remain unchanged)
-  // ...
+
   const handleAddNewItem = async (formData) => {
-    // --- THIS IS THE NEW PAYLOAD ---
-    // We must format the ingredients array for the backend
     const payload = {
       ...formData,
       ingredients: formData.ingredients.map(ing => ({
@@ -114,13 +110,12 @@ function AdminPage() {
       }))
     };
     
-    // The API endpoint is now /api/admin/items
     try {
-      const response = await fetch('http://localhost:3000/api/admin/items', { // --- FIX: Use admin route ---
+      const response = await fetch('http://localhost:3000/api/admin/items', { 
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // --- FIX: Add Auth Token ---
+          'Authorization': `Bearer ${token}` 
         },
         body: JSON.stringify(payload),
       });
@@ -129,7 +124,6 @@ function AdminPage() {
          throw new Error(errData.message || 'Failed to save the item.');
       }
       
-      // Manually refetch items to get the new list with its recipe
       const itemsResponse = await fetch('http://localhost:3000/api/items');
       const itemsData = await itemsResponse.json();
       setMenuItems(itemsData);
@@ -142,7 +136,6 @@ function AdminPage() {
   };
 
   const handleUpdateItem = async (itemData) => {
-    // --- THIS IS THE NEW PAYLOAD ---
     const payload = {
       ...itemData,
       ingredients: itemData.ingredients.map(ing => ({
@@ -151,13 +144,12 @@ function AdminPage() {
       }))
     };
     
-    // The API endpoint is now /api/admin/items/:id
     try {
-      const response = await fetch(`http://localhost:3000/api/admin/items/${editingItem.item_id}`, { // --- FIX: Use admin route ---
+      const response = await fetch(`http://localhost:3000/api/admin/items/${editingItem.item_id}`, { 
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // --- FIX: Add Auth Token ---
+          'Authorization': `Bearer ${token}` 
         },
         body: JSON.stringify(payload),
       });
@@ -166,7 +158,6 @@ function AdminPage() {
          throw new Error(errData.message || 'Failed to update item.');
       }
       
-      // Manually refetch items
       const itemsResponse = await fetch('http://localhost:3000/api/items');
       const itemsData = await itemsResponse.json();
       setMenuItems(itemsData);
@@ -181,12 +172,11 @@ function AdminPage() {
   const handleDeleteItem = async (itemIdToDelete) => {
     if (!window.confirm('Are you sure you want to delete this item?')) return;
     
-    // The API endpoint is now /api/admin/items/:id
     try {
-      const response = await fetch(`http://localhost:3000/api/admin/items/${itemIdToDelete}`, { // --- FIX: Use admin route ---
+      const response = await fetch(`http://localhost:3000/api/admin/items/${itemIdToDelete}`, { 
         method: 'DELETE',
         headers: { 
-          'Authorization': `Bearer ${token}` // --- FIX: Add Auth Token ---
+          'Authorization': `Bearer ${token}` 
         }
       });
       if (!response.ok) {
@@ -318,10 +308,10 @@ const openModalForEdit = (item) => {
     setIsStaffModalOpen(false);
     setEditingStaff(null);
   };
-   // --- End of handler functions ---
 
-
-  if (loading) return <div className="p-8">Loading dashboard...</div>;
+  // ... (rest of the file is unchanged) ...
+  // (The main return statement is unchanged, it will just use the new import paths)
+   if (loading) return <div className="p-8">Loading dashboard...</div>;
   if (error) return <div className="p-8 text-red-500">Error: {error}</div>;
   
   const uniqueCategories = ['All', ...new Set(menuItems.map(item => item.category))];
@@ -368,8 +358,6 @@ const openModalForEdit = (item) => {
           >
             Staff Management
           </button>
-
-          {/* --- 2. ADD THE "INVENTORY LOGS" TAB --- */}
           <button
             onClick={() => setCurrentView('logs')}
             className={`py-2 px-4 text-lg font-semibold transition-colors ${
@@ -407,7 +395,6 @@ const openModalForEdit = (item) => {
             />
           )}
           
-          {/* --- 3. RENDER THE NEW COMPONENT --- */}
           {currentView === 'logs' && <InventoryLogsTable />}
 
         </main>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import ProfileDropdown from './ProfileDropdown'; // To get the logout button back
+import { useAuth } from '../../../context/AuthContext';
+import ProfileDropdown from '../../../components/ProfileDropdown';
 
 // This component is ONLY for the Admin Dashboard
 const AdminHeader = () => {

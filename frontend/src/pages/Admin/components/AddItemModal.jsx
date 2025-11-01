@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { X, UploadCloud, PlusCircle, Trash2 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext'; // --- 1. IMPORT useAuth ---
+import { useAuth } from '../../../context/AuthContext'; // --- 1. IMPORT useAuth ---
 
 const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) => {
   const { token } = useAuth(); // --- 2. GET TOKEN ---

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle } from "lucide-react";
-import ReceiptModal from "../../components/ReceiptModal"; // ✅ import your existing modal
+import ReceiptModal from "./components/ReceiptModal";
 import toast from "react-hot-toast";
 
 const PaymentSuccess = () => {

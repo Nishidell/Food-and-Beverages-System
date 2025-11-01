@@ -126,7 +126,7 @@ const RegisterPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-4 py-2 font-semibold text-white bg-primary rounded-md hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:bg-gray-400"
+              className="w-full px-4 py-2 font-semibold text-white bg-green-900 rounded-md hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:bg-gray-400"
             >
               {loading ? 'Creating...' : 'Create Account'}
             </button>

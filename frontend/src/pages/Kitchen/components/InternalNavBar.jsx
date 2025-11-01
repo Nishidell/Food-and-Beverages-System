@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import ProfileDropdown from './ProfileDropdown';
-import { useAuth } from '../context/AuthContext'; // We still need this for the profile
+import ProfileDropdown from '../../../components/ProfileDropdown';
+import { useAuth } from '../../../context/AuthContext'; 
 
 const InternalNavBar = () => {
   // Basic styling for the nav link items
@@ -11,7 +11,7 @@ const InternalNavBar = () => {
     padding: '8px 12px',
     borderRadius: '4px',
     fontWeight: 'bold',
-    fontSize: '18px', // text-lg
+    fontSize: '18px',
   };
 
   // Style for the active nav link

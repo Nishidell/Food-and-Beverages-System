@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Sliders, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-import InternalNavBar from '../../components/InternalNavBar';
 import { useAuth } from '../../context/AuthContext';
-
-// --- 1. IMPORT BOTH MODALS ---
-import IngredientModal from './IngredientModal'; 
-import AdjustStockModal from './AdjustStockModal'; 
+import InternalNavBar from './components/InternalNavBar';
+import IngredientModal from './components/IngredientModal'; 
+import AdjustStockModal from './components/AdjustStockModal'; 
 
 const InventoryPage = () => {
   const [ingredients, setIngredients] = useState([]);

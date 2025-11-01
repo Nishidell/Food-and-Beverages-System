@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext.jsx';
 import { useNavigate } from 'react-router-dom';
-import HeaderBar from '../../components/HeaderBar';
-import PromoBanner from '../../components/PromoBanner';
-import CategoryTabs from '../../components/CategoryTabs';
-import FoodGrid from '../../components/FoodGrid';
-import CartPanel from '../../components/CartPanel';
-import ImageModal from '../../components/ImageModal';
-import PaymentModal from '../../components/PaymentModal';
-import ReceiptModal from '../../components/ReceiptModal';
+import { useAuth } from '../../context/AuthContext';
+import HeaderBar from './components/HeaderBar';
+import PromoBanner from './components/PromoBanner';
+import CategoryTabs from './components/CategoryTabs';
+import FoodGrid from './components/FoodGrid';
+import CartPanel from './components/CartPanel';
+import ImageModal from './components/ImageModal';
+import PaymentModal from './components/PaymentModal';
+import ReceiptModal from './components/ReceiptModal';
 import toast from 'react-hot-toast';
 
 const primaryColor = { backgroundColor: '#0B3D2E' };

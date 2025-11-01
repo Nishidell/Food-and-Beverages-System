@@ -1,6 +1,6 @@
 import React from 'react';
 import { ShoppingCart, Search } from 'lucide-react';
-import ProfileDropdown from './ProfileDropdown'; // 1. Import ProfileDropdown
+import ProfileDropdown from '../../../components/ProfileDropdown';
 
 //temporary color object
 const primaryColor = {
