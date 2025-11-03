@@ -55,10 +55,11 @@ function MenuPage() {
         
         setItems(itemsData);
         setCategories(categoriesData);
-
+        toast.success('Menu loaded successfully.');
       } catch (err) {
         setError(err.message);
         console.error("Error fetching data:", err);
+          toast.error('Failed to load menu or categories.');
       }
     };
     fetchItems();
@@ -71,29 +72,34 @@ function MenuPage() {
     setCartItems(prevItems => {
       const isItemInCart = prevItems.find(item => item.item_id === clickedItem.item_id);
       if (isItemInCart) {
+         toast('Increased item quantity.', { icon: '➕' });
         return prevItems.map(item =>
           item.item_id === clickedItem.item_id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
+        toast.success('Added to cart!');
       return [...prevItems, { ...clickedItem, quantity: 1 }];
     });
   };
 
   const handleRemoveItem = (itemIdToRemove) => {
     setCartItems(prevItems => prevItems.filter(item => item.item_id !== itemIdToRemove));
+     toast('Item removed from cart.', { icon: '🗑️' });
   };
 
   const handleUpdateQuantity = (itemId, newQuantity) => {
     if (newQuantity <= 0) {
       handleRemoveItem(itemId);
+        toast('Item removed (0 quantity).', { icon: '⚠️' });
     } else {
       setCartItems(prevItems =>
         prevItems.map(item =>
           item.item_id === itemId ? { ...item, quantity: newQuantity } : item
         )
       );
+       toast('Quantity updated.', { icon: '🔄' });
     }
   };
 
