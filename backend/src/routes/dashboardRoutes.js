@@ -1,18 +1,22 @@
 import express from "express";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
-import {
-  getSalesSummary,
-  getOrders,
-  getLowStock,
-  getCustomers
-} from "../controllers/dashboardController.js";
+
+// We ONLY import the 'getDashboardSummary' function,
+// because it's the only one we need.
+import { getDashboardSummary } from "../controllers/dashboardController.js";
 
 const router = express.Router();
 
-// Routes
-router.get("/sales", protect, authorizeRoles("admin"), getSalesSummary);
-router.get("/orders", protect, authorizeRoles("admin"), getOrders);
-router.get("/low-stock", protect, authorizeRoles("admin"), getLowStock);
-router.get("/customers", protect, authorizeRoles("admin"), getCustomers);
+/**
+ * @route   GET /api/dashboard/summary
+ * @desc    Get all dashboard summary data in one request
+ * @access  Private (Admin)
+ */
+router.get("/summary", protect, authorizeRoles("admin"), getDashboardSummary);
+
+// ALL OTHER ROUTES ARE REMOVED.
+// This fixes the 'ReferenceError' crash because
+// we are no longer trying to use variables
+// that are not defined (like 'salesGrowth').
 
 export default router;
