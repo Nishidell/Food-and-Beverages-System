@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import AdminDashboard from './components/AdminDashboard';
 import MenuManagementTable from './components/MenuManagementTable';
 import AddItemModal from './components/AddItemModal';
 import AdminHeader from './components/AdminHeader';
@@ -68,7 +69,7 @@ function AdminPage() {
   const [categories, setCategories] = useState([]); 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState('analytics'); 
+  const [currentView, setCurrentView] = useState('dashboard'); 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
@@ -314,6 +315,18 @@ function AdminPage() {
         <div className="container mx-auto px-4 py-8">
         
           <nav className="flex space-x-4 border-b mb-8">
+              <button
+              onClick={() => setCurrentView('dashboard')}
+              style={{
+                padding: '8px 16px',
+                fontSize: '1.125rem',
+                fontWeight: 600,
+                color: currentView === 'dashboard' ? accentColor : '#6B7280',
+                borderBottom: currentView === 'dashboard' ? `2px solid ${accentColor}` : '2px solid transparent'
+              }}
+            >
+              Dashboard
+            </button>
             <button
               onClick={() => setCurrentView('analytics')}
               style={{
@@ -377,6 +390,7 @@ function AdminPage() {
           </nav>
 
           <main>
+            {currentView === 'dashboard' && <AdminDashboard />}
             {currentView === 'analytics' && <AnalyticsDashboard />}
             
             {loading && currentView !== 'analytics' && (
