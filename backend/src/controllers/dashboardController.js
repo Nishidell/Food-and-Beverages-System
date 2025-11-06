@@ -57,20 +57,16 @@ export const getDashboardSummary = async (req, res) => {
     const lowStockGrowth = 0; // Could implement historical snapshot if needed
 
     // --- Total Customers ---
-    const [customersTodayRows] = await pool.query(`
+    const [staffRows] = await pool.query(`
       SELECT COUNT(*) AS total
-      FROM customers
-      WHERE DATE(created_at) = CURDATE()
+      FROM staff
     `);
-
-    const [customersYesterdayRows] = await pool.query(`
-      SELECT COUNT(*) AS total
-      FROM customers
-      WHERE DATE(created_at) = CURDATE() - INTERVAL 1 DAY
-    `);
-
-    const totalCustomers = customersTodayRows[0].total || 0;
-    const customerGrowth = calculateGrowth(totalCustomers, customersYesterdayRows[0].total || 0);
+        // --- THIS IS THE FIX ---
+    // You must extract the .total property from the result.
+    // staffRows[0] is the object { total: 5 }
+    // staffRows[0].total is the NUMBER 5
+    const totalStaff = staffRows[0].total || 0;
+    // --- END OF FIX ---
 
     // --- Recent Orders (last 5) ---
     const [recentOrders] = await pool.query(`
@@ -99,8 +95,7 @@ export const getDashboardSummary = async (req, res) => {
         ordersGrowth,
         lowStock,
         lowStockGrowth,
-        totalCustomers,
-        customerGrowth,
+        totalStaff,
       },
       recentOrders,
       stockAlerts,
@@ -110,4 +105,4 @@ export const getDashboardSummary = async (req, res) => {
     console.error("Error fetching dashboard summary:", err);
     res.status(500).json({ message: "Server error fetching dashboard summary", error: err.message });
   }
-};
+};  
