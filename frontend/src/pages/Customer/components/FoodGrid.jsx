@@ -82,7 +82,7 @@ const FoodGrid = ({ items, onAddToCart, onImageClick }) => {
               
               {/* --- NEW: Promo Badge --- */}
               {isActive && (
-                <span className="absolute top-0 left-0 bg-red-600 text-white font-bold text-xs py-1 px-3 rounded-br-lg">
+                <span className="absolute top-0 left-0 bg-green-700 text-white font-bold text-xs py-1 px-3 rounded-br-lg">
                   {discountPercent}% OFF
                 </span>
               )}
@@ -100,8 +100,8 @@ const FoodGrid = ({ items, onAddToCart, onImageClick }) => {
                 
                 {/* --- NEW: Price Display Logic --- */}
                 {isActive ? (
-                  <div className="flex flex-col">
-                    <p className="text-2xl font-semibold text-red-600">
+                  <div className="flex flex-row items-baseline gap-2">
+                    <p className="text-2xl font-semibold text-green-700">
                       ₱{parseFloat(displayPrice).toFixed(2)}
                     </p>
                     <p className="text-lg font-normal text-gray-500 line-through">
