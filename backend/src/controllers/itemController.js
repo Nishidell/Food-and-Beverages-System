@@ -5,8 +5,8 @@ import pool from "../config/mysql.js";
 // @access  Public
 export const getAllItems = async (req, res) => {
     try {
-        // --- FIX: JOIN with categories table ---
-       const sql = `
+        // 1. Get all menu items with category
+        const itemSql = `
             SELECT 
                 mi.item_id, 
                 mi.item_name, 
@@ -21,22 +21,51 @@ export const getAllItems = async (req, res) => {
             FROM menu_items mi
             LEFT JOIN categories c ON mi.category_id = c.category_id
         `;
-        const [items] = await pool.query(sql);
+        const [items] = await pool.query(itemSql);
         
-        const itemIds = items.map(item => item.item_id);
-        if (itemIds.length > 0) {
-            const [recipes] = await pool.query(
-                `SELECT mi.menu_item_id, i.ingredient_id, i.name, mi.quantity_consumed, i.unit_of_measurement
-                 FROM menu_item_ingredients mi
-                 JOIN ingredients i ON mi.ingredient_id = i.ingredient_id
-                 WHERE mi.menu_item_id IN (?)`,
-                [itemIds]
-            );
-
-            items.forEach(item => {
-                item.ingredients = recipes.filter(r => r.menu_item_id === item.item_id);
-            });
+        if (items.length === 0) {
+            return res.json([]);
         }
+
+        // --- NEW LOGIC ---
+        // 2. Get all recipes
+        const itemIds = items.map(item => item.item_id);
+        const [recipes] = await pool.query(
+            `SELECT mi.menu_item_id, i.ingredient_id, mi.quantity_consumed
+             FROM menu_item_ingredients mi
+             JOIN ingredients i ON mi.ingredient_id = i.ingredient_id
+             WHERE mi.menu_item_id IN (?)`,
+            [itemIds]
+        );
+
+        // 3. Get all ingredient stock levels and put them in a Map for fast lookup
+        const [ingredients] = await pool.query("SELECT ingredient_id, stock_level FROM ingredients");
+        const stockMap = new Map(ingredients.map(ing => [ing.ingredient_id, parseFloat(ing.stock_level)]));
+        // --- END OF NEW LOGIC ---
+
+        // 4. Combine items, recipes, and check stock
+        items.forEach(item => {
+            const itemRecipes = recipes.filter(r => r.menu_item_id === item.item_id);
+            item.ingredients = itemRecipes; // Add recipe for reference
+            
+            // --- NEW AVAILABILITY CHECK ---
+            item.is_available = true; // Assume it's available by default
+
+            // If it has no recipe, it can't be sold
+            if (itemRecipes.length === 0) {
+                item.is_available = false;
+            }
+
+            for (const recipeItem of itemRecipes) {
+                const availableStock = stockMap.get(recipeItem.ingredient_id) || 0;
+                // If *any* ingredient is below the required amount, mark as unavailable
+                if (availableStock < recipeItem.quantity_consumed) {
+                    item.is_available = false;
+                    break; // No need to check other ingredients
+                }
+            }
+            // --- END OF NEW CHECK ---
+        });
         
         res.json(items);
     } catch (error) {
@@ -50,7 +79,6 @@ export const getAllItems = async (req, res) => {
 export const getItemById = async (req, res) => {
     try {
         const { id } = req.params;
-        // --- FIX: JOIN with categories table ---
         const sql = `
             SELECT 
                 mi.item_id, 
@@ -63,7 +91,6 @@ export const getItemById = async (req, res) => {
                 mi.is_promo,
                 mi.promo_discount_percentage,
                 mi.promo_expiry_date
-
             FROM menu_items mi
             LEFT JOIN categories c ON mi.category_id = c.category_id
             WHERE mi.item_id = ?
@@ -84,6 +111,22 @@ export const getItemById = async (req, res) => {
         );
         item.ingredients = recipes;
 
+        // --- NEW AVAILABILITY CHECK FOR SINGLE ITEM ---
+        item.is_available = true;
+        if (recipes.length === 0) {
+            item.is_available = false;
+        } else {
+            for (const recipeItem of recipes) {
+                const [stockRows] = await pool.query("SELECT stock_level FROM ingredients WHERE ingredient_id = ?", [recipeItem.ingredient_id]);
+                const availableStock = stockRows[0] ? parseFloat(stockRows[0].stock_level) : 0;
+                if (availableStock < recipeItem.quantity_consumed) {
+                    item.is_available = false;
+                    break;
+                }
+            }
+        }
+        // --- END OF NEW CHECK ---
+
         res.json(item);
     } catch (error) {
         res.status(500).json({ message: "Error fetching menu item", error: error.message });
@@ -94,10 +137,9 @@ export const getItemById = async (req, res) => {
 // @route   POST /api/admin/items
 // @access  Admin
 export const createMenuItem = async (req, res) => {
-
     const { 
         item_name, category_id, price, image_url, description, ingredients, 
-        is_promo, promo_discount_percentage, promo_expiry_date
+        is_promo, promo_discount_percentage, promo_expiry_date 
     } = req.body; 
 
     if (!item_name || !category_id || !price) { 
@@ -113,14 +155,12 @@ export const createMenuItem = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // --- 2. UPDATE SQL QUERY ---
         const sql = `
             INSERT INTO menu_items 
             (item_name, category_id, price, image_url, description, is_promo, promo_discount_percentage, promo_expiry_date) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `;
         
-        // --- 3. UPDATE SQL PARAMETERS (HANDLE NULLS) ---
         const [result] = await connection.query(sql, [
             item_name, 
             category_id, 
@@ -129,7 +169,7 @@ export const createMenuItem = async (req, res) => {
             description,
             is_promo ? 1 : 0,
             is_promo ? promo_discount_percentage : null,
-            is_promo ? promo_expiry_date: null
+            is_promo ? promo_expiry_date : null
         ]);
         const newItemId = result.insertId;
 
@@ -156,7 +196,6 @@ export const createMenuItem = async (req, res) => {
 // @access  Admin
 export const updateMenuItem = async (req, res) => {
     const { id } = req.params;
-    // --- 1. ADD NEW FIELDS FROM REQ.BODY ---
     const { 
         item_name, category_id, price, image_url, description, ingredients,
         is_promo, promo_discount_percentage, promo_expiry_date
@@ -175,15 +214,13 @@ export const updateMenuItem = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // --- 2. UPDATE SQL QUERY ---
         const sql = `
             UPDATE menu_items 
             SET item_name = ?, category_id = ?, price = ?, image_url = ?, description = ?,
-                is_promo = ?, promo_discount_percentage = ?, promo_expiry_date= ? 
+                is_promo = ?, promo_discount_percentage = ?, promo_expiry_date = ? 
             WHERE item_id = ?
         `;
         
-        // --- 3. UPDATE SQL PARAMETERS (HANDLE NULLS) ---
         const [result] = await connection.query(sql, [
             item_name, 
             category_id, 
@@ -192,7 +229,7 @@ export const updateMenuItem = async (req, res) => {
             description, 
             is_promo ? 1 : 0,
             is_promo ? promo_discount_percentage : null,
-            is_promo ? promo_expiry_date: null,
+            is_promo ? promo_expiry_date : null,
             id
         ]);
 
@@ -242,7 +279,6 @@ export const deleteMenuItem = async (req, res) => {
 
 
 // --- HELPER FUNCTIONS FOR STOCK MANAGEMENT ---
-// (These are unchanged)
 
 /**
  * @desc Validates if there is enough stock for a list of items.

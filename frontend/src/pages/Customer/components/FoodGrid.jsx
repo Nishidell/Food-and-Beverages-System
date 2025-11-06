@@ -14,7 +14,7 @@ const FoodGrid = ({ items, onAddToCart, onImageClick }) => {
     return <p className="text-center mt-12 text-gray-500">No items match your search.</p>;
   }
 
-  // --- NEW: Helper function to check if promo is active ---
+  // Helper function to check if promo is active
   const getPromoPrice = (item) => {
     // Check for all required promo fields
     if (!item.is_promo || !item.promo_discount_percentage || !item.promo_expiry_date) {
@@ -41,27 +41,26 @@ const FoodGrid = ({ items, onAddToCart, onImageClick }) => {
       discountPercent: item.promo_discount_percentage,
     };
   };
-  // --- END OF NEW FUNCTION ---
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mt-8">
       {items.map((item) => {
         
-        // --- NEW: Calculate price on each render ---
         const { isActive, displayPrice, originalPrice, discountPercent } = getPromoPrice(item);
         
-        // --- THIS IS THE FIX ---
         // Create a *new item object* with the correct price to add to the cart
         const itemForCart = {
           ...item,
           price: displayPrice // Overwrite price with the discounted price
         };
-        // --- END OF FIX ---
+        
+        // The card is now dimmer if it's unavailable, but has no text overlay
+        const cardOpacity = !item.is_available ? 'opacity-80' : '';
 
         return (
           <div
             key={item.item_id}
-            className="rounded-lg shadow-lg overflow-hidden flex flex-col"
+            className={`rounded-lg shadow-lg overflow-hidden flex flex-col ${cardOpacity}`}
             style={secondaryColor}
           >
             <div className="relative">
@@ -80,13 +79,12 @@ const FoodGrid = ({ items, onAddToCart, onImageClick }) => {
                 }
               />
               
-              {/* --- NEW: Promo Badge --- */}
+              {/* Promo Badge */}
               {isActive && (
-                <span className="absolute top-0 left-0 bg-green-700 text-white font-bold text-xs py-1 px-3 rounded-br-lg">
+                <span className="absolute top-0 left-0 bg-red-600 text-white font-bold text-xs py-1 px-3 rounded-br-lg">
                   {discountPercent}% OFF
                 </span>
               )}
-              {/* --- END OF NEW BADGE --- */}
             </div>
 
             {/* All text inside padded area */}
@@ -98,7 +96,7 @@ const FoodGrid = ({ items, onAddToCart, onImageClick }) => {
 
               <div className="mt-auto flex justify-between items-center">
                 
-                {/* --- NEW: Price Display Logic --- */}
+                {/* Price Display Logic */}
                 {isActive ? (
                   <div className="flex flex-row items-baseline gap-2">
                     <p className="text-2xl font-semibold text-green-700">
@@ -113,15 +111,27 @@ const FoodGrid = ({ items, onAddToCart, onImageClick }) => {
                     ₱{parseFloat(displayPrice).toFixed(2)}
                   </p>
                 )}
-                {/* --- END OF NEW PRICE LOGIC --- */}
                 
-                <button
-                  onClick={() => onAddToCart(itemForCart)} // <-- Pass the item with the correct price
-                  style={primaryColor}
-                  className="text-white font-bold py-2 px-6 rounded-full hover:bg-orange-600 transition-transform transform hover:scale-105"
-                >
-                  Add
-                </button>
+                {/* --- CONDITIONAL ADD BUTTON --- */}
+                {item.is_available ? (
+                  <button
+                    onClick={() => onAddToCart(itemForCart)}
+                    style={primaryColor}
+                    className="text-white font-bold py-2 px-6 rounded-full hover:bg-orange-600 transition-transform transform hover:scale-105"
+                  >
+                    Add
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    style={{ ...primaryColor, opacity: 0.5 }} // <-- THIS IS THE CHANGED LINE
+                    className="text-white font-bold py-2 px-6 rounded-full cursor-not-allowed"
+                  >
+                    Unavailable
+                  </button>
+                )}
+                {/* --- END OF CONDITIONAL BUTTON --- */}
+
               </div>
             </div>
           </div>
