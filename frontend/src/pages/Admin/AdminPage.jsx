@@ -1,63 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import AdminDashboard from './components/AdminDashboard';
+import AnalyticsDashboard from './components/AnalyticsDashboard';
+import OrderManagement from './components/OrderManangement'   
 import MenuManagementTable from './components/MenuManagementTable';
 import AddItemModal from './components/AddItemModal';
 import AdminHeader from './components/AdminHeader';
 import StaffManagementTable from './components/StaffManagementTable';
 import StaffModal from './components/StaffModal';
 import InventoryLogsTable from './components/InventoryLogsTable';
-import AnalyticsDashboard from './components/AnalyticsDashboard'; 
 import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../utils/apiClient';
 
-// ... (OrderManagementTable component is unchanged) ...
-const OrderManagementTable = ({ orders }) => (
-  <div className="bg-white shadow-md rounded-lg overflow-hidden">
-    <h2 className="text-2xl font-bold p-6">Order Management</h2>
-    <table className="min-w-full leading-normal">
-      <thead>
-        <tr className="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
-          <th className="py-3 px-6 text-left">Order ID</th>
-          <th className="py-3 px-6 text-left">Customer Name</th>
-          <th className="py-3 px-6 text-left">Type</th>
-          <th className="py-3 px-6 text-left">Location</th>
-          <th className="py-3 px-6 text-center">Total</th>
-          <th className="py-3 px-6 text-center">Status</th>
-          <th className="py-3 px-6 text-left">Date</th>
-        </tr>
-      </thead>
-      <tbody className="text-gray-600 text-sm font-light">
-        {orders.map((order) => (
-          <tr key={order.order_id} className="border-b border-gray-200 hover:bg-gray-50">
-            <td className="py-3 px-6 text-left whitespace-nowrap">{order.order_id}</td>
-            <td className="py-3 px-6 text-left">
-              {order.first_name || order.last_name ? `${order.first_name} ${order.last_name}` : 'Guest'}
-            </td>
-            <td className="py-3 px-6 text-left">{order.order_type}</td>
-            <td className="py-3 px-6 text-left">{order.delivery_location}</td>
-            <td className="py-3 px-6 text-center">
-              ₱{parseFloat(order.total_amount || 0).toFixed(2)}
-            </td>
-            <td className="py-3 px-6 text-center">
-              <span
-                className={`py-1 px-3 rounded-full text-xs font-semibold ${
-                  order.status === 'Pending' ? 'bg-yellow-200 text-yellow-800' :
-                  order.status === 'Completed' ? 'bg-green-200 text-green-800' :
-                  order.status === 'Cancelled' ? 'bg-red-200 text-red-800' :
-                  'bg-gray-200 text-gray-800'
-                }`}
-              >
-                {order.status}
-              </span>
-            </td>
-            <td className="py-3 px-6 text-left">{new Date(order.order_date).toLocaleString()}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
 
 
 function AdminPage() {
@@ -68,7 +23,7 @@ function AdminPage() {
   const [categories, setCategories] = useState([]); 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState('analytics'); 
+  const [currentView, setCurrentView] = useState('dashboard'); 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
@@ -314,6 +269,18 @@ function AdminPage() {
         <div className="container mx-auto px-4 py-8">
         
           <nav className="flex space-x-4 border-b mb-8">
+              <button
+              onClick={() => setCurrentView('dashboard')}
+              style={{
+                padding: '8px 16px',
+                fontSize: '1.125rem',
+                fontWeight: 600,
+                color: currentView === 'dashboard' ? accentColor : '#6B7280',
+                borderBottom: currentView === 'dashboard' ? `2px solid ${accentColor}` : '2px solid transparent'
+              }}
+            >
+              Dashboard
+            </button>
             <button
               onClick={() => setCurrentView('analytics')}
               style={{
@@ -377,6 +344,7 @@ function AdminPage() {
           </nav>
 
           <main>
+            {currentView === 'dashboard' && <AdminDashboard />}
             {currentView === 'analytics' && <AnalyticsDashboard />}
             
             {loading && currentView !== 'analytics' && (
@@ -391,7 +359,7 @@ function AdminPage() {
                </div>
             )}
             
-            {!loading && !error && currentView === 'orders' && <OrderManagementTable orders={orders} />}
+            {!loading && !error && currentView === 'orders' && <OrderManagement orders={orders} />}
             {!loading && !error && currentView === 'menu' && (
               <MenuManagementTable
                 items={filteredMenuItems} 
