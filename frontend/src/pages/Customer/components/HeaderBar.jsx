@@ -9,7 +9,7 @@ const primaryColor = {
 
 export default function HeaderBar({ cartCount, onCartToggle, searchTerm, onSearchChange, notificationCount, onNotificationToggle }) {
   return (
-    <header style={primaryColor} className="grid grid-cols-3 items-center px-6 py-4 shadow-sm sticky top-0 z-10" >
+    <header style={primaryColor} className="grid grid-cols-3 items-center px-6 py-4 shadow-sm" >
 
       {/* Left Column: Logo */}
       <div className="justify-self-start">
