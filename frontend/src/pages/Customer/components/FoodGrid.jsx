@@ -2,13 +2,6 @@ import React from 'react';
 
 // --- All styles are defined here ---
 
-const gridStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-  gap: '32px',
-  marginTop: '32px',
-};
-
 const cardStyle = {
   backgroundColor: '#fff2e0', // Your 'secondaryColor'
   borderRadius: '0.5rem', // 8px
@@ -104,7 +97,7 @@ const unavailableButtonStyle = {
 
 // --- End of styles ---
 
-const FoodGrid = ({ items, onAddToCart, onImageClick }) => {
+const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle }) => {
   if (!items || items.length === 0) {
     return <p style={{ textAlign: 'center', marginTop: '48px', color: 'white' }}>No items match your search.</p>;
   }
@@ -131,7 +124,7 @@ const FoodGrid = ({ items, onAddToCart, onImageClick }) => {
   };
 
   return (
-    <div style={gridStyle}>
+    <div style={layoutStyle}>
       {items.map((item) => {
         
         const { isActive, displayPrice, originalPrice, discountPercent } = getPromoPrice(item);

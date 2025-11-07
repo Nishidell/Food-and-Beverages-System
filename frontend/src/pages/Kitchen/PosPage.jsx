@@ -28,6 +28,14 @@ function PosPage() {
   const [totalDue, setTotalDue] = useState(0);
 
   const { user, token } = useAuth();
+
+  const posPageGridStyle = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, 320px)',
+  justifyContent: 'center', // This centers the card(s)
+  gap: '24px',
+  marginTop: '32px',
+};
   
   // Fetch Menu Items and Categories
   useEffect(() => {
@@ -230,10 +238,11 @@ const handleOpenPaymentModal = (grandTotal) => {
             onSelectCategory={handleSelectCategory}
           />
           <FoodGrid
-            items={filteredItems}
-            onAddToCart={handleAddToCart}
-            onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
-          />
+       items={filteredItems}
+       onAddToCart={handleAddToCart}
+       onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
+       layoutStyle={posPageGridStyle}
+        />
         </main>
 
         {/* Fixed Cart (Right Side) */}

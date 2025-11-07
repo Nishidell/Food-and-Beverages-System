@@ -14,6 +14,15 @@ import toast from 'react-hot-toast';
 import apiClient from '../../utils/apiClient';
 
 const primaryColor = { backgroundColor: '#0B3D2E' };
+const menuPageGridStyle = {
+  display: 'grid',
+  // This creates columns of 320px, and 'auto-fit' adds as many as fit.
+  gridTemplateColumns: 'repeat(auto-fit, 320px)',
+  // THIS IS THE FIX: It centers the grid of cards on the page.
+  justifyContent: 'center', 
+  gap: '32px',
+  marginTop: '32px',
+};
 
 function MenuPage() {
   const [items, setItems] = useState([]);
@@ -291,10 +300,11 @@ function MenuPage() {
           onSelectCategory={handleSelectCategory}
         />
         <FoodGrid
-          items={filteredItems}
-          onAddToCart={handleAddToCart}
-          onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
-        />
+        items={filteredItems}
+        onAddToCart={handleAddToCart}
+        onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
+        layoutStyle={menuPageGridStyle} 
+      />
       </main>
 
       <CartPanel
