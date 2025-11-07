@@ -1,39 +1,127 @@
 import React from 'react';
 
-// Temporary color objects
-const primaryColor = {
-  backgroundColor: '#0B3D2E'
+// --- All styles are defined here ---
+
+const gridStyle = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+  gap: '32px',
+  marginTop: '32px',
 };
 
-const secondaryColor = {
-  backgroundColor: '#fff2e0'
+const cardStyle = {
+  backgroundColor: '#fff2e0', // Your 'secondaryColor'
+  borderRadius: '0.5rem', // 8px
+  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
+  overflow: 'hidden',
+  display: 'flex',
+  flexDirection: 'column',
 };
+
+const cardImageStyle = {
+  width: '100%',
+  height: '224px', // 14rem
+  objectFit: 'cover',
+  cursor: 'pointer',
+};
+
+const promoBadgeStyle = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  backgroundColor: '#DC2626', // red-600
+  color: 'white',
+  fontWeight: 'bold',
+  fontSize: '0.75rem', // 12px
+  padding: '4px 12px',
+  borderBottomRightRadius: '0.5rem', // 8px
+};
+
+const contentStyle = {
+  padding: '24px',
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+};
+
+const itemNameStyle = {
+  fontSize: '1.5rem', // 24px
+  fontWeight: 'bold',
+  color: '#0B3D2E', // Dark green text
+  marginBottom: '16px',
+};
+
+const itemDescriptionStyle = {
+  fontSize: '1rem', // 16px
+  color: '#053a34', // Dark green text
+  marginBottom: '8px',
+  flex: 1, // Pushes price/button to bottom
+};
+
+const footerStyle = {
+  marginTop: 'auto', // Pushes this to the bottom
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'flex-end', // Aligns price (which is taller) and button
+};
+
+const priceContainerStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+};
+
+const priceStyle = {
+  fontSize: '1.5rem', // 24px
+  fontWeight: '600',
+  color: '#053a34',
+};
+
+const originalPriceStyle = {
+  fontSize: '1rem', // 16px
+  fontWeight: 'normal',
+  color: '#6B7280', // gray-500
+  textDecoration: 'line-through',
+};
+
+// --- REMOVED availableTagStyle and buttonContainerStyle ---
+
+const baseButtonStyle = {
+  backgroundColor: '#0B3D2E', // Your 'primaryColor'
+  color: 'white',
+  fontWeight: 'bold',
+  padding: '8px 24px',
+  borderRadius: '0.375rem', // 6px (matches design)
+  border: 'none',
+  cursor: 'pointer',
+};
+
+const unavailableButtonStyle = {
+  ...baseButtonStyle,
+  backgroundColor: '#6B7280', // gray-500
+  opacity: 0.7,
+  cursor: 'not-allowed',
+};
+
+// --- End of styles ---
 
 const FoodGrid = ({ items, onAddToCart, onImageClick }) => {
   if (!items || items.length === 0) {
-    return <p className="text-center mt-12 text-gray-500">No items match your search.</p>;
+    return <p style={{ textAlign: 'center', marginTop: '48px', color: 'white' }}>No items match your search.</p>;
   }
 
-  // Helper function to check if promo is active
+  // Helper function (no changes)
   const getPromoPrice = (item) => {
-    // Check for all required promo fields
     if (!item.is_promo || !item.promo_discount_percentage || !item.promo_expiry_date) {
       return { isActive: false, displayPrice: item.price };
     }
-
-    // Check if the expiry date has passed
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Set to start of today
+    today.setHours(0, 0, 0, 0); 
     const expiryDate = new Date(item.promo_expiry_date);
-
     if (expiryDate < today) {
       return { isActive: false, displayPrice: item.price };
     }
-
-    // If active, calculate the new price
     const discount = parseFloat(item.promo_discount_percentage) / 100;
     const discountedPrice = parseFloat(item.price) * (1 - discount);
-
     return {
       isActive: true,
       displayPrice: discountedPrice,
@@ -43,27 +131,27 @@ const FoodGrid = ({ items, onAddToCart, onImageClick }) => {
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mt-8">
+    <div style={gridStyle}>
       {items.map((item) => {
         
         const { isActive, displayPrice, originalPrice, discountPercent } = getPromoPrice(item);
         
-        // Create a *new item object* with the correct price to add to the cart
         const itemForCart = {
           ...item,
-          price: displayPrice // Overwrite price with the discounted price
+          price: displayPrice 
         };
         
-        // The card is now dimmer if it's unavailable, but has no text overlay
-        const cardOpacity = !item.is_available ? 'opacity-80' : '';
+        const dynamicCardStyle = {
+          ...cardStyle,
+          opacity: !item.is_available ? 0.8 : 1,
+        };
 
         return (
           <div
             key={item.item_id}
-            className={`rounded-lg shadow-lg overflow-hidden flex flex-col ${cardOpacity}`}
-            style={secondaryColor}
+            style={dynamicCardStyle}
           >
-            <div className="relative">
+            <div style={{ position: 'relative' }}>
               <img
                 src={
                   item.image_url
@@ -71,7 +159,7 @@ const FoodGrid = ({ items, onAddToCart, onImageClick }) => {
                     : 'https://via.placeholder.com/400x300.png?text=No+Image'
                 }
                 alt={item.item_name}
-                className="w-full h-56 object-cover cursor-pointer"
+                style={cardImageStyle}
                 onClick={() =>
                   onImageClick(
                     item.image_url ? `http://localhost:3000${item.image_url}` : null
@@ -79,53 +167,52 @@ const FoodGrid = ({ items, onAddToCart, onImageClick }) => {
                 }
               />
               
-              {/* Promo Badge */}
               {isActive && (
-                <span className="absolute top-0 left-0 bg-red-600 text-white font-bold text-xs py-1 px-3 rounded-br-lg">
+                <span style={promoBadgeStyle}>
                   {discountPercent}% OFF
                 </span>
               )}
             </div>
 
-            {/* All text inside padded area */}
-            <div className="p-6 flex-1 flex flex-col">
-              <h3 className="text-2xl font-bold text-gray-800 mb-4">{item.item_name}</h3>
-              <p className="text-lg text-green-900 mb-2">
+            <div style={contentStyle}>
+              <h3 style={itemNameStyle}>{item.item_name}</h3>
+              <p style={itemDescriptionStyle}>
                 {item.description || 'No description available.'}
               </p>
 
-              <div className="mt-auto flex justify-between items-center">
+              {/* --- UPDATED FOOTER --- */}
+              <div style={footerStyle}>
                 
                 {/* Price Display Logic */}
-                {isActive ? (
-                  <div className="flex flex-row items-baseline gap-2">
-                    <p className="text-2xl font-semibold text-green-700">
+                <div style={priceContainerStyle}>
+                  {isActive ? (
+                    <>
+                      <p style={priceStyle}>
+                        ₱{parseFloat(displayPrice).toFixed(2)}
+                      </p>
+                      <p style={originalPriceStyle}>
+                        ₱{parseFloat(originalPrice).toFixed(2)}
+                      </p>
+                    </>
+                  ) : (
+                    <p style={priceStyle}>
                       ₱{parseFloat(displayPrice).toFixed(2)}
                     </p>
-                    <p className="text-lg font-normal text-gray-500 line-through">
-                      ₱{parseFloat(originalPrice).toFixed(2)}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-2xl font-semibold text-gray-900">
-                    ₱{parseFloat(displayPrice).toFixed(2)}
-                  </p>
-                )}
+                  )}
+                </div>
                 
-                {/* --- CONDITIONAL ADD BUTTON --- */}
+                {/* --- CONDITIONAL BUTTON (NO TAG) --- */}
                 {item.is_available ? (
                   <button
                     onClick={() => onAddToCart(itemForCart)}
-                    style={primaryColor}
-                    className="text-white font-bold py-2 px-6 rounded-full hover:bg-orange-600 transition-transform transform hover:scale-105"
+                    style={baseButtonStyle}
                   >
                     Add
                   </button>
                 ) : (
                   <button
                     disabled
-                    style={{ ...primaryColor, opacity: 0.5 }} // <-- THIS IS THE CHANGED LINE
-                    className="text-white font-bold py-2 px-6 rounded-full cursor-not-allowed"
+                    style={unavailableButtonStyle}
                   >
                     Unavailable
                   </button>
@@ -133,6 +220,8 @@ const FoodGrid = ({ items, onAddToCart, onImageClick }) => {
                 {/* --- END OF CONDITIONAL BUTTON --- */}
 
               </div>
+              {/* --- END OF UPDATED FOOTER --- */}
+
             </div>
           </div>
         );

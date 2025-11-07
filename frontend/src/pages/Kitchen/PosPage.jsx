@@ -218,7 +218,7 @@ const handleOpenPaymentModal = (grandTotal) => {
     .filter(item => item.item_name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
-    <div className="flex flex-col h-screen" style={{ backgroundColor: '#f9fafb' }}>
+    <div className="flex flex-col h-screen" style={{ backgroundColor: '#0B3D2E' }}>
       <InternalNavBar />
       <div className="flex flex-1 overflow-hidden">
         

@@ -16,7 +16,7 @@ const pageTitleStyle = {
   fontWeight: 'bold',
   marginBottom: '24px',
   textAlign: 'center',
-  color: '#FFFFFF', // Make the title white
+  color: '#F9A825', // Make the title white
 };
 
 const getStatusStyles = (status) => {
@@ -141,7 +141,7 @@ const styles = {
     justifyContent: 'center',
   },
   filterContainer: {
-  backgroundColor: '#3C2A21', // Dark brown background
+  backgroundColor: '#fff2e0', // Dark brown background
   padding: '16px',
   borderRadius: '0.5rem',
   marginBottom: '24px',
@@ -159,14 +159,14 @@ filterLabel: {
   fontSize: '0.875rem',
   fontWeight: '600',
   marginBottom: '4px',
-  color: '#F9A825', // Use the accent orange for the label
+  color: 'black', // Use the accent orange for the label
 },
 filterSelect: {
   padding: '10px',
-  border: '1px solid #785A4A', // A lighter brown border
+  border: '1px solid #ffffff', // A lighter brown border
   borderRadius: '0.375rem',
-  backgroundColor: '#503C30', // A slightly lighter brown for the box
-  color: '#FFFFFF', // White text
+  backgroundColor: '#ffffff', // A slightly lighter brown for the box
+  color: 'black', // White text
   fontSize: '1rem',
   cursor: 'pointer',
 },
