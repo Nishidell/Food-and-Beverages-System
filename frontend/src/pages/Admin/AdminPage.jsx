@@ -268,7 +268,7 @@ function AdminPage() {
         <AdminHeader />
         <div className="container mx-auto px-4 py-8 ">
         
-          <nav className="flex space-x-8 border-b mb-8 ">
+          <nav className="flex space-x-4 border-b mb-8" style={{ justifyContent: 'center' }}>
               <button
               onClick={() => setCurrentView('dashboard')}
               style={{

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import ProfileDropdown from '../../../components/ProfileDropdown';
@@ -18,9 +18,31 @@ const AdminHeader = () => {
     border: '1px solid white',
   };
 
+const [isHovered, setIsHovered] = useState(false);
+
+// This is the base style (maroon background, white text/border)
+const baseLinkStyle = {
+  color: 'white',
+  backgroundColor: '#480c1b', // Your maroon background
+  border: '1px solid white',
+  textDecoration: 'none',
+  padding: '8px 12px',
+  borderRadius: '6px',
+  fontWeight: 'bold',
+  fontSize: '16px',
+  transition: 'background-color 0.2s', // Smooth transition
+};
+
+// This style will be applied on hover
+const hoverLinkStyle = {
+  backgroundColor: '#F9A825', // Your orange accent
+  color: '#3C2A21', // Dark text for contrast
+  border: '1px solid #F9A825',
+};
+
   return (
     <nav style={{
-        backgroundColor: '#480c1b', // The dark brown/maroon color you wanted
+        backgroundColor: '#480c1b',
         color: 'white',
         display: 'flex',
         alignItems: 'center',
@@ -47,11 +69,13 @@ const AdminHeader = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
         {/* This is the "Go to Kitchen" link you requested */}
         <Link
-          to="/kitchen"
-          style={navLinkStyle}
-        >
-          Go to Kitchen Portal
-        </Link>
+       to="/kitchen"
+       style={isHovered ? { ...baseLinkStyle, ...hoverLinkStyle } : baseLinkStyle}
+       onMouseEnter={() => setIsHovered(true)}
+       onMouseLeave={() => setIsHovered(false)}
+      >
+       Go to Kitchen Portal
+      </Link>
         
         {/* This brings back your profile and logout button */}
         <ProfileDropdown />
@@ -59,5 +83,6 @@ const AdminHeader = () => {
     </nav>
   );
 };
+
 
 export default AdminHeader;

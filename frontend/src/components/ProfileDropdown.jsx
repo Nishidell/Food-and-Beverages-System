@@ -32,14 +32,24 @@ const ProfileDropdown = () => {
   
   if (!user) return null; // Don't show if not logged in
 
+  const profileIconStyle = {
+  backgroundColor: '#F9A825', // Your orange accent color
+  color: '#3C2A21',           // Dark text/icon color for contrast
+  padding: '12px',             // 'p-3'
+  borderRadius: '50%',         // 'rounded-full'
+  boxShadow: '0 4px 6px rgba(0,0,0,0.1)', // 'shadow-md'
+  border: 'none',
+  cursor: 'pointer',
+};
+
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Profile Icon Button */}
-      <button
-        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-        className="bg-gray-200 text-primary p-3 rounded-full shadow-md hover:bg-gray-300 transition"
+           {/* Profile Icon Button */}
+            <button
+       onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+       style={profileIconStyle}
       >
-        <User size={22} />
+       <User size={22} />
       </button>
 
       {/* Dropdown Menu */}
