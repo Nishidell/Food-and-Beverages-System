@@ -151,9 +151,8 @@ const InventoryPage = () => {
           </h1>
           <button
             onClick={handleOpenAddModal}
-            className="flex items-center gap-2 bg-green-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-800 transition-colors"
+            className="bg-[#F9A825] text-white font-bold py-2 px-6 rounded hover:bg-[#c47b04] transition-colors"
           >
-            <Plus size={20} />
             Add New Ingredient
           </button>
         </div>

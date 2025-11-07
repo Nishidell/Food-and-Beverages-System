@@ -122,7 +122,7 @@ const unitOptions = [
             </button>
             <button
               type="submit"
-              className="py-2 px-4 bg-green-700 text-white rounded-md hover:bg-green-800"
+               className="bg-[#F9A825] text-white font-bold py-2 px-6 rounded hover:bg-[#c47b04] transition-colors"
             >
               Save Ingredient
             </button>

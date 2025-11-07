@@ -4,6 +4,57 @@
     import { useAuth } from '../../context/AuthContext';
     import apiClient from '../../utils/apiClient'; // <-- 1. IMPORT
 
+const styles = {
+  card: {
+    backgroundColor: '#fff2e0', // The user's requested color
+    borderRadius: '0.5rem',
+    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
+    padding: '16px',
+    color: '#3C2A21', // The new brown text color
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+  },
+  cardHeader: {
+    marginBottom: '12px',
+    borderBottom: '1px solid #D1C0B6', // A light brown border
+    paddingBottom: '8px',
+  },
+  cardTitle: {
+    fontWeight: 'bold',
+    fontSize: '1.125rem', // 18px
+    color: '#3C2A21',
+  },
+  cardSubText: {
+    fontSize: '0.75rem', // 12px
+    color: '#503C30', // A slightly lighter brown
+  },
+  infoText: {
+    fontSize: '0.875rem', // 14px
+    color: '#3C2A21',
+  },
+  infoLabel: {
+    fontWeight: '500', // medium
+  },
+  itemSectionTitle: {
+    fontWeight: '600',
+    fontSize: '0.875rem',
+    marginTop: '8px',
+    color: '#3C2A21',
+  },
+  itemText: {
+    fontSize: '0.875rem',
+    marginLeft: '8px',
+    color: '#3C2A21',
+  },
+  itemInstructions: {
+    fontSize: '0.75rem',
+    color: '#785A4A', // Lighter brown
+    fontStyle: 'italic',
+    paddingLeft: '16px',
+  }
+};
+
     function ArchivePage() {
       const [servedOrders, setServedOrders] = useState([]);
       const [error, setError] = useState(null);
@@ -87,37 +138,40 @@
           <InternalNavBar />
           <div className="bg-figma-cream min-h-screen px-4 py-8">
             <div className="container mx-auto">
-              <h1 className="text-3xl font-bold mb-6 text-center text-figma-dark-green">Served Orders Archive</h1>
+              <h1 className="text-3xl font-bold mb-6 text-center" style={{ color: '#3C2A21' }}>Served Orders Archive</h1>
 
               {servedOrders.length === 0 ? (
                 <p className="text-center text-gray-500 mt-10">No served orders found.</p>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {servedOrders.map(order => (  
-                    <div key={order.order_id} className="p-4 rounded-lg shadow-md bg-white">
-                      <div className="mb-3 border-b pb-2">
-                        <h2 className="font-bold text-lg text-figma-dark-green">Order #{order.order_id}</h2>
-                        <p className="text-xs text-gray-500">Time: {new Date(order.order_date).toLocaleString()}</p>
-                        <p className="text-sm">Type: <span className="font-medium">{order.order_type}</span></p>
-                        <p className="text-sm">Location: <span className="font-medium">{order.delivery_location}</span></p>
-                        <p className="text-sm">Status: <span className="font-medium">{order.status}</span></p>
-                      </div>
-                      <div className="space-y-2 mb-3 grow overflow-y-auto max-h-48 pr-1">
-                  <h3 className="font-semibold text-sm">Items:</h3>
-                  {order.items && order.items.length > 0 ? (
-                    order.items.map(item => (
-                      <div key={item.detail_id} className="text-sm ml-2">
-                        <span className="font-medium">{item.quantity} x</span> {item.item_name}
-                        {item.instructions && <p className="text-xs text-gray-600 italic pl-4">- {item.instructions}</p>}
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-gray-500 ml-2">No item details found.</p>
-                  )}
-                </div>
-                    </div>
-                  ))}
-                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+  {servedOrders.map(order => (  
+    <div key={order.order_id} style={styles.card}>
+      {/* Card Header */}
+      <div style={styles.cardHeader}>
+        <h2 style={styles.cardTitle}>Order #{order.order_id}</h2>
+        <p style={styles.cardSubText}>Time: {new Date(order.order_date).toLocaleString()}</p>
+        <p style={styles.infoText}>Type: <span style={styles.infoLabel}>{order.order_type}</span></p>
+        <p style={styles.infoText}>Location: <span style={styles.infoLabel}>{order.delivery_location}</span></p>
+        <p style={styles.infoText}>Status: <span style={styles.infoLabel}>{order.status}</span></p>
+      </div>
+
+      {/* Card Body (Items) */}
+      <div style={{flex: 1, overflowY: 'auto', maxHeight: '192px', paddingRight: '4px'}}>
+        <h3 style={styles.itemSectionTitle}>Items:</h3>
+        {order.items && order.items.length > 0 ? (
+          order.items.map(item => (
+            <div key={item.detail_id} style={{marginTop: '4px'}}>
+              <span style={styles.itemText}><span style={styles.infoLabel}>{item.quantity} x</span> {item.item_name}</span>
+              {item.instructions && <p style={styles.itemInstructions}>- {item.instructions}</p>}
+            </div>
+          ))
+        ) : (
+          <p style={styles.itemText}>No item details found.</p>
+           )}
+          </div>
+            </div>
+            ))}
+              </div>
               )}
             </div>
           </div>
