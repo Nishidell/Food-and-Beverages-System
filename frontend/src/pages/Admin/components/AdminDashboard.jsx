@@ -34,11 +34,11 @@ const AdminDashboard = () => {
   const { summary, recentOrders, stockAlerts } = data;
 
   return (
-    <div className="min-h-screen bg-[#4b0a0a] text-white p-6">
+    <div className="min-h-screen bg-[#480c1b] text-black p-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         {/* Total Sales */}
-        <div className="bg-[#5c0e0e] rounded-xl p-5 shadow-md border border-[#6e1a1a]">
+        <div className="bg-[#fff2e0] rounded-xl p-5 shadow-md border border-[#6e1a1a]">
           <div className="flex justify-between items-center mb-2">
             <CircleDollarSign className="text-orange-400" size={28} />
             <span
@@ -51,14 +51,14 @@ const AdminDashboard = () => {
                 : `${summary.salesGrowth}%`}
             </span>
           </div>
-          <h3 className="text-sm text-gray-300">Total Sales Today</h3>
+          <h3 className="text-sm text-black">Total Sales Today</h3>
           <p className="text-3xl font-bold mt-1">
             ₱{summary.totalSales.toLocaleString()}
           </p>
         </div>
 
         {/* Active Orders */}
-        <div className="bg-[#5c0e0e] rounded-xl p-5 shadow-md border border-[#6e1a1a]">
+        <div className="bg-[#fff2e0] rounded-xl p-5 shadow-md border border-[#6e1a1a]">
           <div className="flex justify-between items-center mb-2">
             <ShoppingCart className="text-blue-400" size={28} />
             <span
@@ -71,13 +71,13 @@ const AdminDashboard = () => {
                 : `${summary.ordersGrowth}%`}
             </span>
           </div>
-          <h3 className="text-sm text-gray-300">Active Orders</h3>
+          <h3 className="text-sm text-black">Active Orders</h3>
           <p className="text-3xl font-bold mt-1">{summary.activeOrders}</p>
         </div>
 
         {/* Low Stock */}
         {/* --- MODIFICATION 1: Added conditional "Action needed" label --- */}
-        <div className="bg-[#5c0e0e] rounded-xl p-5 shadow-md border border-[#6e1a1a]">
+        <div className="bg-[#fff2e0] rounded-xl p-5 shadow-md border border-[#6e1a1a]">
           <div className="flex justify-between items-center mb-2">
             <Box className="text-red-400" size={28} />
             
@@ -96,16 +96,16 @@ const AdminDashboard = () => {
             )}
             
           </div>
-          <h3 className="text-sm text-gray-300">Low Stock Items</h3>
+          <h3 className="text-sm text-black">Low Stock Items</h3>
           <p className="text-3xl font-bold mt-1">{summary.lowStock}</p>
         </div>
 
         {/* Total Customers */}
-        <div className="bg-[#5c0e0e] rounded-xl p-5 shadow-md border border-[#6e1a1a]">
+        <div className="bg-[#fff2e0] rounded-xl p-5 shadow-md border border-[#6e1a1a]">
           <div className="flex justify-between items-center mb-2">
             <Users className="text-green-400" size={28} />
           </div>
-          <h3 className="text-sm text-gray-300">Total Staff</h3>
+          <h3 className="text-sm text-black">Total Staff</h3>
           <p className="text-3xl font-bold mt-1">{summary.totalStaff}</p>
         </div>
       </div>

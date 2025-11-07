@@ -20,7 +20,7 @@ const AdminHeader = () => {
 
   return (
     <nav style={{
-        backgroundColor: '#3C2A21', // The dark brown/maroon color you wanted
+        backgroundColor: '#480c1b', // The dark brown/maroon color you wanted
         color: 'white',
         display: 'flex',
         alignItems: 'center',
@@ -36,11 +36,13 @@ const AdminHeader = () => {
         <Link to="/admin">
           <img src="/images/logo_var.svg" alt="Logo" style={{ height: '64px' }} />
         </Link>
-        <h1 style={{ fontSize: '20px', fontWeight: 'bold' }}>
+      </div>
+      
+      <div>
+      <h1 style={{ fontSize: '20px', fontWeight: 'bold', color: '#F9A825' }}>
           Admin Dashboard
         </h1>
       </div>
-
       {/* Right: Kitchen Link & Profile */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
         {/* This is the "Go to Kitchen" link you requested */}

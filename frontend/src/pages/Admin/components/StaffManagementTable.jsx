@@ -10,10 +10,10 @@ const StaffManagementTable = ({
   return (
     <div className="mt-12">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Staff Management</h2>
+        <h2 style={{ color: '#F9A825' , fontSize: '1.5rem', fontWeight: 'bold' }}>Staff Management</h2>
         <button
           onClick={onAddStaff}
-          className="bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-600 transition-colors"
+          className="bg-[#F9A825] text-white font-bold py-2 px-4 rounded hover:bg-[#c47b04] transition-colors"
         >
           Add New Staff
         </button>

@@ -4,7 +4,6 @@ import ProfileDropdown from '../../../components/ProfileDropdown';
 import { useAuth } from '../../../context/AuthContext'; 
 
 const InternalNavBar = () => {
-  // Basic styling for the nav link items
   const navLinkStyle = {
     color: 'white',
     textDecoration: 'none',

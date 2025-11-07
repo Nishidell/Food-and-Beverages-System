@@ -68,7 +68,6 @@ const InventoryLogsTable = () => {
     borderBottom: '1px solid #E5E7EB',
   };
 
-  // --- NEW STYLES FOR THE DROPDOWN ---
   const filterContainerStyle = {
     display: 'flex',
     justifyContent: 'space-between',
@@ -77,16 +76,17 @@ const InventoryLogsTable = () => {
   };
 
   const selectStyle = {
-    border: '1px solid #D1D5DB', // gray-300
-    borderRadius: '0.375rem', // rounded-md
-    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+    color: '#F9A825',
+    backgroundColor: '#480c1b',
+    border: '1px solid #F9A825', 
+    borderRadius: '0.375rem', 
+    boxShadow: '0 1px 2px 0 #F9A825',
     padding: '8px 12px',
-    fontSize: '0.875rem', // text-sm
+    fontSize: '0.875rem', 
   };
-  // --- END OF NEW STYLES ---
+ 
 
   const getActionStyle = (action) => {
-    // ... (This function is unchanged) ...
     let color = '#374151'; 
     let fontWeight = 'normal';
     if (action.includes('ADD') || action.includes('RESTOCK')) {
@@ -148,11 +148,11 @@ const InventoryLogsTable = () => {
       {/* --- 3. ADD FILTER UI --- */}
       <div style={filterContainerStyle}>
         <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Inventory Logs</h2>
-          <p style={{ color: '#4B5563' }}>Showing {filteredLogs.length} most recent stock changes.</p>
+          <h2 style={{ color: '#F9A825' , fontSize: '1.5rem', fontWeight: 'bold' }}>Inventory Logs</h2>
+          <p style={{ color: '#F9A825' }}>Showing {filteredLogs.length} most recent stock changes.</p>
         </div>
         <div>
-          <label htmlFor="log-filter" style={{ marginRight: '8px', fontSize: '0.875rem', fontWeight: '500' }}>
+          <label htmlFor="log-filter" style={{ marginRight: '8px', fontSize: '0.875rem', fontWeight: '500', color: '#F9A825' }}>
             Filter by source:
           </label>
           <select 

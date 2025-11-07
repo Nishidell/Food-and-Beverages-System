@@ -16,7 +16,7 @@ import apiClient from '../../utils/apiClient';
 
 
 function AdminPage() {
-  // ... (All state and handlers are unchanged) ...
+
   const [orders, setOrders] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [staffList, setStaffList] = useState([]);
@@ -264,18 +264,18 @@ function AdminPage() {
    return (
     <>
       {/* --- INLINE STYLE FOR BACKGROUND --- */}
-      <div style={{ backgroundColor: '#fff2e0', minHeight: '100vh' }}>
+      <div style={{ backgroundColor: '#480c1b', minHeight: '100vh' }}>
         <AdminHeader />
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-8 ">
         
-          <nav className="flex space-x-4 border-b mb-8">
+          <nav className="flex space-x-8 border-b mb-8 ">
               <button
               onClick={() => setCurrentView('dashboard')}
               style={{
                 padding: '8px 16px',
                 fontSize: '1.125rem',
                 fontWeight: 600,
-                color: currentView === 'dashboard' ? accentColor : '#6B7280',
+                color: currentView === 'dashboard' ? accentColor : '#ffffff',
                 borderBottom: currentView === 'dashboard' ? `2px solid ${accentColor}` : '2px solid transparent'
               }}
             >
@@ -287,7 +287,7 @@ function AdminPage() {
                 padding: '8px 16px',
                 fontSize: '1.125rem',
                 fontWeight: 600,
-                color: currentView === 'analytics' ? accentColor : '#6B7280',
+                color: currentView === 'analytics' ? accentColor : '#ffffff',
                 borderBottom: currentView === 'analytics' ? `2px solid ${accentColor}` : '2px solid transparent'
               }}
             >
@@ -299,7 +299,7 @@ function AdminPage() {
                 padding: '8px 16px',
                 fontSize: '1.125rem',
                 fontWeight: 600,
-                color: currentView === 'orders' ? accentColor : '#6B7280',
+                color: currentView === 'orders' ? accentColor : '#ffffff',
                 borderBottom: currentView === 'orders' ? `2px solid ${accentColor}` : '2px solid transparent'
               }}
             >
@@ -311,7 +311,7 @@ function AdminPage() {
                 padding: '8px 16px',
                 fontSize: '1.125rem',
                 fontWeight: 600,
-                color: currentView === 'menu' ? accentColor : '#6B7280',
+                color: currentView === 'menu' ? accentColor : '#ffffff',
                 borderBottom: currentView === 'menu' ? `2px solid ${accentColor}` : '2px solid transparent'
               }}
             >
@@ -323,7 +323,7 @@ function AdminPage() {
                 padding: '8px 16px',
                 fontSize: '1.125rem',
                 fontWeight: 600,
-                color: currentView === 'staff' ? accentColor : '#6B7280',
+                color: currentView === 'staff' ? accentColor : '#ffffff',
                 borderBottom: currentView === 'staff' ? `2px solid ${accentColor}` : '2px solid transparent'
               }}
             >
@@ -335,7 +335,7 @@ function AdminPage() {
                 padding: '8px 16px',
                 fontSize: '1.125rem',
                 fontWeight: 600,
-                color: currentView === 'logs' ? accentColor : '#6B7280',
+                color: currentView === 'logs' ? accentColor : '#ffffff',
                 borderBottom: currentView === 'logs' ? `2px solid ${accentColor}` : '2px solid transparent'
               }}
             >
@@ -348,7 +348,7 @@ function AdminPage() {
             {currentView === 'analytics' && <AnalyticsDashboard />}
             
             {loading && currentView !== 'analytics' && (
-              <div style={{ padding: '2rem', textAlign: 'center', fontSize: '1.25rem', color: '#6B7280' }}>
+              <div style={{ padding: '2rem', textAlign: 'center', fontSize: '1.25rem', color: '#ffffff' }}>
                 Loading {currentView} data...
               </div>
             )}
