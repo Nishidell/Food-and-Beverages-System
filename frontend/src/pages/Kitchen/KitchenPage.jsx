@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Clock, Package, CheckCircle, CheckCircle2 } from 'lucide-react';
 import InternalNavBar from './components/InternalNavBar';
 import apiClient from '../../utils/apiClient';
 
@@ -159,18 +159,72 @@ filterLabel: {
   fontSize: '0.875rem',
   fontWeight: '600',
   marginBottom: '4px',
-  color: 'black', // Use the accent orange for the label
+  color: 'brown', // Use the accent orange for the label
 },
 filterSelect: {
   padding: '10px',
   border: '1px solid #ffffff', // A lighter brown border
   borderRadius: '0.375rem',
   backgroundColor: '#ffffff', // A slightly lighter brown for the box
-  color: 'black', // White text
+  color: 'brown', // White text
   fontSize: '1rem',
   cursor: 'pointer',
 },
+summaryCardContainer: {
+  display: 'flex',
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  gap: '16px',
+  marginBottom: '24px',
+},
+summaryCard: {
+  backgroundColor: '#FAEBD7', // The new light cream background
+  borderRadius: '1rem', // 16px, for the high rounding
+  padding: '16px',
+  flex: 1, // Makes all 4 cards share the space equally
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+},
+summaryCardContent: {
+
+},
+summaryCardTitle: {
+  color: '#3C2A21', 
+  fontSize: '0.875rem',
+  fontWeight: '600',
+  textTransform: 'uppercase',
+},
+summaryCardCount: {
+  color: '#3C2A21', // Dark brown text
+  fontSize: '2.25rem',
+  fontWeight: 'bold',
+},
+summaryIconWrapper: {
+  width: '48px',
+  height: '48px',
+  borderRadius: '50%', // Circle
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: 'white',
+},
+
+iconPending: {
+  backgroundColor: '#F59E0B', // Amber/Yellow
+},
+iconPreparing: {
+  backgroundColor: '#3B82F6', // Blue
+},
+iconReady: {
+  backgroundColor: '#10B981', // Green
+},
+iconServed: {
+  backgroundColor: '#6B7280', // Gray
+},
 };
+
 
 function KitchenPage() {
   const [kitchenOrders, setKitchenOrders] = useState([]);
@@ -179,6 +233,8 @@ function KitchenPage() {
   const [isPolling, setIsPolling] = useState(false);
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterType, setFilterType] = useState('All Types');
+
+  const [servedCount, setServedCount] = useState(0);
 
   const fetchOrderDetails = async (orderId) => {
     try {
@@ -198,46 +254,64 @@ function KitchenPage() {
   };
 
   const fetchAndPopulateOrders = async (isInitialLoad = false) => {
-      if (!isInitialLoad && isPolling) return;
-      if (isInitialLoad) setLoading(true);
-      setIsPolling(true);
-      setError(null);
+    if (!isInitialLoad && isPolling) return;
+    if (isInitialLoad) setLoading(true);
+    setIsPolling(true);
+    setError(null);
 
-      try {
-        // --- 3. USE apiClient ---
-        const listResponse = await apiClient('/orders/kitchen'); // No headers
-        if (!listResponse.ok) {
-          throw new Error('Failed to fetch kitchen orders list');
-        }
-        const ordersList = await listResponse.json();
+    try {
+      // --- 1. NEW: Use Promise.all to fetch both endpoints ---
+      const [kitchenResponse, servedResponse] = await Promise.all([
+        apiClient('/orders/kitchen'), // The orders we display
+        apiClient('/orders/served')  // The orders we just want to count
+      ]);
+      // --- END OF NEW CODE ---
 
-        if (!Array.isArray(ordersList)) {
-            console.error("API did not return an array, received:", ordersList);
-            throw new Error("Invalid data from server.");
-        }
-
-        const ordersWithDetails = await Promise.all(
-          ordersList.map(order => fetchOrderDetails(order.order_id))
-        );
-        
-        const newOrders = ordersWithDetails.filter(order => order !== null);
-        
-        if (Array.isArray(newOrders)) {
-            setKitchenOrders(newOrders);
-        } else {
-            console.error("Error: newOrders is not an array.", newOrders);
-            setKitchenOrders([]); 
-        }
-      } catch (err) {
-         if (err.message !== 'Session expired') {
-          setError(err.message);
-          setKitchenOrders([]);
-        }
-      } finally {
-        if (isInitialLoad) setLoading(false);
-        setIsPolling(false);
+      if (!kitchenResponse.ok) {
+        throw new Error('Failed to fetch kitchen orders list');
       }
-    };
+      if (!servedResponse.ok) {
+        throw new Error('Failed to fetch served orders list');
+      }
+
+      const ordersList = await kitchenResponse.json();
+      const servedList = await servedResponse.json(); // --- NEW: Get served list
+
+      if (!Array.isArray(ordersList)) {
+          console.error("API (kitchen) did not return an array, received:", ordersList);
+          throw new Error("Invalid data from server (kitchen).");
+      }
+      if (!Array.isArray(servedList)) {
+          console.error("API (served) did not return an array, received:", servedList);
+          throw new Error("Invalid data from server (served).");
+      }
+
+      // --- 2. NEW: Set the served count from the list's length ---
+      setServedCount(servedList.length);
+      // --- END OF NEW CODE ---
+
+      const ordersWithDetails = await Promise.all(
+        ordersList.map(order => fetchOrderDetails(order.order_id))
+      );
+
+      const newOrders = ordersWithDetails.filter(order => order !== null);
+
+      if (Array.isArray(newOrders)) {
+          setKitchenOrders(newOrders);
+      } else {
+          console.error("Error: newOrders is not an array.", newOrders);
+          setKitchenOrders([]); 
+      }
+    } catch (err) {
+       if (err.message !== 'Session expired') {
+        setError(err.message);
+        setKitchenOrders([]);
+      }
+    } finally {
+      if (isInitialLoad) setLoading(false);
+      setIsPolling(false);
+    }
+  };
 
 
   const handleUpdateStatus = async (orderId, newStatus) => {
@@ -300,12 +374,63 @@ function KitchenPage() {
     const typeMatch = filterType === 'All Types' || (order.order_type && order.order_type.toLowerCase() === filterType.toLowerCase());
     return statusMatch && typeMatch;
   }) : []; 
+
+  const pendingCount = kitchenOrders.filter(o => o.status.toLowerCase() === 'pending').length;
+  const preparingCount = kitchenOrders.filter(o => o.status.toLowerCase() === 'preparing').length;
+  const readyCount = kitchenOrders.filter(o => o.status.toLowerCase() === 'ready').length;
+  
   return (
     <>
     <InternalNavBar />
 <div style={pageContainerStyle}>
   <div style={{ maxWidth: '1280px', margin: '0 auto' }}> 
     <h1 style={pageTitleStyle}>Kitchen Order Display</h1>
+
+<div style={styles.summaryCardContainer}>
+  {/* Pending Card */}
+  <div style={styles.summaryCard}>
+    <div style={styles.summaryCardContent}>
+      <h3 style={styles.summaryCardTitle}>Pending</h3>
+      <p style={styles.summaryCardCount}>{pendingCount}</p>
+    </div>
+    <div style={{...styles.summaryIconWrapper, ...styles.iconPending}}>
+      <Clock size={24} />
+    </div>
+  </div>
+
+  {/* Preparing Card */}
+  <div style={styles.summaryCard}>
+    <div style={styles.summaryCardContent}>
+      <h3 style={styles.summaryCardTitle}>Preparing</h3>
+      <p style={styles.summaryCardCount}>{preparingCount}</p>
+    </div>
+    <div style={{...styles.summaryIconWrapper, ...styles.iconPreparing}}>
+      <Package size={24} />
+    </div>
+  </div>
+
+  {/* Ready Card */}
+  <div style={styles.summaryCard}>
+    <div style={styles.summaryCardContent}>
+      <h3 style={styles.summaryCardTitle}>Ready</h3>
+      <p style={styles.summaryCardCount}>{readyCount}</p>
+    </div>
+    <div style={{...styles.summaryIconWrapper, ...styles.iconReady}}>
+      <CheckCircle size={24} />
+    </div>
+  </div>
+
+  {/* Served Card */}
+  <div style={styles.summaryCard}>
+    <div style={styles.summaryCardContent}>
+      <h3 style={styles.summaryCardTitle}>Served</h3>
+      <p style={styles.summaryCardCount}>{servedCount}</p>
+    </div>
+    <div style={{...styles.summaryIconWrapper, ...styles.iconServed}}>
+      <CheckCircle2 size={24} />
+    </div>
+  </div>
+</div>
         
         {error && <p className="text-center text-red-500 text-sm mb-4">Error fetching updates: {error}</p>}
 
