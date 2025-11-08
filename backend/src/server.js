@@ -15,6 +15,11 @@ import orderRoutes from "../src/routes/orderRoutes.js";
 import paymentRoutes from "../src/routes/paymentRoutes.js";
 import adminRoutes from "../src/routes/adminRoutes.js";
 import uploadRoutes from './routes/uploadRoutes.js';
+import inventoryRoutes from "../src/routes/inventoryRoutes.js";
+import categoryRoutes from "../src/routes/categoryRoutes.js";
+import analyticsRoutes from "../src/routes/analyticsRoutes.js";
+import dashboardRoutes from "../src/routes/dashboardRoutes.js";
+import notificationRoutes from "../src/routes/notificationRoutes.js";
 
 dotenv.config();
 
@@ -34,6 +39,7 @@ app.get("/api/health", async (req, res) => {
 
 // Para di tamaan ng Rate limiter middleware
 app.use("/api/orders", orderRoutes);
+app.use("/api/categories", categoryRoutes); 
 
 // Apply the general API rate limiter to all requests starting with /api
 app.use("/api/", apiLimiter);
@@ -45,7 +51,10 @@ app.use("/api/items", itemRoutes);
 
 app.use("/api/payments", paymentRoutes);
 app.use("/api/admin", adminRoutes);
-
+app.use('/api/inventory', inventoryRoutes);
+app.use("/api/analytics", analyticsRoutes); 
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/upload', uploadRoutes); // Upload Image route
 const __dirname = path.resolve();
 app.use('/uploads', express.static(path.join(__dirname, '/uploads')));

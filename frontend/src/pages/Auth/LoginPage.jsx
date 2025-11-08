@@ -2,6 +2,23 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Link, Navigate } from 'react-router-dom';
 
+const pageStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: '100vh',
+  backgroundColor: '#0B3D2E' // Your primary theme color
+};
+
+const boxStyle = {
+  width: '100%',
+  maxWidth: '28rem', // 448px
+  padding: '2rem', // 32px
+  backgroundColor: '#FFFFFF',
+  borderRadius: '0.5rem', // 8px
+  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+};
+
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,8 +41,8 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+    <div style={pageStyle}>
+      <div style={boxStyle}>
         <img 
           src="/images/logo_var.svg" 
           alt="Logo" 

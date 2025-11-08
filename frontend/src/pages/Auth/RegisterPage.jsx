@@ -2,6 +2,23 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 
+const pageStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: '100vh',
+  backgroundColor: '#0B3D2E' // Your primary theme color
+};
+
+const boxStyle = {
+  width: '100%',
+  maxWidth: '28rem', // 448px
+  padding: '2rem', // 32px
+  backgroundColor: '#FFFFFF',
+  borderRadius: '0.5rem', // 8px
+  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+};
+
 const RegisterPage = () => {
   // --- FIX: Use firstName and lastName ---
   const [firstName, setFirstName] = useState('');
@@ -25,8 +42,8 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+    <div style={pageStyle}>
+     <div style={boxStyle}>
         <img 
           src="/images/logo_var.svg" 
           alt="Logo" 
@@ -126,7 +143,7 @@ const RegisterPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-4 py-2 font-semibold text-white bg-primary rounded-md hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:bg-gray-400"
+              className="w-full px-4 py-2 font-semibold text-white bg-green-900 rounded-md hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:bg-gray-400"
             >
               {loading ? 'Creating...' : 'Create Account'}
             </button>
