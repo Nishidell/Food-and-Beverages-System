@@ -8,7 +8,6 @@ const AdminDashboard = () => {
       totalSales: 0,
       salesGrowth: 0,
       activeOrders: 0,
-      ordersGrowth: 0,
       lowStock: 0,
       lowStockGrowth: 0,
       totalStaff: 0,
@@ -89,9 +88,6 @@ const AdminDashboard = () => {
             ) : (
               // If not, it shows the original growth %
               <span className="text-red-300 text-xs font-semibold">
-                {summary.lowStockGrowth >= 0
-                  ? `+${summary.lowStockGrowth}%`
-                  : `${summary.lowStockGrowth}%`}
               </span>
             )}
             
