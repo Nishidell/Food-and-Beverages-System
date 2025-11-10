@@ -68,13 +68,6 @@ const MenuManagementTable = ({
         <span className="text-sm font-medium text-gray-700">
             Total Menu Items: {totalItems}
           </span>
-        <button 
-          onClick={onClearFilters}
-          className="text-sm text-blue-500 hover:underline"
-          disabled={selectedCategory === 'All' && searchTerm === ''}
-        >
-          Clear Filters
-        </button>
       </div>
     </div>
 

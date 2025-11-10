@@ -163,11 +163,6 @@ function AdminPage() {
     setMenuFilterCategory(category);
   };
 
-  const handleClearFilters = () => {
-    setMenuFilterCategory('All');
-    setMenuSearchTerm('');
-  };
-
   const handleAddStaff = async (formData) => {
     try {
       const response = await apiClient('/admin/staff', {
@@ -373,7 +368,6 @@ function AdminPage() {
                 searchTerm={menuSearchTerm}
                 onSearchChange={setMenuSearchTerm}
                 onFilterChange={handleMenuFilterChange}
-                onClearFilters={handleClearFilters}
                 onAddItem={openModalForAdd}
                 onEditItem={openModalForEdit}
                 onDeleteItem={handleDeleteItem}
