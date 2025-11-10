@@ -29,6 +29,7 @@ function AdminPage() {
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
   const [menuFilterCategory, setMenuFilterCategory] = useState('All');
+  const [menuSearchTerm, setMenuSearchTerm] = useState('');
   const { token } = useAuth();
   
   useEffect(() => {
@@ -164,6 +165,7 @@ function AdminPage() {
 
   const handleClearFilters = () => {
     setMenuFilterCategory('All');
+    setMenuSearchTerm('');
   };
 
   const handleAddStaff = async (formData) => {
@@ -254,9 +256,11 @@ function AdminPage() {
   };
 
    const allCategoriesForFilter = ['All', ...new Set(menuItems.map(item => item.category))];
-   const filteredMenuItems = menuItems.filter(item => 
-    menuFilterCategory === 'All' || item.category === menuFilterCategory
-   );
+   const filteredMenuItems = menuItems.filter(item => {
+  const categoryMatch = menuFilterCategory === 'All' || item.category === menuFilterCategory;
+  const searchMatch = item.item_name.toLowerCase().includes(menuSearchTerm.toLowerCase());
+  return categoryMatch && searchMatch;
+});
 
    // --- ACCENT COLOR for tabs ---
    const accentColor = '#F9A825'; // From your tailwind.config.js
@@ -366,6 +370,8 @@ function AdminPage() {
                 totalItems={filteredMenuItems.length} 
                 categories={allCategoriesForFilter} 
                 selectedCategory={menuFilterCategory}
+                searchTerm={menuSearchTerm}
+                onSearchChange={setMenuSearchTerm}
                 onFilterChange={handleMenuFilterChange}
                 onClearFilters={handleClearFilters}
                 onAddItem={openModalForAdd}
