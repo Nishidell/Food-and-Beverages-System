@@ -73,9 +73,9 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
              is_promo: data.is_promo || false,
               promo_discount_percentage: data.promo_discount_percentage || '',
               // Format "2025-11-01T00:00:00.000Z" to "2025-11-01"
-              promo_expiry_date: data.promo_expiry_date 
-                ? new Date(data.promo_expiry_date).toISOString().split('T')[0] 
-                : ''
+              promo_expiry_date: data.promo_expiry_date
+                ? new Date(data.promo_expiry_date).toISOString().split('T')[0]
+                : '',
 
             });
           } catch (err) {
@@ -118,13 +118,27 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
   if (!isOpen) return null;
 
   const handleChange = (e) => {
-    // --- UPDATED LOGIC ---
     const { id, value, type, checked } = e.target;
-    setFormData((prevData) => ({
-      ...prevData,
-      [id]: type === 'checkbox' ? checked : value,
-    }));
-    // --- END OF UPDATE ---
+
+    setFormData((prevData) => {
+      const newData = {
+        ...prevData,
+        [id]: type === 'checkbox' ? checked : value,
+      };
+
+      // --- THIS IS THE FIX ---
+      // If the user just checked the 'is_promo' box
+      if (id === 'is_promo' && checked) {
+        // And if the expiry date is currently empty
+        if (!newData.promo_expiry_date) {
+          // Set it to today's date by default
+          newData.promo_expiry_date = new Date().toISOString().split('T')[0];
+        }
+      }
+      // --- END OF FIX ---
+
+      return newData;
+    });
   };
   
 
