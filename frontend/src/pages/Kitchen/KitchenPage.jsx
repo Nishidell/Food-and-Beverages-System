@@ -475,24 +475,28 @@ function KitchenPage() {
           </p>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
-  {filteredOrders.map(order => (
+  {filteredOrders.map(order => {
+    
+    // --- THIS IS THE NEW LINE ---
+    const orderInstructions = order.items && order.items.length > 0 ? order.items[0].instructions : null;
 
-    <div key={order.order_id} style={styles.card}>
+    return (
+      <div key={order.order_id} style={styles.card}>
 
-      {/* ---- CARD HEADER ---- */}
-      <div style={styles.cardHeader}>
-        {/* Status Tag (Top Right) */}
-        <span style={getStatusStyles(order.status)}>
-          {order.status}
-        </span>
-        {/* Title */}
-        <h2 style={styles.cardTitle}>Order #{order.order_id}</h2>
-        <p style={styles.cardTime}>
-          Time: {new Date(order.order_date).toLocaleTimeString()}
-        </p>
-      </div>
+        {/* ---- CARD HEADER ---- */}
+        <div style={styles.cardHeader}>
+          {/* Status Tag (Top Right) */}
+          <span style={getStatusStyles(order.status)}>
+            {order.status}
+          </span>
+          {/* Title */}
+          <h2 style={styles.cardTitle}>Order #{order.order_id}</h2>
+          <p style={styles.cardTime}>
+            Time: {new Date(order.order_date).toLocaleTimeString()}
+          </p>
+        </div>
 
-      {/* ---- CARD BODY ---- */}
+        {/* ---- CARD BODY ---- */}
       <div style={styles.cardBody}>
         {/* Info Section */}
         <div>
@@ -507,84 +511,91 @@ function KitchenPage() {
           </p>
         </div>
 
-        {/* Items Section */}
+        {/* Items Section (Instructions REMOVED from loop) */}
         <div style={styles.itemsListContainer}>
           <h3 style={styles.itemsListTitle}>Items:</h3>
           {order.items && order.items.length > 0 ? (
             order.items.map(item => (
               <div key={item.detail_id} style={styles.itemEntry}>
                 <span style={styles.itemName}>{item.quantity} x {item.item_name}</span>
-
-                {/* --- SPECIAL INSTRUCTIONS --- */}
-                {item.instructions && (
-                  <p style={styles.itemInstructions}>
-                    - {item.instructions}
-                  </p>
-                )}
+                {/* Instruction <p> tag is removed from here */}
               </div>
             ))
           ) : (
             <p style={styles.infoLine}>No item details found.</p>
           )}
         </div>
+
+        {/* --- NEW Special Instructions Section --- */}
+        {orderInstructions && (
+          <div style={{ marginTop: '8px', borderTop: '1px solid #E5E7EB', paddingTop: '8px' }}>
+            <h3 style={styles.itemsListTitle}>Instructions:</h3>
+            <p style={{...styles.itemInstructions, marginLeft: 0, fontSize: '0.875rem', color: '#EF4444'}}>
+              {orderInstructions}
+            </p>
+          </div>
+        )}
+        {/* --- END of new section --- */}
+
       </div>
 
-      {/* ---- CARD FOOTER (BUTTONS) ---- */}
-      <div style={styles.cardFooter}>
+        {/* ---- CARD FOOTER (BUTTONS) ---- */}
+        <div style={styles.cardFooter}>
 
-        {/* --- PENDING --- */}
-        {order.status.toLowerCase() === 'pending' && (
-          <div style={styles.buttonRow}>
-            <button
-              onClick={() => handleUpdateStatus(order.order_id, 'Preparing')}
-              style={{...styles.primaryButton, backgroundColor: '#16A34A'}} // Green
-            >
-              Accept (Prepare)
-            </button>
-            <button
-              onClick={() => handleUpdateStatus(order.order_id, 'Cancelled')}
-              style={styles.iconButton}
-              title="Cancel Order"
-            >
-              <Trash2 size={20} />
-            </button>
-          </div>
-        )}
+          {/* --- PENDING --- */}
+          {order.status.toLowerCase() === 'pending' && (
+            <div style={styles.buttonRow}>
+              <button
+                onClick={() => handleUpdateStatus(order.order_id, 'Preparing')}
+                style={{...styles.primaryButton, backgroundColor: '#16A34A'}} // Green
+              >
+                Accept (Prepare)
+              </button>
+              <button
+                onClick={() => handleUpdateStatus(order.order_id, 'Cancelled')}
+                style={styles.iconButton}
+                title="Cancel Order"
+              >
+                <Trash2 size={20} />
+              </button>
+            </div>
+          )}
 
-        {/* --- PREPARING --- */}
-        {order.status.toLowerCase() === 'preparing' && (
-          <div style={styles.buttonRow}>
-            <button
-              onClick={() => handleUpdateStatus(order.order_id, 'Ready')}
-              style={{...styles.primaryButton, backgroundColor: '#3B82F6'}} // Blue
-            >
-              Mark as Ready
-            </button>
-            <button
-              onClick={() => handleUpdateStatus(order.order_id, 'Cancelled')}
-              style={styles.iconButton}
-              title="Cancel Order"
-            >
-              <Trash2 size={20} />
-            </button>
-          </div>
-        )}
+          {/* --- PREPARING --- */}
+          {order.status.toLowerCase() === 'preparing' && (
+            <div style={styles.buttonRow}>
+              <button
+                onClick={() => handleUpdateStatus(order.order_id, 'Ready')}
+                style={{...styles.primaryButton, backgroundColor: '#3B82F6'}} // Blue
+              >
+                Mark as Ready
+              </button>
+              <button
+                onClick={() => handleUpdateStatus(order.order_id, 'Cancelled')}
+                style={styles.iconButton}
+                title="Cancel Order"
+              >
+                <Trash2 size={20} />
+              </button>
+            </div>
+          )}
 
-        {/* --- READY --- */}
-        {order.status.toLowerCase() === 'ready' && (
-          <div style={styles.buttonRow}>
-            <button
-              onClick={() => handleUpdateStatus(order.order_id, 'Served')}
-              style={{...styles.primaryButton, backgroundColor: '#F59E0B'}} // Amber
-            >
-              Mark as Served
-            </button>
-          </div>
-        )}
+          {/* --- READY --- */}
+          {order.status.toLowerCase() === 'ready' && (
+            <div style={styles.buttonRow}>
+              <button
+                onClick={() => handleUpdateStatus(order.order_id, 'Served')}
+                style={{...styles.primaryButton, backgroundColor: '#F59E0B'}} // Amber
+              >
+                Mark as Served
+              </button>
+            </div>
+          )}
 
+        </div>
       </div>
-    </div>
-  ))}
+    )
+  })}
 </div>
         )}
       </div>
