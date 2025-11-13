@@ -70,7 +70,7 @@ export const getDashboardSummary = async (req, res) => {
 
     // --- Recent Orders (last 5) ---
     const [recentOrders] = await pool.query(`
-      SELECT order_id, customer_id, order_date, status, total_amount, order_type, delivery_location
+      SELECT order_id, client_id, order_date, status, total_amount, order_type, delivery_location
       FROM fb_orders
       ORDER BY order_date DESC
       LIMIT 5

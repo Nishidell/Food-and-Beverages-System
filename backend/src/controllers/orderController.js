@@ -18,9 +18,10 @@ export const createPosOrder = async (req, res) => {
           items, order_type, instructions, delivery_location, 
           payment_method, amount_tendered, change_amount 
         } = req.body;
-        const staff_id = req.user.id; // From 'protect' middleware
+        // Renamed `staff_id` to `employee_id`.
+        const employee_id = req.user.id; // From 'protect' middleware
 
-        if (!staff_id || !items || items.length === 0 || !delivery_location) {
+        if (!employee_id || !items || items.length === 0 || !delivery_location) {
             throw new Error("Missing required order information.");
         }
         
@@ -40,13 +41,14 @@ export const createPosOrder = async (req, res) => {
 
         // --- CHANGE 1: 'Pending' changed to 'pending' ---
         // This fixes the NULL bug on creation.
+        // Changed `staff_id` column to `employee_id`.
         const orderSql = `
             INSERT INTO fb_orders 
-            (client_id, staff_id, order_type, delivery_location, status, items_total, service_charge_amount, vat_amount, total_amount) 
+            (client_id, employee_id, order_type, delivery_location, status, items_total, service_charge_amount, vat_amount, total_amount) 
             VALUES (NULL, ?, ?, ?, 'pending', ?, ?, ?, ?)
         `;
         const [orderResult] = await connection.query(orderSql, [
-            staff_id, 
+            employee_id, 
             order_type, 
             delivery_location, 
             calculatedItemsTotal,
@@ -262,7 +264,7 @@ export const updateOrderStatus = async (req, res) => {
     const { status } = req.body; 
     const connection = await pool.getConnection();
     
-    const staff_id = req.user.id; 
+    const employee_id = req.user.id; 
     const newStatus = status.toLowerCase();
 
     const validStatuses = ['pending', 'preparing', 'ready', 'served', 'cancelled'];
@@ -314,8 +316,8 @@ export const updateOrderStatus = async (req, res) => {
 
         // Update the order status and who updated it
         const [result] = await connection.query(
-            "UPDATE fb_orders SET status = ?, staff_id = ? WHERE order_id = ?", 
-            [newStatus, staff_id, id]
+            "UPDATE fb_orders SET status = ?, employee_id = ? WHERE order_id = ?", 
+            [newStatus, employee_id, id]
         );
 
         if (result.affectedRows === 0) {
