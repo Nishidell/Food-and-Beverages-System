@@ -216,7 +216,7 @@ const handleConfirmPayment = async (paymentInfo) => {
 
     // Prepare order data - backend will calculate total
     const orderData = {
-      customer_id: user.id,
+      client_id: user.id,
       order_type: orderType,
       instructions: instructions,
       delivery_location: deliveryLocation,
