@@ -1,10 +1,10 @@
 import express from "express";
 import { 
-    getAllStaff, 
+    getAllEmployees, 
     getAllCustomers,
-    createStaff,
-    updateStaff,
-    deleteStaff
+    createEmployee,
+    updateEmployee,
+    deleteEmployee
 } from "../controllers/adminController.js";
 import { 
     createMenuItem, 
@@ -16,10 +16,10 @@ import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 // --- Staff Management ---
-router.get("/staff", protect, authorizeRoles("admin"), getAllStaff);
-router.post("/staff", protect, authorizeRoles("admin"), createStaff);
-router.put("/staff/:id", protect, authorizeRoles("admin"), updateStaff);
-router.delete("/staff/:id", protect, authorizeRoles("admin"), deleteStaff);
+router.get("/staff", protect, authorizeRoles("admin"), getAllEmployees);
+router.post("/staff", protect, authorizeRoles("admin"), createEmployee);
+router.put("/staff/:id", protect, authorizeRoles("admin"), updateEmployee);
+router.delete("/staff/:id", protect, authorizeRoles("admin"), deleteEmployee);
 
 // --- Customer Management ---
 router.get("/customers", protect, authorizeRoles("admin"), getAllCustomers);
