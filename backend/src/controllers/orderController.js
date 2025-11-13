@@ -42,7 +42,7 @@ export const createPosOrder = async (req, res) => {
         // This fixes the NULL bug on creation.
         const orderSql = `
             INSERT INTO fb_orders 
-            (customer_id, staff_id, order_type, delivery_location, status, items_total, service_charge_amount, vat_amount, total_amount) 
+            (client_id, staff_id, order_type, delivery_location, status, items_total, service_charge_amount, vat_amount, total_amount) 
             VALUES (NULL, ?, ?, ?, 'pending', ?, ?, ?, ?)
         `;
         const [orderResult] = await connection.query(orderSql, [
@@ -111,16 +111,16 @@ export const createOrder = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        const { customer_id, items, order_type, instructions, delivery_location } = req.body;
+        const { client_id, items, order_type, instructions, delivery_location } = req.body;
 
-        if (!customer_id || !items || items.length === 0 || !delivery_location) {
+        if (!client_id || !items || items.length === 0 || !delivery_location) {
             throw new Error("Missing required order information.");
         }
         
         // --- CHANGE 2: 'Pending' changed to 'pending' ---
         // This fixes the NULL bug on creation.
-        const orderSql = "INSERT INTO fb_orders (customer_id, order_type, delivery_location, status) VALUES (?, ?, ?, 'pending')";
-        const [orderResult] = await connection.query(orderSql, [customer_id, order_type, delivery_location]);
+        const orderSql = "INSERT INTO fb_orders (client_id, order_type, delivery_location, status) VALUES (?, ?, ?, 'pending')";
+        const [orderResult] = await connection.query(orderSql, [client_id, order_type, delivery_location]);
         const order_id = orderResult.insertId;
 
         let calculatedItemsTotal = 0; 
@@ -157,7 +157,7 @@ export const createOrder = async (req, res) => {
         ]);
 
         // --- ADDED: Create the first "pending" notification ---
-        await createOrUpdateNotification(order_id, customer_id, 'pending', connection);
+        await createOrUpdateNotification(order_id, client_id, 'pending', connection);
         // --- END OF ADDITION ---
 
         await connection.commit();
@@ -189,7 +189,7 @@ export const getOrders = async (req, res) => {
                 c.first_name,
                 c.last_name
             FROM fb_orders o
-            LEFT JOIN customers c ON o.customer_id = c.customer_id
+            LEFT JOIN tbl_client_users c ON o.client_id = c.client_id
             ORDER BY o.order_date DESC
         `;
         const [orders] = await pool.query(sql);
@@ -273,13 +273,13 @@ export const updateOrderStatus = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // Get current order status AND customer_id
-        const [orders] = await connection.query("SELECT status, customer_id FROM fb_orders WHERE order_id = ? FOR UPDATE", [id]);
+        // Get current order status AND client_id
+        const [orders] = await connection.query("SELECT status, client_id FROM fb_orders WHERE order_id = ? FOR UPDATE", [id]);
         if (orders.length === 0) {
             throw new Error("Order not found");
         }
         const currentStatus = orders[0].status;
-        const customer_id = orders[0].customer_id; // Get customer_id
+        const client_id = orders[0].client_id; // Get client_id
 
         if (currentStatus === newStatus) {
              return res.status(400).json({ message: `Order is already ${newStatus}` });
@@ -323,7 +323,7 @@ export const updateOrderStatus = async (req, res) => {
         }
 
         // --- ADDED: Create/Update the notification ---
-        await createOrUpdateNotification(id, customer_id, newStatus, connection);
+        await createOrUpdateNotification(id, client_id, newStatus, connection);
         // --- END OF ADDITION ---
 
         await connection.commit();
@@ -350,7 +350,7 @@ export const getKitchenOrders = async (req, res) => {
         const sql = `
             SELECT o.*, c.first_name, c.last_name
             FROM fb_orders o
-            LEFT JOIN customers c ON o.customer_id = c.customer_id
+            LEFT JOIN tbl_client_users c ON o.client_id = c.client_id
             WHERE o.status IN ('pending', 'preparing', 'ready')
             ORDER BY o.order_date ASC
         `;
@@ -372,7 +372,7 @@ export const getServedOrders = async (req, res) => {
         const sql = `
             SELECT o.*, c.first_name, c.last_name
             FROM fb_orders o
-            LEFT JOIN customers c ON o.customer_id = c.customer_id
+            LEFT JOIN tbl_client_users c ON o.client_id = c.client_id
             WHERE o.status = 'served'
             ORDER BY o.order_date DESC
         `;
@@ -386,9 +386,9 @@ export const getServedOrders = async (req, res) => {
 
 
 // --- NEW HELPER FUNCTION TO CREATE NOTIFICATIONS ---
-const createOrUpdateNotification = async (order_id, customer_id, status, connection) => {
-  // If there's no customer_id (e.g., a POS order), we can't create a notification.
-  if (!customer_id) {
+const createOrUpdateNotification = async (order_id, client_id, status, connection) => {
+  // If there's no client_id (e.g., a POS order), we can't create a notification.
+  if (!client_id) {
     return;
   }
 
@@ -427,10 +427,10 @@ const createOrUpdateNotification = async (order_id, customer_id, status, connect
 
     // Step 3: Insert the new notification. (It's unread by default)
     const insertSql = `
-      INSERT INTO fb_notifications (customer_id, order_id, title, message, is_read)
+      INSERT INTO fb_notifications (client_id, order_id, title, message, is_read)
       VALUES (?, ?, ?, ?, 0)
     `;
-    await (connection || pool).query(insertSql, [customer_id, order_id, title, message]);
+    await (connection || pool).query(insertSql, [client_id, order_id, title, message]);
 
   } catch (error) {
     // Log the error but don't crash the main transaction
