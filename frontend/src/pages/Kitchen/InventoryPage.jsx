@@ -144,9 +144,9 @@ const InventoryPage = () => {
   return (
     <>
       <InternalNavBar />
-      <div className="container mx-auto px-4 py-8">
+      <div style={{ backgroundColor: '#523a2eff', minHeight: 'calc(100vh - 84px)', padding: '32px 16px' }}>
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-primary">
+          <h1 className="text-3xl font-bold text-primary" style={{ color: '#F9A825' }}>
             Inventory Management
           </h1>
           <button

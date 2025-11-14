@@ -2,8 +2,37 @@ import React from 'react';
 
 // --- All styles are defined here ---
 
-const cardStyle = {
-  backgroundColor: '#fff2e0', // Your 'secondaryColor'
+
+
+// --- End of styles ---
+
+const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "customer" }) => {
+
+  // --- Define Theme Colors ---
+  const customerTheme = {
+    cardBg: '#fff2e0',
+    itemName: '#0B3D2E',
+    itemDescription: '#053a34',
+    price: '#053a34',
+    buttonBg: '#0B3D2E',
+    buttonText: 'white',
+    unavailableButtonBg: '#6B7280',
+  };
+
+  const kitchenTheme = {
+    cardBg: '#fff2e0', 
+    itemName: '#3C2A21',
+    itemDescription: '#523a2eff',
+    price: '#3C2A21',
+    buttonBg: '#F9A825', 
+    buttonText: '#3C2A21', 
+    unavailableButtonBg: '#6B7280',
+  };
+
+  const colors = theme === 'kitchen' ? kitchenTheme : customerTheme;
+
+  const cardStyle = {
+  backgroundColor: colors.cardBg,// Your 'secondaryColor'
   borderRadius: '0.5rem', // 8px
   boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
   overflow: 'hidden',
@@ -38,24 +67,24 @@ const contentStyle = {
 };
 
 const itemNameStyle = {
-  fontSize: '1.5rem', // 24px
+  fontSize: '1.5rem', 
   fontWeight: 'bold',
-  color: '#0B3D2E', // Dark green text
+  color: colors.itemName, 
   marginBottom: '16px',
 };
 
 const itemDescriptionStyle = {
-  fontSize: '1rem', // 16px
-  color: '#053a34', // Dark green text
+  fontSize: '1rem',
+  color: colors.itemDescription, 
   marginBottom: '8px',
-  flex: 1, // Pushes price/button to bottom
+  flex: 1, 
 };
 
 const footerStyle = {
-  marginTop: 'auto', // Pushes this to the bottom
+  marginTop: 'auto', 
   display: 'flex',
   justifyContent: 'space-between',
-  alignItems: 'flex-end', // Aligns price (which is taller) and button
+  alignItems: 'flex-end', 
 };
 
 const priceContainerStyle = {
@@ -68,11 +97,11 @@ const priceContainerStyle = {
 const priceStyle = {
   fontSize: '1.5rem', // 24px
   fontWeight: '600',
-  color: '#053a34',
+  color: colors.price
 };
 
 const originalPriceStyle = {
-  fontSize: '1rem', // 16px
+  fontSize: '1rem',
   fontWeight: 'normal',
   color: '#6B7280', // gray-500
   textDecoration: 'line-through',
@@ -81,8 +110,8 @@ const originalPriceStyle = {
 // --- REMOVED availableTagStyle and buttonContainerStyle ---
 
 const baseButtonStyle = {
-  backgroundColor: '#0B3D2E', // Your 'primaryColor'
-  color: 'white',
+  backgroundColor: colors.buttonBg,
+  color: colors.buttonText,
   fontWeight: 'bold',
   padding: '8px 24px',
   borderRadius: '0.375rem', // 6px (matches design)
@@ -92,14 +121,12 @@ const baseButtonStyle = {
 
 const unavailableButtonStyle = {
   ...baseButtonStyle,
-  backgroundColor: '#6B7280', // gray-500
+  backgroundColor: colors.unavailableButtonBg,
   opacity: 0.7,
   cursor: 'not-allowed',
 };
 
-// --- End of styles ---
 
-const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle }) => {
   if (!items || items.length === 0) {
     return <p style={{ textAlign: 'center', marginTop: '48px', color: 'white' }}>No items match your search.</p>;
   }

@@ -136,9 +136,9 @@ const styles = {
       return (
         <>
           <InternalNavBar />
-          <div className="bg-figma-cream min-h-screen px-4 py-8">
+          <div style={{ backgroundColor: '#523a2eff', minHeight: 'calc(100vh - 84px)', padding: '32px 16px' }}>
             <div className="container mx-auto">
-              <h1 className="text-3xl font-bold mb-6 text-center" style={{ color: '#3C2A21' }}>Served Orders Archive</h1>
+              <h1 className="text-3xl font-bold mb-6 text-center" style={{ color: '#F9A825' }}>Served Orders Archive</h1>
 
               {servedOrders.length === 0 ? (
                 <p className="text-center text-gray-500 mt-10">No served orders found.</p>

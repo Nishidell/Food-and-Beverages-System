@@ -226,7 +226,7 @@ const handleOpenPaymentModal = (grandTotal) => {
     .filter(item => item.item_name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
-    <div className="flex flex-col h-screen" style={{ backgroundColor: '#0B3D2E' }}>
+    <div className="flex flex-col h-screen" style={{ backgroundColor: '#523a2eff' }}>
       <InternalNavBar />
       <div className="flex flex-1 overflow-hidden">
         
@@ -236,12 +236,14 @@ const handleOpenPaymentModal = (grandTotal) => {
             categories={categories}
             selectedCategory={selectedCategory}
             onSelectCategory={handleSelectCategory}
+            theme="kitchen"
           />
           <FoodGrid
        items={filteredItems}
        onAddToCart={handleAddToCart}
        onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
        layoutStyle={posPageGridStyle}
+       theme="kitchen"
         />
         </main>
 
