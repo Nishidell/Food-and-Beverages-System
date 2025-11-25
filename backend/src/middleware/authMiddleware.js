@@ -21,25 +21,34 @@ export const protect = (req, res, next) => {
 };
 
 // UPDATED: Now checks for POSITIONS, not Roles.
-export const authorizeRoles = (...allowedPositions) => {
+// UPDATED: Checks for BOTH Positions (Staff) and Roles (Customers)
+export const authorizeRoles = (...allowedRolesOrPositions) => {
   return (req, res, next) => {
     if (!req.user) {
        return res.status(403).json({ message: "Access forbidden: not authenticated" });
     }
 
-    // 1. Get the user's position from the token
-    // (Note: We trimmed the position in the authController, so "F&B Admin " became "F&B Admin")
-    const userPosition = req.user.position; 
+    // 1. Get user info
+    const userPosition = req.user.position; // For Staff (e.g., "F&B Admin")
+    const userRole = req.user.role;         // For Customers (e.g., "customer")
 
-    // 2. Check if the user's position is in the allowed list
-    // We treat specific positions as valid.
-    // NOTE: We also check if the user is a 'customer' (who has no position) 
-    // to prevent crashes if a customer tries to access staff routes.
-    if (!userPosition || !allowedPositions.includes(userPosition)) {
-      console.log(`Access Denied: User position '${userPosition}' is not in allowed list:`, allowedPositions);
-      return res.status(403).json({ message: "Access forbidden: insufficient privileges" });
+    // 2. Check strict Position match (For Staff)
+    if (userPosition && allowedRolesOrPositions.includes(userPosition)) {
+        return next();
     }
 
-    next();
+    // 3. Check strict Role match (For Customers or generic roles)
+    if (userRole && allowedRolesOrPositions.includes(userRole)) {
+        return next();
+    }
+
+    // 4. Special Case: 'F&B Admin' should access 'admin' routes (Backward compatibility)
+    // If the route asks for 'admin', but the user is 'F&B Admin', allow it.
+    if (userPosition === 'F&B Admin' && allowedRolesOrPositions.includes('admin')) {
+        return next();
+    }
+
+    console.log(`Access Denied. User: ${userRole}/${userPosition}. Allowed: ${allowedRolesOrPositions}`);
+    return res.status(403).json({ message: "Access forbidden: insufficient privileges" });
   };
 };

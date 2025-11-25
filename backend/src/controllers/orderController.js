@@ -80,8 +80,9 @@ export const createPosOrder = async (req, res) => {
             // HOW: Check if item has its own instructions, otherwise use the general one
             const itemInstructions = item.instructions || instructions || '';
             
-            const detailSql = "INSERT INTO fb_order_details (order_id, item_id, quantity, subtotal, instructions) VALUES (?, ?, ?, ?, ?)";
-            await connection.query(detailSql, [order_id, item.item_id, item.quantity, subtotal, itemInstructions]);
+            // UPDATED: Insert 'actualPrice' into 'price_on_purchase'
+            const detailSql = "INSERT INTO fb_order_details (order_id, item_id, quantity, price_on_purchase, subtotal, instructions) VALUES (?, ?, ?, ?, ?, ?)";
+            await connection.query(detailSql, [order_id, item.item_id, item.quantity, actualPrice, subtotal, itemInstructions]);
         }
 
         // Calculate service charge and VAT
@@ -188,8 +189,9 @@ export const createOrder = async (req, res) => {
             // Item instructions fallback
             const itemInstructions = item.instructions || instructions || '';
             
-            const detailSql = "INSERT INTO fb_order_details (order_id, item_id, quantity, subtotal, instructions) VALUES (?, ?, ?, ?, ?)";
-            await connection.query(detailSql, [order_id, item.item_id, item.quantity, subtotal, itemInstructions]);
+            // UPDATED: Insert 'actualPrice' into 'price_on_purchase'
+            const detailSql = "INSERT INTO fb_order_details (order_id, item_id, quantity, price_on_purchase, subtotal, instructions) VALUES (?, ?, ?, ?, ?, ?)";
+            await connection.query(detailSql, [order_id, item.item_id, item.quantity, actualPrice, subtotal, itemInstructions]);
         }
 
         const calculatedServiceCharge = calculatedItemsTotal * SERVICE_RATE;
@@ -285,7 +287,7 @@ export const getOrderById = async (req, res) => {
             `SELECT 
                 mi.item_name, 
                 od.quantity, 
-                mi.price,
+                od.price_on_purchase AS price, -- UPDATED: Fetch the frozen price from purchase time
                 od.subtotal,
                 od.instructions,
                 od.order_detail_id

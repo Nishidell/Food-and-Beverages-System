@@ -32,10 +32,7 @@ export const createPayMongoPayment = async (req, res) => {
             `SELECT 
                 od.quantity, 
                 mi.item_name, 
-                mi.price, 
-                mi.is_promo, 
-                mi.promo_discount_percentage, 
-                mi.promo_expiry_date
+                od.price_on_purchase
              FROM fb_order_details od
              JOIN fb_menu_items mi ON od.item_id = mi.item_id
              WHERE od.order_id = ?`,
@@ -48,21 +45,8 @@ export const createPayMongoPayment = async (req, res) => {
 
         // 3. Build line items for menu items with promo pricing
         const menu_line_items = orderItems.map(item => {
-            let actualPrice = parseFloat(item.price);
+            const actualPrice = parseFloat(item.price_on_purchase);
 
-            // Apply promo discount if valid
-            if (item.is_promo && item.promo_discount_percentage && item.promo_expiry_date) {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0); 
-                const expiryDate = new Date(item.promo_expiry_date);
-                
-                if (expiryDate >= today) { // If promo is not expired
-                    const discount = parseFloat(item.promo_discount_percentage) / 100;
-                    actualPrice = actualPrice * (1 - discount); // Apply the discount!
-                }
-            }
-
-            // Use the new 'actualPrice' for the PayMongo line item amount
             return {
                 name: item.item_name,
                 quantity: item.quantity,
