@@ -19,11 +19,12 @@ export const createPosOrder = async (req, res) => {
           items, order_type, instructions, delivery_location, 
           payment_method, amount_tendered, change_amount 
         } = req.body;
-        const employee_id = req.user.id;
-
-        if (!employee_id || !items || items.length === 0 || !delivery_location) {
-            throw new Error("Missing required order information.");
+        const [empRows] = await connection.query("SELECT employee_id FROM employees WHERE user_id = ?", [req.user.id]);
+        
+        if (empRows.length === 0) {
+            throw new Error("Staff profile not found for this user.");
         }
+        const employee_id = empRows[0].employee_id;
         
         // Step 1: Validate stock
         await validateStock(items, connection);
@@ -142,14 +143,17 @@ export const createOrder = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        const { client_id, items, order_type, instructions, delivery_location } = req.body;
+        // SECURITY FIX: Get client_id from the authenticated token, NOT the body
+        const client_id = req.user.id; 
+        
+        // We removed 'client_id' from the destructuring below
+        const { items, order_type, instructions, delivery_location } = req.body;
 
-        if (!client_id || !items || items.length === 0 || !delivery_location) {
-            throw new Error("Missing required order information.");
+        if (!items || items.length === 0 || !delivery_location) {
+            throw new Error("Missing required order information (items or delivery location).");
         }
         
-        // --- CHANGE 2: 'Pending' changed to 'pending' ---
-        // This fixes the NULL bug on creation.
+        // Insert order
         const orderSql = "INSERT INTO fb_orders (client_id, order_type, delivery_location, status) VALUES (?, ?, ?, 'pending')";
         const [orderResult] = await connection.query(orderSql, [client_id, order_type, delivery_location]);
         const order_id = orderResult.insertId;
@@ -157,33 +161,31 @@ export const createOrder = async (req, res) => {
         let calculatedItemsTotal = 0; 
         
         for (const item of items) {
-            // 1. Fetch the item's price AND promo details
+            // 1. Fetch price & promo details
             const [rows] = await connection.query(
                 "SELECT price, is_promo, promo_discount_percentage, promo_expiry_date FROM fb_menu_items WHERE item_id = ?", 
                 [item.item_id]
             );
 
             const dbItem = rows[0];
-            let actualPrice = parseFloat(dbItem.price); // Start with the original price
+            let actualPrice = parseFloat(dbItem.price); 
 
-            // 2. Check if the promo is active and valid
+            // 2. Apply promo logic
             if (dbItem.is_promo && dbItem.promo_discount_percentage && dbItem.promo_expiry_date) {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0); 
                 const expiryDate = new Date(dbItem.promo_expiry_date);
                 
-                if (expiryDate >= today) { // If promo is not expired
+                if (expiryDate >= today) { 
                     const discount = parseFloat(dbItem.promo_discount_percentage) / 100;
-                    actualPrice = actualPrice * (1 - discount); // Apply the discount!
+                    actualPrice = actualPrice * (1 - discount); 
                 }
             }
             
             const subtotal = actualPrice * item.quantity;
             calculatedItemsTotal += subtotal;
             
-            // BUG FIX #4: Use item-specific instructions if provided
-            // WHY: Same as POS orders - allows per-item customization
-            // HOW: Check item.instructions first, then fall back to general instructions
+            // Item instructions fallback
             const itemInstructions = item.instructions || instructions || '';
             
             const detailSql = "INSERT INTO fb_order_details (order_id, item_id, quantity, subtotal, instructions) VALUES (?, ?, ?, ?, ?)";
@@ -211,7 +213,7 @@ export const createOrder = async (req, res) => {
             order_id
         ]);
 
-        // Create the first "pending" notification
+        // Create notification
         await createOrUpdateNotification(order_id, client_id, 'pending', connection);
 
         await connection.commit();
@@ -230,7 +232,6 @@ export const createOrder = async (req, res) => {
         connection.release();
     }
 };
-
 // @desc    Get all orders
 // @route   GET /api/orders
 // @access  Private
@@ -327,7 +328,12 @@ export const updateOrderStatus = async (req, res) => {
     const { status } = req.body; 
     const connection = await pool.getConnection();
     
-    const employee_id = req.user.id; 
+    const [empRows] = await pool.query("SELECT employee_id FROM employees WHERE user_id = ?", [req.user.id]);
+    if (empRows.length === 0) {
+         connection.release();
+         return res.status(403).json({ message: "Staff profile not found." });
+    }
+    const employee_id = empRows[0].employee_id;
     const newStatus = status.toLowerCase();
 
     const validStatuses = ['pending', 'preparing', 'ready', 'served', 'cancelled'];

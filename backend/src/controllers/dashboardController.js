@@ -59,14 +59,11 @@ export const getDashboardSummary = async (req, res) => {
     // --- Total Customers ---
     const [staffRows] = await pool.query(`
       SELECT COUNT(*) AS total
-      FROM staff
+      FROM employees
+      WHERE status = 'active'
     `);
-        // --- THIS IS THE FIX ---
-    // You must extract the .total property from the result.
-    // staffRows[0] is the object { total: 5 }
-    // staffRows[0].total is the NUMBER 5
+
     const totalStaff = staffRows[0].total || 0;
-    // --- END OF FIX ---
 
     // --- Recent Orders (last 5) ---
     const [recentOrders] = await pool.query(`

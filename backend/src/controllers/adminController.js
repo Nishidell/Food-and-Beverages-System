@@ -34,10 +34,18 @@ export const getAllEmployees = async (req, res) => {
 // @access  Admin
 export const getAllCustomers = async (req, res) => {
     try {
-        // --- THIS IS THE FIX ---
-        // Changed "full_name" to "first_name, last_name"
-        // This function was already correct and did not need refactoring.
-        const [customers] = await pool.query("SELECT customer_id, first_name, last_name, email, phone, created_at FROM customers");
+        // UPDATED: Query from 'tbl_client_users' instead of 'customers'
+        const sql = `
+            SELECT 
+                client_id, 
+                first_name, 
+                last_name, 
+                email, 
+                phone, 
+                created_at 
+            FROM tbl_client_users
+        `;
+        const [customers] = await pool.query(sql);
         res.json(customers);
     } catch (error) {
         res.status(500).json({ message: "Error fetching customer list", error: error.message });
