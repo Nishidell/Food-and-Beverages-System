@@ -12,6 +12,7 @@ import StaffModal from './components/StaffModal';
 import InventoryLogsTable from './components/InventoryLogsTable';
 import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../utils/apiClient';
+import PromotionsManagement from './components/PromotionsManagement'; // <-- ADD THIS
 
 
 
@@ -317,6 +318,18 @@ function AdminPage() {
               Menu Management
             </button>
             <button
+            onClick={() => setCurrentView('promotions')}
+            style={{
+              padding: '8px 16px',
+              fontSize: '1.125rem',
+              fontWeight: 600,
+              color: currentView === 'promotions' ? accentColor : '#ffffff',
+              borderBottom: currentView === 'promotions' ? `2px solid ${accentColor}` : '2px solid transparent'
+            }}
+          >
+            Promo Management
+          </button>
+            <button
               onClick={() => setCurrentView('staff')}
               style={{
                 padding: '8px 16px',
@@ -345,6 +358,7 @@ function AdminPage() {
           <main>
             {currentView === 'dashboard' && <AdminDashboard />}
             {currentView === 'analytics' && <AnalyticsDashboard />}
+            {!loading && !error && currentView === 'promotions' && <PromotionsManagement />}
             
             {loading && currentView !== 'analytics' && (
               <div style={{ padding: '2rem', textAlign: 'center', fontSize: '1.25rem', color: '#ffffff' }}>

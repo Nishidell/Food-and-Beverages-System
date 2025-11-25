@@ -52,7 +52,15 @@ export const createPosOrder = async (req, res) => {
         for (const item of items) {
             // 1. Fetch the item's price AND promo details
             const [rows] = await connection.query(
-                "SELECT price, is_promo, promo_discount_percentage, promo_expiry_date FROM fb_menu_items WHERE item_id = ?", 
+                `SELECT 
+                    mi.price, 
+                    p.discount_percentage, 
+                    p.start_date, 
+                    p.end_date, 
+                    p.is_active 
+                 FROM fb_menu_items mi
+                 LEFT JOIN fb_promotions p ON mi.promotion_id = p.promotion_id
+                 WHERE mi.item_id = ?`, 
                 [item.item_id]
             );
 
@@ -60,14 +68,16 @@ export const createPosOrder = async (req, res) => {
             let actualPrice = parseFloat(dbItem.price); // Start with the original price
 
             // 2. Check if the promo is active and valid
-            if (dbItem.is_promo && dbItem.promo_discount_percentage && dbItem.promo_expiry_date) {
+            if (dbItem.discount_percentage && dbItem.is_active) {
                 const today = new Date();
-                today.setHours(0, 0, 0, 0); 
-                const expiryDate = new Date(dbItem.promo_expiry_date);
+                today.setHours(0, 0, 0, 0);
                 
-                if (expiryDate >= today) { // If promo is not expired
-                    const discount = parseFloat(dbItem.promo_discount_percentage) / 100;
-                    actualPrice = actualPrice * (1 - discount); // Apply the discount!
+                const startDate = new Date(dbItem.start_date);
+                const endDate = new Date(dbItem.end_date);
+                
+                if (today >= startDate && today <= endDate) { 
+                    const discount = parseFloat(dbItem.discount_percentage) / 100;
+                    actualPrice = actualPrice * (1 - discount); 
                 }
             }
             
@@ -164,21 +174,30 @@ export const createOrder = async (req, res) => {
         for (const item of items) {
             // 1. Fetch price & promo details
             const [rows] = await connection.query(
-                "SELECT price, is_promo, promo_discount_percentage, promo_expiry_date FROM fb_menu_items WHERE item_id = ?", 
+                `SELECT 
+                    mi.price, 
+                    p.discount_percentage, 
+                    p.start_date, 
+                    p.end_date, 
+                    p.is_active 
+                 FROM fb_menu_items mi
+                 LEFT JOIN fb_promotions p ON mi.promotion_id = p.promotion_id
+                 WHERE mi.item_id = ?`, 
                 [item.item_id]
             );
-
             const dbItem = rows[0];
             let actualPrice = parseFloat(dbItem.price); 
 
             // 2. Apply promo logic
-            if (dbItem.is_promo && dbItem.promo_discount_percentage && dbItem.promo_expiry_date) {
+            if (dbItem.discount_percentage && dbItem.is_active) {
                 const today = new Date();
-                today.setHours(0, 0, 0, 0); 
-                const expiryDate = new Date(dbItem.promo_expiry_date);
+                today.setHours(0, 0, 0, 0);
                 
-                if (expiryDate >= today) { 
-                    const discount = parseFloat(dbItem.promo_discount_percentage) / 100;
+                const startDate = new Date(dbItem.start_date);
+                const endDate = new Date(dbItem.end_date);
+                
+                if (today >= startDate && today <= endDate) { 
+                    const discount = parseFloat(dbItem.discount_percentage) / 100;
                     actualPrice = actualPrice * (1 - discount); 
                 }
             }

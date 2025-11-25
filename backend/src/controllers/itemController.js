@@ -6,7 +6,7 @@ import pool from "../config/mysql.js";
 export const getAllItems = async (req, res) => {
     try {
         // 1. Get all menu items with category
-        const itemSql = `
+       const itemSql = `
         SELECT 
             mi.item_id, 
             mi.item_name, 
@@ -15,11 +15,21 @@ export const getAllItems = async (req, res) => {
             mi.image_url, 
             mi.description,
             mi.category_id,
-            mi.is_promo,
-            mi.promo_discount_percentage,
-            mi.promo_expiry_date
+            mi.promotion_id,
+            -- Check if promo is active and within date range
+            CASE 
+                WHEN p.promotion_id IS NOT NULL 
+                     AND p.is_active = 1 
+                     AND CURDATE() BETWEEN p.start_date AND p.end_date 
+                THEN 1 
+                ELSE 0 
+            END AS is_promo,
+            p.discount_percentage AS promo_discount_percentage,
+            p.end_date AS promo_expiry_date,
+            p.name AS promo_name
         FROM fb_menu_items mi
         LEFT JOIN fb_categories c ON mi.category_id = c.category_id
+        LEFT JOIN fb_promotions p ON mi.promotion_id = p.promotion_id
     `;
         const [items] = await pool.query(itemSql);
         
@@ -88,11 +98,19 @@ export const getItemById = async (req, res) => {
             mi.image_url, 
             mi.description,
             mi.category_id,
-            mi.is_promo,
-            mi.promo_discount_percentage,
-            mi.promo_expiry_date
+            CASE 
+                WHEN p.promotion_id IS NOT NULL 
+                     AND p.is_active = 1 
+                     AND CURDATE() BETWEEN p.start_date AND p.end_date 
+                THEN 1 
+                ELSE 0 
+            END AS is_promo,
+            p.discount_percentage AS promo_discount_percentage,
+            p.end_date AS promo_expiry_date,
+            p.name AS promo_name
         FROM fb_menu_items mi
         LEFT JOIN fb_categories c ON mi.category_id = c.category_id
+        LEFT JOIN fb_promotions p ON mi.promotion_id = p.promotion_id
         WHERE mi.item_id = ?
     `;
         const [items] = await pool.query(sql, [id]);
@@ -133,7 +151,7 @@ export const getItemById = async (req, res) => {
     }
 };
 
-// @desc    Create a new menu item
+// @desc    Create a new menu item (with Promotion support)
 // @route   POST /api/admin/items
 // @access  Admin
 export const createMenuItem = async (req, res) => {
@@ -146,20 +164,33 @@ export const createMenuItem = async (req, res) => {
         return res.status(400).json({ message: 'Please provide item name, category, and price.' });
     }
     
-    if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
-        return res.status(400).json({ message: 'A menu item must have at least one ingredient.' });
-    }
-
     const connection = await pool.getConnection(); 
     
     try {
         await connection.beginTransaction();
 
+        // 1. Handle Promotion (If active)
+        let promotion_id = null;
+        if (is_promo && promo_discount_percentage && promo_expiry_date) {
+            const promoSql = `
+                INSERT INTO fb_promotions (name, description, discount_percentage, start_date, end_date, is_active)
+                VALUES (?, ?, ?, CURDATE(), ?, 1)
+            `;
+            const [promoResult] = await connection.query(promoSql, [
+                `${item_name} Promo`, // Auto-generate name
+                `Discount for ${item_name}`,
+                promo_discount_percentage,
+                promo_expiry_date
+            ]);
+            promotion_id = promoResult.insertId;
+        }
+
+        // 2. Insert Menu Item (Linking the promotion_id)
         const sql = `
-        INSERT INTO fb_menu_items 
-        (item_name, category_id, price, image_url, description, is_promo, promo_discount_percentage, promo_expiry_date) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+            INSERT INTO fb_menu_items 
+            (item_name, category_id, price, image_url, description, promotion_id) 
+            VALUES (?, ?, ?, ?, ?, ?)
+        `;
         
         const [result] = await connection.query(sql, [
             item_name, 
@@ -167,20 +198,20 @@ export const createMenuItem = async (req, res) => {
             price, 
             image_url, 
             description,
-            is_promo ? 1 : 0,
-            is_promo ? promo_discount_percentage : null,
-            is_promo ? promo_expiry_date : null
+            promotion_id // Link the new promotion (or null)
         ]);
         const newItemId = result.insertId;
 
-        const recipeSql = "INSERT INTO fb_menu_item_ingredients (menu_item_id, ingredient_id, quantity_consumed) VALUES ?";
-        const recipeValues = ingredients.map(ing => [newItemId, ing.ingredient_id, ing.quantity_consumed]);
-        await connection.query(recipeSql, [recipeValues]);
+        // 3. Insert Ingredients (Recipe)
+        if (ingredients && ingredients.length > 0) {
+            const recipeSql = "INSERT INTO fb_menu_item_ingredients (menu_item_id, ingredient_id, quantity_consumed) VALUES ?";
+            const recipeValues = ingredients.map(ing => [newItemId, ing.ingredient_id, ing.quantity_consumed]);
+            await connection.query(recipeSql, [recipeValues]);
+        }
         
         await connection.commit(); 
 
-        const [newItem] = await pool.query("SELECT * FROM fb_menu_items WHERE item_id = ?", [newItemId]);
-        res.status(201).json(newItem[0]);
+        res.status(201).json({ message: "Item created successfully", item_id: newItemId });
 
     } catch (error) {
         await connection.rollback(); 
@@ -191,7 +222,7 @@ export const createMenuItem = async (req, res) => {
     }
 };
 
-// @desc    Update a menu item
+// @desc    Update a menu item (and its promotion)
 // @route   PUT /api/admin/items/:id
 // @access  Admin
 export const updateMenuItem = async (req, res) => {
@@ -201,53 +232,72 @@ export const updateMenuItem = async (req, res) => {
         is_promo, promo_discount_percentage, promo_expiry_date
     } = req.body;
 
-    if (!item_name || !category_id || !price) { 
-        return res.status(400).json({ message: 'Please provide item name, category, and price.' });
-    }
-
-    if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
-        return res.status(400).json({ message: 'A menu item must have at least one ingredient.' });
-    }
-
     const connection = await pool.getConnection(); 
 
     try {
         await connection.beginTransaction();
 
+        // 1. Determine Promotion Action
+        let promotion_id = null;
+
+        // Get current item to check existing promotion
+        const [currentItem] = await connection.query("SELECT promotion_id FROM fb_menu_items WHERE item_id = ?", [id]);
+        const currentPromoId = currentItem[0]?.promotion_id;
+
+        if (is_promo && promo_discount_percentage && promo_expiry_date) {
+            // Case A: User wants a promo
+            if (currentPromoId) {
+                // Update existing promotion
+                await connection.query(
+                    "UPDATE fb_promotions SET discount_percentage = ?, end_date = ?, is_active = 1 WHERE promotion_id = ?",
+                    [promo_discount_percentage, promo_expiry_date, currentPromoId]
+                );
+                promotion_id = currentPromoId;
+            } else {
+                // Create new promotion
+                const [promoResult] = await connection.query(
+                    "INSERT INTO fb_promotions (name, description, discount_percentage, start_date, end_date, is_active) VALUES (?, ?, ?, CURDATE(), ?, 1)",
+                    [`${item_name} Promo`, `Discount for ${item_name}`, promo_discount_percentage, promo_expiry_date]
+                );
+                promotion_id = promoResult.insertId;
+            }
+        } else {
+            // Case B: User removed the promo
+            if (currentPromoId) {
+                // Deactivate or Delete the old promotion
+                await connection.query("DELETE FROM fb_promotions WHERE promotion_id = ?", [currentPromoId]);
+            }
+            promotion_id = null;
+        }
+
+        // 2. Update Menu Item
         const sql = `
-        UPDATE fb_menu_items 
-        SET item_name = ?, category_id = ?, price = ?, image_url = ?, description = ?,
-            is_promo = ?, promo_discount_percentage = ?, promo_expiry_date = ? 
-        WHERE item_id = ?
-       `;
+            UPDATE fb_menu_items 
+            SET item_name = ?, category_id = ?, price = ?, image_url = ?, description = ?, promotion_id = ?
+            WHERE item_id = ?
+        `;
         
-        const [result] = await connection.query(sql, [
+        await connection.query(sql, [
             item_name, 
             category_id, 
             price, 
             image_url, 
             description, 
-            is_promo ? 1 : 0,
-            is_promo ? promo_discount_percentage : null,
-            is_promo ? promo_expiry_date : null,
+            promotion_id,
             id
         ]);
 
-        if (result.affectedRows === 0) {
-            await connection.rollback();
-            return res.status(404).json({ message: 'Item not found' });
+        // 3. Update Recipe (Delete old, Insert new)
+        await connection.query("DELETE FROM fb_menu_item_ingredients WHERE menu_item_id = ?", [id]);
+        
+        if (ingredients && ingredients.length > 0) {
+            const recipeSql = "INSERT INTO fb_menu_item_ingredients (menu_item_id, ingredient_id, quantity_consumed) VALUES ?";
+            const recipeValues = ingredients.map(ing => [id, ing.ingredient_id, ing.quantity_consumed]);
+            await connection.query(recipeSql, [recipeValues]);
         }
 
-        await connection.query("DELETE FROM fb_menu_item_ingredients WHERE menu_item_id = ?", [id]);
-
-        const recipeSql = "INSERT INTO fb_menu_item_ingredients (menu_item_id, ingredient_id, quantity_consumed) VALUES ?";
-        const recipeValues = ingredients.map(ing => [id, ing.ingredient_id, ing.quantity_consumed]);
-        await connection.query(recipeSql, [recipeValues]);
-
         await connection.commit(); 
-
-        const [updatedItem] = await pool.query("SELECT * FROM fb_menu_items WHERE item_id = ?", [id]);
-        res.status(200).json(updatedItem[0]);
+        res.status(200).json({ message: "Item updated successfully" });
 
     } catch (error) {
         await connection.rollback(); 
