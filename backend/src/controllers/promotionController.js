@@ -145,3 +145,36 @@ export const togglePromotionStatus = async (req, res) => {
         res.status(500).json({ message: "Error toggling promotion status", error: error.message });
     }
 };
+
+// @desc    Update Promotion Details
+// @route   PUT /api/promotions/:id
+// @access  F&B Admin
+export const updatePromotion = async (req, res) => {
+    const { id } = req.params;
+    const { name, description, discount_percentage, start_date, end_date } = req.body;
+
+    try {
+        const sql = `
+            UPDATE fb_promotions 
+            SET name = ?, description = ?, discount_percentage = ?, start_date = ?, end_date = ?
+            WHERE promotion_id = ?
+        `;
+        
+        const [result] = await pool.query(sql, [
+            name, 
+            description, 
+            discount_percentage, 
+            start_date, 
+            end_date, 
+            id
+        ]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Promotion not found" });
+        }
+
+        res.json({ message: "Promotion updated successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Error updating promotion", error: error.message });
+    }
+};

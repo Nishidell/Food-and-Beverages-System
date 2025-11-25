@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Tag, Calendar, Trash2, CheckCircle, Power, XCircle } from 'lucide-react';
+import { Plus, Tag, Calendar, Trash2, CheckCircle, Power, XCircle, Edit } from 'lucide-react';
 import apiClient from '../../../utils/apiClient';
 import AddPromotionModal from './AddPromotionModal';
 import ApplyPromoModal from './ApplyPromoModal';
@@ -9,6 +9,7 @@ const PromotionsManagement = () => {
   const [promotions, setPromotions] = useState([]);
   const [allItems, setAllItems] = useState([]); // We need items to pass to the Apply Modal
   const [loading, setLoading] = useState(true);
+  const [promoToEdit, setPromoToEdit] = useState(null);
   
   // Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -133,6 +134,18 @@ const handleToggleStatus = async (id, currentStatus) => {
                             {promo.item_count > 0 ? `Manage (${promo.item_count})` : "Add Items"}
                         </button>
 
+                            {/* Edit Button (New) */}
+                    <button 
+                        onClick={() => {
+                            setPromoToEdit(promo);
+                            setIsAddModalOpen(true); // Re-use the Add Modal
+                        }}
+                        className="px-3 py-2 bg-blue-50 text-blue-600 font-semibold rounded hover:bg-blue-100 text-sm flex justify-center items-center"
+                        title="Edit Details"
+                    >
+                        <Edit size={16}/>
+                    </button>
+
                         {/* Toggle Status Button */}
                         <button 
                             onClick={() => handleToggleStatus(promo.promotion_id, promo.is_active)}
@@ -162,10 +175,14 @@ const handleToggleStatus = async (id, currentStatus) => {
 
       {/* Modals */}
       <AddPromotionModal 
-        isOpen={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
-        onSave={fetchData} 
-      />
+    isOpen={isAddModalOpen} 
+    onClose={() => {
+        setIsAddModalOpen(false);
+        setPromoToEdit(null); // Clear edit state on close
+    }} 
+    onSave={fetchData}
+    promotionToEdit={promoToEdit} // Pass the data
+  />
       
       <ApplyPromoModal
         isOpen={!!selectedPromoForApply}

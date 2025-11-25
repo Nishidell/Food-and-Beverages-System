@@ -5,7 +5,8 @@ import {
     applyPromotionToItems,
     removePromotionFromItems,
     deletePromotion,
-    togglePromotionStatus
+    togglePromotionStatus,
+    updatePromotion
 } from "../controllers/promotionController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
@@ -20,4 +21,5 @@ router.post("/apply", applyPromotionToItems); // Link Items -> Promo
 router.post("/remove", removePromotionFromItems); // Unlink Items
 router.delete("/:id", deletePromotion);
 router.put("/:id/status", togglePromotionStatus);
+router.put("/:id", updatePromotion);
 export default router;
