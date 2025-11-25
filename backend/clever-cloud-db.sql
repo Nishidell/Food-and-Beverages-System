@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: b9wkqgu32onfqy0dvyva-mysql.services.clever-cloud.com:21917
--- Generation Time: Nov 25, 2025 at 02:19 AM
+-- Generation Time: Nov 25, 2025 at 04:13 AM
 -- Server version: 8.4.6-6
 -- PHP Version: 8.2.29
 
@@ -85,7 +85,6 @@ INSERT INTO `activity_logs` (`log_id`, `user_id`, `action`, `module`, `descripti
 (8, 1, 'CREATE', 'attendance', 'Clock in recorded for employee ID 1 (ATT-0001)', '2024-10-01 08:00:00', 1),
 (9, 2, 'UPDATE', 'positions', 'Updated position POS-0002 salary', '2024-09-20 13:00:00', 2),
 (10, 3, 'CREATE', 'departments', 'Created new department', '2024-08-15 09:00:00', 1),
-(12, 10, 'UPDATE', 'attendance', 'Clock out recorded for employee ID 10 (ATT-0010)', '2024-10-01 21:00:00', 10),
 (13, 12, 'CREATE', 'leaves', 'Created leave request LEV-0002', '2024-10-07 18:30:00', 12),
 (14, 1, 'LOGIN', 'auth', 'User logged in successfully', '2024-10-09 07:55:00', 1),
 (15, 2, 'LOGIN', 'auth', 'User logged in successfully', '2024-10-09 08:00:00', 2),
@@ -135,24 +134,11 @@ INSERT INTO `activity_logs` (`log_id`, `user_id`, `action`, `module`, `descripti
 (59, 1, 'CREATE', 'fingerprints', 'Initialized fingerprint enrollment for employee Christian Ancog (ID: 17) using fingerprint ID 4', '2025-11-11 11:40:23', 1),
 (60, 1, 'CREATE', 'fingerprints', 'Initialized fingerprint enrollment for employee Christian Ancog (ID: 17) using fingerprint ID 4', '2025-11-11 11:40:36', 1),
 (61, 1, 'CREATE', 'fingerprints', 'Initialized fingerprint enrollment for employee Christian Ancog (ID: 17) using fingerprint ID 4', '2025-11-11 11:40:44', 1),
-(62, 10, 'LOGIN', 'auth', 'User itemployee1 logged in', '2025-11-11 14:38:34', 10),
-(63, 10, 'UPDATE', 'employees', 'Updated employee James Lim (EMP-0010)', '2025-11-11 14:40:06', 10),
-(64, 10, 'UPDATE', 'employees', 'Updated employee Jamesa Lim (EMP-0010)', '2025-11-11 14:40:47', 10),
-(65, 10, 'UPDATE', 'employees', 'Updated employee Jamesa Lim (EMP-0010)', '2025-11-11 14:41:43', 10),
-(66, 10, 'CREATE', 'tickets', 'Created ticket \"issue1\" (TIC-0010)', '2025-11-11 14:43:21', 10),
-(67, 10, 'LOGIN', 'auth', 'User itemployee1 logged in', '2025-11-11 14:44:31', 10),
 (68, 1, 'LOGIN', 'auth', 'User superadmin logged in', '2025-11-11 14:47:24', 1),
-(69, 10, 'UPDATE', 'employees', 'Updated employee Jamesa Lim (EMP-0010)', '2025-11-11 14:48:34', 10),
-(70, 10, 'UPDATE', 'employees', 'Updated employee Jamesa Lim (EMP-0010)', '2025-11-11 14:48:44', 10),
-(71, 10, 'UPDATE', 'employees', 'Updated employee Jamesa Lim (EMP-0010)', '2025-11-11 14:48:55', 10),
 (72, 1, 'CREATE', 'positions', 'Created position CRM Manager (POS-0028)', '2025-11-11 14:50:25', 1),
 (73, 1, 'CREATE', 'departments', 'Created department Customer Service (DEP-0013)', '2025-11-11 14:52:46', 1),
 (74, 1, 'UPDATE', 'positions', 'Updated position CRM Manager (POS-0028)', '2025-11-11 14:53:14', 1),
-(75, 10, 'LOGIN', 'auth', 'User itemployee1 logged in', '2025-11-11 14:53:44', 10),
-(76, 10, 'UPDATE', 'users', 'Updated user itemployee1 (ID: 10)', '2025-11-11 14:58:48', 10),
-(77, 10, 'UPDATE', 'users', 'Updated user itemployee1 (ID: 10)', '2025-11-11 14:58:51', 10),
 (78, 1, 'CREATE', 'employees', 'Created employee Nicole Mayo (EMP-0018) with role: employee', '2025-11-11 15:03:38', 1),
-(79, 10, 'LOGIN', 'auth', 'User it.jamesa logged in', '2025-11-11 15:05:26', 10),
 (80, 1, 'UPDATE', 'employees', 'Updated employee Nicole Mayo (EMP-0018)', '2025-11-11 15:05:36', 1),
 (81, 1, 'UPDATE', 'employees', 'Updated employee Nicole Mayo (EMP-0018)', '2025-11-11 15:21:03', 1),
 (82, 1, 'CREATE', 'employees', 'Created employee Vincent Torio (EMP-0019) with role: employee', '2025-11-11 15:31:19', 1),
@@ -523,7 +509,25 @@ INSERT INTO `activity_logs` (`log_id`, `user_id`, `action`, `module`, `descripti
 (505, 72, 'UPDATE', 'employees', 'Updated employee Christian Ancog (EMP-0072)', '2025-11-24 06:13:41', 72),
 (506, 72, 'UPDATE', 'employees', 'Updated employee Christian Ancog (EMP-0072)', '2025-11-24 06:14:04', 72),
 (507, 72, 'UPDATE', 'employees', 'Updated employee Christian Ancog (EMP-0072)', '2025-11-24 06:36:04', 72),
-(508, 72, 'UPDATE', 'employees', 'Updated employee Christian Ancog (EMP-0072)', '2025-11-24 06:36:17', 72);
+(508, 72, 'UPDATE', 'employees', 'Updated employee Christian Ancog (EMP-0072)', '2025-11-24 06:36:17', 72),
+(509, 1, 'LOGIN', 'auth', 'User superadmin logged in', '2025-11-25 03:42:18', 1),
+(510, 1, 'CREATE', 'positions', 'Created position Admin  (POS-0032)', '2025-11-25 03:44:48', 1),
+(511, 1, 'CREATE', 'employees', 'Created employee Franc Randell Coton (EMP-0073) with role: employee', '2025-11-25 03:52:11', 1),
+(512, 1, 'UPDATE', 'positions', 'Updated position Admin  (POS-0032)', '2025-11-25 03:52:49', 1),
+(513, 1, 'CREATE', 'fingerprints', 'Initialized fingerprint enrollment for employee Jamesa Lim (ID: 10) using fingerprint ID 6', '2025-11-25 04:01:19', 1),
+(514, 1, 'CREATE', 'fingerprints', 'Initialized fingerprint enrollment for employee Jamesa Lim (ID: 10) using fingerprint ID 6', '2025-11-25 04:01:24', 1),
+(516, 1, 'UPDATE', 'employees', 'Updated employee Jamesa Lim (EMP-0010)', '2025-11-25 04:01:55', 1),
+(517, 1, 'DELETE', 'employees', 'Deleted employee Jamesa Lim (EMP-0010) and linked user account', '2025-11-25 04:04:24', 1),
+(518, 1, 'CREATE', 'fingerprints', 'Initialized fingerprint enrollment for employee Louvel Navarro (ID: 59) using fingerprint ID 6', '2025-11-25 04:05:08', 1),
+(519, 1, 'CREATE', 'fingerprints', 'Initialized fingerprint enrollment for employee Louvel Navarro (ID: 59) using fingerprint ID 6', '2025-11-25 04:05:31', 1),
+(520, 1, 'CREATE', 'fingerprints', 'Initialized fingerprint enrollment for employee Louvel Navarro (ID: 59) using fingerprint ID 6', '2025-11-25 04:05:38', 1),
+(522, 1, 'UPDATE', 'employees', 'Updated employee Louvel Navarro (EMP-0059)', '2025-11-25 04:06:08', 1),
+(523, 1, 'DELETE', 'employees', 'Deleted employee Louvel Navarro (EMP-0059) and linked user account', '2025-11-25 04:08:26', 1),
+(524, 1, 'CREATE', 'fingerprints', 'Initialized fingerprint enrollment for employee Marx Elis Suarez (ID: 61) using fingerprint ID 6', '2025-11-25 04:11:14', 1),
+(525, 1, 'CREATE', 'fingerprints', 'Initialized fingerprint enrollment for employee Marx Elis Suarez (ID: 61) using fingerprint ID 6', '2025-11-25 04:11:39', 1);
+INSERT INTO `activity_logs` (`log_id`, `user_id`, `action`, `module`, `description`, `created_at`, `created_by`) VALUES
+(526, 61, 'UPDATE', 'employees', 'Fingerprint enrolled for employee ID 61 (Fingerprint ID: 6)', '2025-11-25 04:11:41', 61),
+(527, 1, 'UPDATE', 'employees', 'Updated employee Marx Elis Suarez (EMP-0061)', '2025-11-25 04:11:49', 1);
 
 -- --------------------------------------------------------
 
@@ -563,7 +567,6 @@ INSERT INTO `attendance` (`attendance_id`, `attendance_code`, `employee_id`, `da
 (15, 'ATT-0015', 56, '2025-11-21', '2025-11-21 14:48:14', NULL, 'present', 0.00, '2025-11-21 06:48:15', '2025-11-21 06:48:15', 56, NULL),
 (16, 'ATT-0016', 57, '2025-11-22', '2025-11-22 01:05:33', NULL, 'absent', 0.00, '2025-11-21 17:05:34', '2025-11-21 17:08:28', 1, 1),
 (17, 'ATT-0017', 60, '2025-11-22', '2025-11-22 01:07:27', NULL, 'absent', 0.00, '2025-11-21 17:07:28', '2025-11-21 17:08:45', 1, 1),
-(18, 'ATT-0018', 59, '2025-11-22', '2025-11-22 01:07:38', NULL, 'present', 0.00, '2025-11-21 17:07:39', '2025-11-21 17:07:39', 1, NULL),
 (20, 'ATT-0020', 1, '2025-11-21', NULL, NULL, 'absent', 0.00, '2025-11-21 17:44:24', '2025-11-21 17:44:24', 1, NULL),
 (21, 'ATT-0021', 2, '2025-11-21', NULL, NULL, 'absent', 0.00, '2025-11-21 17:44:24', '2025-11-21 17:44:24', 1, NULL),
 (22, 'ATT-0022', 3, '2025-11-21', NULL, NULL, 'absent', 0.00, '2025-11-21 17:44:24', '2025-11-21 17:44:24', 1, NULL),
@@ -571,7 +574,6 @@ INSERT INTO `attendance` (`attendance_id`, `attendance_code`, `employee_id`, `da
 (24, 'ATT-0024', 5, '2025-11-21', NULL, NULL, 'absent', 0.00, '2025-11-21 17:44:25', '2025-11-21 17:44:25', 1, NULL),
 (25, 'ATT-0025', 6, '2025-11-21', NULL, NULL, 'absent', 0.00, '2025-11-21 17:44:25', '2025-11-21 17:44:25', 1, NULL),
 (26, 'ATT-0026', 7, '2025-11-21', NULL, NULL, 'absent', 0.00, '2025-11-21 17:44:26', '2025-11-21 17:44:26', 1, NULL),
-(27, 'ATT-0027', 10, '2025-11-21', NULL, NULL, 'absent', 0.00, '2025-11-21 17:44:26', '2025-11-21 17:44:26', 1, NULL),
 (28, 'ATT-0028', 12, '2025-11-21', NULL, NULL, 'absent', 0.00, '2025-11-21 17:44:26', '2025-11-21 17:44:26', 1, NULL),
 (29, 'ATT-0029', 13, '2025-11-21', NULL, NULL, 'absent', 0.00, '2025-11-21 17:44:27', '2025-11-21 17:44:27', 1, NULL),
 (30, 'ATT-0030', 18, '2025-11-21', NULL, NULL, 'absent', 0.00, '2025-11-21 17:44:27', '2025-11-21 17:44:27', 1, NULL),
@@ -585,14 +587,16 @@ INSERT INTO `attendance` (`attendance_id`, `attendance_code`, `employee_id`, `da
 (38, 'ATT-0038', 45, '2025-11-21', NULL, NULL, 'absent', 0.00, '2025-11-21 17:44:29', '2025-11-21 17:44:29', 1, NULL),
 (39, 'ATT-0039', 48, '2025-11-21', NULL, NULL, 'absent', 0.00, '2025-11-21 17:44:30', '2025-11-21 17:44:30', 1, NULL),
 (40, 'ATT-0040', 57, '2025-11-21', NULL, NULL, 'absent', 0.00, '2025-11-21 17:44:30', '2025-11-21 17:44:30', 1, NULL),
-(42, 'ATT-0042', 59, '2025-11-21', NULL, NULL, 'absent', 0.00, '2025-11-21 17:44:31', '2025-11-21 17:44:31', 1, NULL),
 (43, 'ATT-0043', 60, '2025-11-21', NULL, NULL, 'absent', 0.00, '2025-11-21 17:44:31', '2025-11-21 17:44:31', 1, NULL),
 (44, 'ATT-0044', 61, '2025-11-21', NULL, NULL, 'absent', 0.00, '2025-11-21 17:44:32', '2025-11-21 17:44:32', 1, NULL),
 (45, 'ATT-0045', 45, '2025-11-24', '2025-11-24 01:25:18', NULL, 'present', 0.00, '2025-11-23 17:25:18', '2025-11-23 17:25:19', 1, NULL),
 (46, 'ATT-0046', 57, '2025-11-24', '2025-11-24 01:25:26', NULL, 'present', 0.00, '2025-11-23 17:25:26', '2025-11-23 17:25:26', 1, NULL),
 (48, 'ATT-0048', 72, '2025-11-24', '2025-11-24 01:31:08', '2025-11-24 01:31:45', 'late', 0.00, '2025-11-23 17:31:08', '2025-11-23 17:31:45', 72, 72),
 (49, 'ATT-0049', 21, '2025-11-24', '2025-11-24 01:37:32', '2025-11-24 01:37:44', 'late', 0.00, '2025-11-23 17:37:32', '2025-11-23 17:37:44', 21, 21),
-(50, 'ATT-0050', 60, '2025-11-24', '2025-11-24 13:08:37', '2025-11-24 13:11:06', 'late', 0.00, '2025-11-24 05:08:38', '2025-11-24 05:11:07', 60, 60);
+(50, 'ATT-0050', 60, '2025-11-24', '2025-11-24 13:08:37', '2025-11-24 13:11:06', 'late', 0.00, '2025-11-24 05:08:38', '2025-11-24 05:11:07', 60, 60),
+(51, 'ATT-0051', 72, '2025-11-25', '2025-11-25 12:01:22', '2025-11-25 12:02:54', 'late', 0.00, '2025-11-25 04:01:22', '2025-11-25 04:02:55', 72, 72),
+(53, 'ATT-0053', 21, '2025-11-25', '2025-11-25 12:03:08', '2025-11-25 12:03:20', 'late', 0.00, '2025-11-25 04:03:08', '2025-11-25 04:03:20', 21, 21),
+(55, 'ATT-0055', 60, '2025-11-25', '2025-11-25 12:10:39', '2025-11-25 12:10:46', 'late', 0.00, '2025-11-25 04:10:40', '2025-11-25 04:10:46', 60, 60);
 
 -- --------------------------------------------------------
 
@@ -963,7 +967,6 @@ INSERT INTO `dependants` (`dependant_id`, `dependant_code`, `employee_id`, `firs
 (5, 'DEP-0005', 6, 'Isabella', 'Mendoza', 'Spouse', '1988-11-30', '2025-11-09 10:18:55', '2025-11-09 10:18:55', 1, NULL),
 (6, 'DEP-0006', 6, 'Diego', 'Mendoza', 'Child', '2016-03-15', '2025-11-09 10:18:55', '2025-11-09 10:18:55', 1, NULL),
 (7, 'DEP-0007', 6, 'Elena', 'Mendoza', 'Child', '2019-09-08', '2025-11-09 10:18:55', '2025-11-09 10:18:55', 1, NULL),
-(10, 'DEP-0010', 10, 'Patricia', 'Lim', 'Spouse', '1994-01-18', '2025-11-09 10:18:55', '2025-11-09 10:18:55', 1, NULL),
 (14, 'DEP-0014', 18, 'Skylar ', 'Catalan', 'Parent', NULL, '2025-11-11 15:21:03', '2025-11-11 15:21:03', 1, NULL),
 (15, 'DEP-0015', 18, 'Leah', 'Ramirez', 'Sibling', NULL, '2025-11-11 15:21:03', '2025-11-11 15:21:03', 1, NULL),
 (24, 'DEP-0024', 22, 'Ricardo', 'Villaflor', 'Spouse', NULL, '2025-11-11 18:16:53', '2025-11-11 18:16:53', 1, NULL),
@@ -981,8 +984,6 @@ INSERT INTO `dependants` (`dependant_id`, `dependant_code`, `employee_id`, `firs
 (96, 'DEP-0096', 45, 'Wilfred', 'Acosta', 'Boardmates', NULL, '2025-11-21 06:27:10', '2025-11-21 06:27:10', 1, NULL),
 (100, 'DEP-0100', 47, 'Ashley', 'Marasigan', 'Sibling', NULL, '2025-11-21 06:39:40', '2025-11-21 06:39:40', 1, NULL),
 (102, 'DEP-0102', 57, 'Michael', 'Gallardo', 'Sibling', NULL, '2025-11-21 16:03:04', '2025-11-21 16:03:04', 1, NULL),
-(107, 'DEP-0107', 61, 'Mark', 'Suarez', 'Parent', NULL, '2025-11-21 18:45:00', '2025-11-21 18:45:00', 1, NULL),
-(108, 'DEP-0108', 59, 'Serena ', 'Navarro', 'Sibling', NULL, '2025-11-22 06:24:16', '2025-11-22 06:24:16', 1, NULL),
 (112, 'DEP-0112', 1, 'Roberto', 'Admin', 'Parent', NULL, '2025-11-22 17:37:32', '2025-11-22 17:37:32', 1, NULL),
 (115, 'DEP-0115', 49, 'Saturnina', 'Rizal', 'Sibling', NULL, '2025-11-23 10:33:39', '2025-11-23 10:33:39', 1, NULL),
 (116, 'DEP-0116', 63, 'Shawn', 'Patulilic', 'Parent', NULL, '2025-11-23 10:56:25', '2025-11-23 10:56:25', 1, NULL),
@@ -991,7 +992,9 @@ INSERT INTO `dependants` (`dependant_id`, `dependant_code`, `employee_id`, `firs
 (123, 'DEP-0123', 56, 'Christian', 'Ancog', 'Child', NULL, '2025-11-23 16:47:18', '2025-11-23 16:47:18', 1, NULL),
 (130, 'DEP-0130', 21, 'Jonas', 'Dela Cruz', 'Parent', NULL, '2025-11-23 17:37:16', '2025-11-23 17:37:16', 1, NULL),
 (132, 'DEP-0132', 60, 'Rodel', 'Apostol', 'Parent', NULL, '2025-11-24 05:08:20', '2025-11-24 05:08:20', 1, NULL),
-(135, 'DEP-0135', 72, 'Christian', 'Ancog', 'spouse', NULL, '2025-11-24 06:36:16', '2025-11-24 06:36:16', 72, NULL);
+(135, 'DEP-0135', 72, 'Christian', 'Ancog', 'spouse', NULL, '2025-11-24 06:36:16', '2025-11-24 06:36:16', 72, NULL),
+(136, 'DEP-0136', 73, 'Nicole', 'Mayo', 'Parent', NULL, '2025-11-25 03:52:11', '2025-11-25 03:52:11', 1, NULL),
+(139, 'DEP-0139', 61, 'Mark', 'Suarez', 'Parent', NULL, '2025-11-25 04:11:49', '2025-11-25 04:11:49', 1, NULL);
 
 -- --------------------------------------------------------
 
@@ -1020,7 +1023,6 @@ INSERT INTO `dependant_address` (`dependant_address_id`, `dependant_id`, `region
 (1, 1, 'NCR', 'Metro Manila', 'Makati City', '456 HR Ave, Brgy. Poblacion', '2025-11-09 10:18:55', '2025-11-09 10:18:55', 1, NULL),
 (2, 3, 'NCR', 'Metro Manila', 'Quezon City', '654 Supervisor Ln, Brgy. Diliman', '2025-11-09 10:18:55', '2025-11-09 10:18:55', 1, NULL),
 (3, 5, 'NCR', 'Metro Manila', 'Makati City', '789 IT Supervisor St, Brgy. Salcedo', '2025-11-09 10:18:55', '2025-11-09 10:18:55', 1, NULL),
-(5, 10, 'NCR', 'Metro Manila', 'Makati City', '741 Dev Center, Brgy. Bel-Air', '2025-11-09 10:18:55', '2025-11-09 10:18:55', 1, NULL),
 (9, 14, 'Region IV-A (CALABARZON)', 'Rizal', 'City of Antipolo ', 'Unit 10, 2/F Molvina Commercial Complex, Marcos Highway', '2025-11-11 15:21:03', '2025-11-11 15:21:03', 1, NULL),
 (10, 15, 'Region IV-A (CALABARZON)', 'Rizal', 'Cainta', ' Unit 10, 2/F Molvina Commercial Complex, Marcos Highway', '2025-11-11 15:21:03', '2025-11-11 15:21:03', 1, NULL),
 (19, 24, 'National Capital Region (NCR)', 'NCR', 'Valenzuela City', '13 Oregano st. Palanas A Barangay Vasra', '2025-11-11 18:16:53', '2025-11-11 18:16:53', 1, NULL),
@@ -1037,8 +1039,6 @@ INSERT INTO `dependant_address` (`dependant_address_id`, `dependant_id`, `region
 (90, 96, 'National Capital Region (NCR)', 'NCR', 'San Juan City', ' 199-B E. Rodriguez Street', '2025-11-21 06:27:11', '2025-11-21 06:27:11', 1, NULL),
 (94, 100, 'National Capital Region (NCR)', 'NCR', 'Manila', ' Hyatt Hotel And Casino Manila, 1558 Pedro Gil, Corner M.H. Del Pilar Street', '2025-11-21 06:39:40', '2025-11-21 06:39:40', 1, NULL),
 (96, 102, 'National Capital Region (NCR)', 'NCR', 'Manila', '1241 Padre Faura Street Corner M.H. Del Pilar Street Ermita 1000', '2025-11-21 16:03:04', '2025-11-21 16:03:04', 1, NULL),
-(101, 107, 'National Capital Region (NCR)', 'NCR', 'Quezon City', 'lock 2 Lot 5 & 6 Vico Subdivision Bgy Bahay Toro Project 8', '2025-11-21 18:45:01', '2025-11-21 18:45:01', 1, NULL),
-(102, 108, 'National Capital Region (NCR)', 'NCR', 'Manila', '1617 Sisa Street 1200', '2025-11-22 06:24:17', '2025-11-22 06:24:17', 1, NULL),
 (106, 112, 'NCR', 'Metro Manila', 'Quezon City', '123 Admin St, Brgy. Central', '2025-11-22 17:37:33', '2025-11-22 17:37:33', 1, NULL),
 (109, 115, 'Region IV-A (CALABARZON)', 'Rizal', 'Cainta', '  P. Burgos Street, Dyquiangco Building', '2025-11-23 10:33:39', '2025-11-23 10:33:39', 1, NULL),
 (110, 116, 'National Capital Region (NCR)', 'NCR', 'Quezon City', '1130 Oroquieta Street 1000', '2025-11-23 10:56:25', '2025-11-23 10:56:25', 1, NULL),
@@ -1047,7 +1047,9 @@ INSERT INTO `dependant_address` (`dependant_address_id`, `dependant_id`, `region
 (117, 123, 'National Capital Region (NCR)', 'NCR', 'Quezon City', 'Palanas A', '2025-11-23 16:47:18', '2025-11-23 16:47:18', 1, NULL),
 (124, 130, 'National Capital Region (NCR)', 'NCR', 'Makati City', ' 1047 Metropolitan Avenue, Sta Cruz', '2025-11-23 17:37:16', '2025-11-23 17:37:16', 1, NULL),
 (126, 132, 'National Capital Region (NCR)', 'NCR', 'Manila', '  Madrigal Building', '2025-11-24 05:08:20', '2025-11-24 05:08:20', 1, NULL),
-(129, 135, 'National Capital Region (NCR)', 'NCR', 'Pateros', '13 Oregano st. Palanas A Barangay Vasra', '2025-11-24 06:36:17', '2025-11-24 06:36:17', 72, NULL);
+(129, 135, 'National Capital Region (NCR)', 'NCR', 'Pateros', '13 Oregano st. Palanas A Barangay Vasra', '2025-11-24 06:36:17', '2025-11-24 06:36:17', 72, NULL),
+(130, 136, 'National Capital Region (NCR)', 'NCR', 'Quezon City', 'Novaliches', '2025-11-25 03:52:11', '2025-11-25 03:52:11', 1, NULL),
+(133, 139, 'National Capital Region (NCR)', 'NCR', 'Quezon City', 'lock 2 Lot 5 & 6 Vico Subdivision Bgy Bahay Toro Project 8', '2025-11-25 04:11:49', '2025-11-25 04:11:49', 1, NULL);
 
 -- --------------------------------------------------------
 
@@ -1074,7 +1076,6 @@ INSERT INTO `dependant_contact` (`dependant_contact_id`, `dependant_id`, `contac
 (2, 2, '+63 918 555 2345', '2025-11-09 10:18:55', '2025-11-09 10:18:55', 1, NULL),
 (3, 3, '+63 919 555 3456', '2025-11-09 10:18:55', '2025-11-09 10:18:55', 1, NULL),
 (4, 5, '+63 920 555 4567', '2025-11-09 10:18:55', '2025-11-09 10:18:55', 1, NULL),
-(6, 10, '+63 922 555 6789', '2025-11-09 10:18:55', '2025-11-09 10:18:55', 1, NULL),
 (10, 14, '09123233232', '2025-11-11 15:21:03', '2025-11-11 15:21:03', 1, NULL),
 (11, 15, '09123213323', '2025-11-11 15:21:03', '2025-11-11 15:21:03', 1, NULL),
 (20, 24, '09242522255', '2025-11-11 18:16:53', '2025-11-11 18:16:53', 1, NULL),
@@ -1091,8 +1092,6 @@ INSERT INTO `dependant_contact` (`dependant_contact_id`, `dependant_id`, `contac
 (91, 96, '09515516662', '2025-11-21 06:27:10', '2025-11-21 06:27:10', 1, NULL),
 (95, 100, '09415556166', '2025-11-21 06:39:40', '2025-11-21 06:39:40', 1, NULL),
 (97, 102, '09515661666', '2025-11-21 16:03:04', '2025-11-21 16:03:04', 1, NULL),
-(102, 107, '09123512525', '2025-11-21 18:45:00', '2025-11-21 18:45:00', 1, NULL),
-(103, 108, '09512451251', '2025-11-22 06:24:16', '2025-11-22 06:24:16', 1, NULL),
 (107, 112, '+639215555678', '2025-11-22 17:37:32', '2025-11-22 17:37:32', 1, NULL),
 (110, 115, '09123551661', '2025-11-23 10:33:39', '2025-11-23 10:33:39', 1, NULL),
 (111, 116, '09512566124', '2025-11-23 10:56:25', '2025-11-23 10:56:25', 1, NULL),
@@ -1101,7 +1100,9 @@ INSERT INTO `dependant_contact` (`dependant_contact_id`, `dependant_id`, `contac
 (118, 123, '09412314151', '2025-11-23 16:47:18', '2025-11-23 16:47:18', 1, NULL),
 (125, 130, '09723232226', '2025-11-23 17:37:16', '2025-11-23 17:37:16', 1, NULL),
 (127, 132, '09515251566', '2025-11-24 05:08:20', '2025-11-24 05:08:20', 1, NULL),
-(130, 135, '09093123232', '2025-11-24 06:36:17', '2025-11-24 06:36:17', 72, NULL);
+(130, 135, '09093123232', '2025-11-24 06:36:17', '2025-11-24 06:36:17', 72, NULL),
+(131, 136, '09123155151', '2025-11-25 03:52:11', '2025-11-25 03:52:11', 1, NULL),
+(134, 139, '09123512525', '2025-11-25 04:11:49', '2025-11-25 04:11:49', 1, NULL);
 
 -- --------------------------------------------------------
 
@@ -1127,7 +1128,6 @@ INSERT INTO `dependant_email` (`dependant_email_id`, `dependant_id`, `email`, `c
 (1, 1, 'miguel.santos@email.com', '2025-11-09 10:18:55', '2025-11-09 10:18:55', 1, NULL),
 (2, 3, 'carmen.ramos@email.com', '2025-11-09 10:18:55', '2025-11-09 10:18:55', 1, NULL),
 (3, 5, 'isabella.mendoza@email.com', '2025-11-09 10:18:55', '2025-11-09 10:18:55', 1, NULL),
-(5, 10, 'patricia.lim@email.com', '2025-11-09 10:18:55', '2025-11-09 10:18:55', 1, NULL),
 (8, 55, 'ancog.christian.ihao@gmail.com', '2025-11-12 15:22:00', '2025-11-12 15:22:00', 1, NULL),
 (10, 60, 'ancog.christian.ihao@gmail.com', '2025-11-12 17:33:24', '2025-11-12 17:33:24', 1, NULL),
 (24, 76, 'DelDylan@gmail.com', '2025-11-20 01:58:13', '2025-11-20 01:58:13', 1, NULL),
@@ -1216,7 +1216,6 @@ INSERT INTO `employees` (`employee_id`, `employee_code`, `user_id`, `fingerprint
 (5, 'EMP-0005', 5, NULL, 'Pedro', 'Ramos', 'Silva', NULL, '1987-11-25', 'male', 'married', 2, 1, 'morning', 40000.00, '2021-05-01', 15, 2, 'active', '2025-11-11 05:41:02', '2025-11-11 05:41:02', 1, NULL),
 (6, 'EMP-0006', 6, NULL, 'Carlos', 'Mendoza', 'Torres', NULL, '1986-09-18', 'male', 'married', 5, 2, 'morning', 50000.00, '2021-05-15', 15, 3, 'active', '2025-11-11 05:41:08', '2025-11-11 05:41:08', 1, NULL),
 (7, 'EMP-0007', 7, NULL, 'Rosa', 'Martinez', 'Fernandez', NULL, '1989-04-12', 'female', 'single', 9, 3, 'morning', 38000.00, '2021-06-01', 15, 4, 'active', '2025-11-11 05:41:14', '2025-11-11 05:41:14', 1, NULL),
-(10, 'EMP-0010', 10, NULL, 'Jamesa', 'Lim', 'Chen', NULL, '1993-12-05', 'female', 'single', 6, 2, 'morning', 45000.00, '2022-03-01', 15, 6, 'active', '2025-11-11 05:41:28', '2025-11-11 14:40:47', 1, 10),
 (12, 'EMP-0012', 12, NULL, 'Jenny', 'Cruz', 'Bautista', NULL, '1997-10-08', 'female', 'single', 10, 3, 'morning', 25000.00, '2022-05-01', 15, 7, 'active', '2025-11-11 05:41:36', '2025-11-11 05:41:36', 1, NULL),
 (13, 'EMP-0013', 13, NULL, 'Michael', 'Reyes', 'Santos', NULL, '1998-03-27', 'male', 'single', 19, 7, 'morning', 23000.00, '2022-06-01', 15, 7, 'active', '2025-11-11 05:41:40', '2025-11-12 15:22:00', 1, 1),
 (18, 'EMP-0018', 18, NULL, 'Nicole', 'Mayo', NULL, NULL, '1995-03-01', 'female', 'single', 13, 4, 'morning', 1000.00, '2025-11-05', 15, NULL, 'active', '2025-11-11 15:03:38', '2025-11-11 15:05:36', 1, 1),
@@ -1237,13 +1236,13 @@ INSERT INTO `employees` (`employee_id`, `employee_code`, `user_id`, `fingerprint
 (49, 'EMP-0049', 49, NULL, 'Paciano', 'Rizal', 'Realonda', NULL, '2000-02-10', 'male', 'single', 26, 12, 'morning', 20000.00, '2023-10-19', 15, NULL, 'active', '2025-11-20 07:47:36', '2025-11-23 10:33:38', 1, 1),
 (56, 'EMP-0056', 56, NULL, 'John Wilmer', 'Ti-maan', NULL, NULL, '2005-02-01', 'male', 'single', 18, 9, 'morning', 15000.00, '2022-02-13', 15, NULL, 'active', '2025-11-21 06:46:44', '2025-11-23 10:58:04', 1, 1),
 (57, 'EMP-0057', 57, NULL, 'Angelo', 'Gallardo', NULL, NULL, '2005-05-01', 'male', 'single', 21, 11, 'morning', 20000.00, '2022-05-07', 15, NULL, 'active', '2025-11-21 16:03:04', '2025-11-21 17:31:13', 1, NULL),
-(59, 'EMP-0059', 59, NULL, 'Louvel', 'Navarro', NULL, NULL, '2001-12-06', 'female', 'single', 22, 9, 'morning', 17000.00, '2023-10-28', 15, NULL, 'active', '2025-11-21 16:32:17', '2025-11-22 06:24:11', 1, 1),
 (60, 'EMP-0060', 60, 4, 'Aaron', 'Apostol', 'Medina', NULL, '2000-10-01', 'male', 'single', 22, 9, 'morning', 19900.00, '2024-09-04', 15, NULL, 'active', '2025-11-21 16:53:46', '2025-11-24 05:08:19', 1, 1),
-(61, 'EMP-0061', 61, NULL, 'Marx Elis', 'Suarez', 'Mañginsay', NULL, '2005-01-02', 'male', 'single', 5, 2, 'morning', 10000.00, '2023-04-02', 15, NULL, 'on-leave', '2025-11-21 17:38:59', '2025-11-23 17:07:01', 1, 1),
+(61, 'EMP-0061', 61, 6, 'Marx Elis', 'Suarez', 'Mañginsay', NULL, '2005-01-02', 'male', 'single', 5, 2, 'morning', 10000.00, '2023-04-02', 15, NULL, 'on-leave', '2025-11-21 17:38:59', '2025-11-25 04:11:49', 1, 1),
 (63, 'EMP-0063', 63, NULL, 'Cristina', 'Patulilic', NULL, NULL, '2001-12-02', 'female', 'single', 17, 11, 'morning', 20000.00, '2021-01-23', 15, NULL, 'active', '2025-11-23 10:56:24', '2025-11-23 17:07:11', 1, NULL),
 (65, 'EMP-0065', 65, NULL, 'Vince Joseph', 'Vargas', 'G ', NULL, '1997-05-16', 'male', 'single', 22, 9, 'morning', 19000.00, '2022-07-07', 15, NULL, 'active', '2025-11-23 11:39:22', '2025-11-23 17:08:02', 1, NULL),
 (66, 'EMP-0066', 66, NULL, 'Arjay', 'Garabiag', NULL, NULL, '1993-08-08', 'male', 'single', 19, 7, 'morning', 20000.00, '2021-08-12', 15, NULL, 'active', '2025-11-23 11:51:58', '2025-11-23 17:08:21', 1, NULL),
-(72, 'EMP-0072', 72, 2, 'Christian', 'Ancog', 'Ihao', NULL, '2005-02-01', 'male', 'single', 6, 2, 'morning', 20000.00, '2022-01-13', 15, 6, 'active', '2025-11-23 17:30:10', '2025-11-23 17:30:35', 1, 72);
+(72, 'EMP-0072', 72, 2, 'Christian', 'Ancog', 'Ihao', NULL, '2005-02-01', 'male', 'single', 6, 2, 'morning', 20000.00, '2022-01-13', 15, 6, 'active', '2025-11-23 17:30:10', '2025-11-23 17:30:35', 1, 72),
+(73, 'EMP-0073', 73, 5, 'Franc Randell', 'Coton', NULL, NULL, '1997-02-01', 'male', 'single', 32, 8, 'morning', 21000.00, '2025-11-21', 15, NULL, 'active', '2025-11-25 03:52:10', '2025-11-25 03:52:10', 1, NULL);
 
 -- --------------------------------------------------------
 
@@ -1278,7 +1277,7 @@ INSERT INTO `employee_addresses` (`address_id`, `employee_id`, `region_name`, `p
 (7, 7, 'NCR', 'Metro Manila', 'Manila', '321 Front Desk Supervisor Ave', '2025-11-20 04:15:20', '2025-11-20 04:15:20', 1, NULL),
 (8, 8, 'NCR', 'Metro Manila', 'Mandaluyong', '258 HR Plaza', '2025-11-20 04:15:20', '2025-11-20 04:15:20', 1, NULL),
 (9, 9, 'NCR', 'Metro Manila', 'Quezon City', '369 Recruitment St', '2025-11-20 04:15:20', '2025-11-20 04:15:20', 1, NULL),
-(10, 10, 'National Capital Region (NCR)', 'NCR', 'Quezon City', '741 Dev Center', '2025-11-20 04:15:20', '2025-11-20 04:15:20', 1, 10),
+(10, 10, 'National Capital Region (NCR)', 'NCR', 'Quezon City', '741 Dev Center', '2025-11-20 04:15:20', '2025-11-25 04:01:54', 1, 1),
 (11, 12, 'NCR', 'Metro Manila', 'Manila', '963 Lobby Ave', '2025-11-20 04:15:20', '2025-11-20 04:15:20', 1, NULL),
 (12, 13, 'Region XII (SOCCSKSARGEN)', 'Cotabato', 'Arakan', '159 Front Office', '2025-11-20 04:15:20', '2025-11-20 04:15:20', 1, 1),
 (13, 18, 'Region IV-A (CALABARZON)', 'Rizal', 'City of Antipolo ', 'Unit 10, 2/F Molvina Commercial Complex, Marcos Highway', '2025-11-20 04:15:20', '2025-11-20 04:15:20', 1, 1),
@@ -1319,7 +1318,8 @@ INSERT INTO `employee_addresses` (`address_id`, `employee_id`, `region_name`, `p
 (49, 69, 'National Capital Region (NCR)', 'NCR', 'Quezon City', '13 Oregano st. Palanas A Barangay Vasra', '2025-11-23 17:02:46', '2025-11-23 17:02:46', 1, NULL),
 (50, 70, 'National Capital Region (NCR)', 'NCR', 'Quezon City', '13 Oregano st. Palanas A Barangay Vasra', '2025-11-23 17:04:29', '2025-11-23 17:04:29', 1, NULL),
 (51, 71, 'National Capital Region (NCR)', 'NCR', 'Quezon City', '13 Oregano st. Palanas A Barangay Vasra', '2025-11-23 17:27:58', '2025-11-23 17:28:54', 1, 1),
-(52, 72, 'National Capital Region (NCR)', 'NCR', 'Quezon City', '13 Oregano st. Palanas A Barangay Vasra', '2025-11-23 17:30:10', '2025-11-24 06:14:04', 1, 72);
+(52, 72, 'National Capital Region (NCR)', 'NCR', 'Quezon City', '13 Oregano st. Palanas A Barangay Vasra', '2025-11-23 17:30:10', '2025-11-24 06:14:04', 1, 72),
+(53, 73, 'National Capital Region (NCR)', 'NCR', 'Quezon City', 'Novaliches', '2025-11-25 03:52:10', '2025-11-25 03:52:10', 1, NULL);
 
 -- --------------------------------------------------------
 
@@ -1399,7 +1399,6 @@ INSERT INTO `employee_contact_numbers` (`contact_id`, `employee_id`, `contact_nu
 (6, 6, '+63 922 678 9012', '2025-11-11 05:41:47', '2025-11-11 05:41:47', 1, NULL),
 (7, 7, '+63 923 789 0123', '2025-11-11 05:41:47', '2025-11-11 05:41:47', 1, NULL),
 (12, 12, '+63 928 234 5678', '2025-11-11 05:41:47', '2025-11-11 05:41:47', 1, NULL),
-(17, 10, '09912121230', '2025-11-11 14:48:55', '2025-11-11 14:48:55', NULL, NULL),
 (20, 18, '09234234242', '2025-11-11 15:21:03', '2025-11-11 15:21:03', NULL, NULL),
 (29, 22, '09971231232', '2025-11-11 18:16:53', '2025-11-11 18:16:53', NULL, NULL),
 (59, 19, '09123233222', '2025-11-12 15:19:47', '2025-11-12 15:19:47', NULL, NULL),
@@ -1416,8 +1415,6 @@ INSERT INTO `employee_contact_numbers` (`contact_id`, `employee_id`, `contact_nu
 (106, 45, '09415515155', '2025-11-21 06:27:09', '2025-11-21 06:27:09', NULL, NULL),
 (110, 47, '09662781722', '2025-11-21 06:39:40', '2025-11-21 06:39:40', NULL, NULL),
 (112, 57, '09516726771', '2025-11-21 16:03:04', '2025-11-21 16:03:04', NULL, NULL),
-(117, 61, '09512416161', '2025-11-21 18:44:59', '2025-11-21 18:44:59', NULL, NULL),
-(118, 59, '09514414555', '2025-11-22 06:24:14', '2025-11-22 06:24:14', NULL, NULL),
 (120, 1, '09951515515', '2025-11-22 16:13:22', '2025-11-22 16:13:22', NULL, NULL),
 (123, 49, '09151555611', '2025-11-23 10:33:38', '2025-11-23 10:33:38', NULL, NULL),
 (124, 63, '09515241245', '2025-11-23 10:56:24', '2025-11-23 10:56:24', NULL, NULL),
@@ -1426,7 +1423,9 @@ INSERT INTO `employee_contact_numbers` (`contact_id`, `employee_id`, `contact_nu
 (131, 56, '09123515151', '2025-11-23 16:47:17', '2025-11-23 16:47:17', NULL, NULL),
 (137, 72, '09512516661', '2025-11-23 17:30:10', '2025-11-23 17:30:10', NULL, NULL),
 (138, 21, '09123123321', '2025-11-23 17:37:16', '2025-11-23 17:37:16', NULL, NULL),
-(140, 60, '09516167725', '2025-11-24 05:08:20', '2025-11-24 05:08:20', NULL, NULL);
+(140, 60, '09516167725', '2025-11-24 05:08:20', '2025-11-24 05:08:20', NULL, NULL),
+(141, 73, '09123551615', '2025-11-25 03:52:10', '2025-11-25 03:52:10', NULL, NULL),
+(144, 61, '09512416161', '2025-11-25 04:11:49', '2025-11-25 04:11:49', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -1455,7 +1454,6 @@ INSERT INTO `employee_emails` (`email_id`, `employee_id`, `email`, `created_at`,
 (6, 6, 'carlos.mendoza@gmail.com', '2025-11-11 05:41:49', '2025-11-11 05:41:49', 1, NULL),
 (7, 7, 'rosa.martinez@gmail.com', '2025-11-11 05:41:49', '2025-11-11 05:41:49', 1, NULL),
 (12, 12, 'jenny.cruz@gmail.com', '2025-11-11 05:41:49', '2025-11-11 05:41:49', 1, NULL),
-(18, 10, 'jamesa.lim@gmail.com', '2025-11-11 14:48:44', '2025-11-11 14:48:44', NULL, NULL),
 (21, 18, 'mayo.nicole@gmail.com', '2025-11-11 15:21:02', '2025-11-11 15:21:02', NULL, NULL),
 (30, 22, 'savaeizlawrence@gmail.com', '2025-11-11 18:16:53', '2025-11-11 18:16:53', NULL, NULL),
 (60, 19, 'torio.vincent@gmail.com', '2025-11-12 15:19:47', '2025-11-12 15:19:47', NULL, NULL),
@@ -1472,8 +1470,6 @@ INSERT INTO `employee_emails` (`email_id`, `employee_id`, `email`, `created_at`,
 (122, 45, 'marasiganRyan@gmail.com', '2025-11-21 06:27:08', '2025-11-21 06:27:08', NULL, NULL),
 (128, 47, 'bagayanjohnwilmertimaan@gmail.com', '2025-11-21 06:39:39', '2025-11-21 06:39:39', NULL, NULL),
 (130, 57, 'gallardoangelo@gmail.com', '2025-11-21 16:03:04', '2025-11-21 16:03:04', NULL, NULL),
-(135, 61, 'ultimatemarxelis12@gmail.com', '2025-11-21 18:44:59', '2025-11-21 18:44:59', NULL, NULL),
-(136, 59, 'velnavarro20@gmail.com', '2025-11-22 06:24:12', '2025-11-22 06:24:12', NULL, NULL),
 (139, 1, 'superadmin@gmail.com', '2025-11-22 16:13:22', '2025-11-22 16:13:22', NULL, NULL),
 (142, 49, 'codeexecute2023@gmail.com', '2025-11-23 10:33:38', '2025-11-23 10:33:38', NULL, NULL),
 (143, 49, 'christiianix37@gmail.com', '2025-11-23 10:33:38', '2025-11-23 10:33:38', NULL, NULL),
@@ -1483,7 +1479,9 @@ INSERT INTO `employee_emails` (`email_id`, `employee_id`, `email`, `created_at`,
 (159, 56, 'bagayan.maintenancemanager@gmail.com', '2025-11-23 16:47:17', '2025-11-23 16:47:17', NULL, NULL),
 (166, 21, 'chavezgabriel@gmail.com', '2025-11-23 17:37:16', '2025-11-23 17:37:16', NULL, NULL),
 (168, 60, 'ronsapostol12@gmail.com', '2025-11-24 05:08:20', '2025-11-24 05:08:20', NULL, NULL),
-(171, 72, 'ancog.christian.ihao@gmail.com', '2025-11-24 06:13:41', '2025-11-24 06:13:41', NULL, NULL);
+(171, 72, 'ancog.christian.ihao@gmail.com', '2025-11-24 06:13:41', '2025-11-24 06:13:41', NULL, NULL),
+(172, 73, 'cotonfrancrandell@gmail.com', '2025-11-25 03:52:10', '2025-11-25 03:52:10', NULL, NULL),
+(175, 61, 'ultimatemarxelis12@gmail.com', '2025-11-25 04:11:49', '2025-11-25 04:11:49', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -2238,7 +2236,8 @@ INSERT INTO `job_positions` (`position_id`, `position_name`, `position_code`, `p
 (28, 'CRM Manager', 'POS-0028', NULL, 13, NULL, 1, '2025-11-11 14:50:25', '2025-11-11 14:53:14', 1, 1),
 (29, 'Waiter', 'POS-0029', NULL, 4, NULL, 5, '2025-11-14 01:30:40', '2025-11-14 06:30:19', 1, 3),
 (30, 'Cashier', 'POS-0030', NULL, 5, NULL, 5, '2025-11-15 02:02:55', '2025-11-15 02:03:35', 1, 1),
-(31, 'Stock Controller', 'POS-0031', NULL, 5, NULL, 5, '2025-11-15 02:03:25', '2025-11-15 02:03:25', 1, NULL);
+(31, 'Stock Controller', 'POS-0031', NULL, 5, NULL, 5, '2025-11-15 02:03:25', '2025-11-15 02:03:25', 1, NULL),
+(32, 'F&B Admin ', 'POS-0032', 'Administrator for F&B', 8, NULL, 1, '2025-11-25 03:44:48', '2025-11-25 03:52:49', 1, 1);
 
 -- --------------------------------------------------------
 
@@ -2269,7 +2268,6 @@ CREATE TABLE `leaves` (
 INSERT INTO `leaves` (`leave_id`, `leave_code`, `employee_id`, `leave_type`, `start_date`, `end_date`, `status`, `remarks`, `approved_by`, `created_at`, `updated_at`, `created_by`, `updated_by`) VALUES
 (2, 'LEV-0002', 12, 'sick', '2024-10-08', '2024-10-08', 'approved', 'Flu symptoms', 7, '2024-10-07 18:30:00', '2025-11-11 05:41:55', 12, NULL),
 (5, 'LEV-0005', 4, 'emergency', '2024-10-25', '2024-10-25', 'approved', 'Family emergency', 7, '2024-10-24 08:00:00', '2025-11-11 05:41:55', 4, NULL),
-(6, 'LEV-0006', 10, 'vacation', '2024-11-05', '2024-11-07', 'pending', 'Planned vacation', NULL, '2024-10-28 11:00:00', '2025-11-11 05:41:55', 10, NULL),
 (7, 'LEV-0007', 2, 'sick', '2024-11-12', '2024-11-13', 'pending', 'Scheduled medical procedure', NULL, '2024-10-30 15:00:00', '2025-11-11 05:41:55', 2, NULL),
 (9, 'LEV-0009', 5, 'others', '2024-09-15', '2024-09-15', 'approved', 'Training seminar', 2, '2024-09-10 09:00:00', '2025-11-11 05:41:55', 5, NULL),
 (10, 'LEV-0010', 7, 'vacation', '2024-12-23', '2024-12-27', 'pending', 'Christmas holiday', NULL, '2024-11-01 08:00:00', '2025-11-11 05:41:55', 7, NULL);
@@ -3618,10 +3616,8 @@ INSERT INTO `tickets` (`ticket_id`, `ticket_code`, `user_id`, `fixed_by`, `title
 (2, 'TIC-0002', 12, 3, 'Email access issue', 'Cannot access company email account', 'resolved', '2024-10-02 09:15:00', 12, '2025-11-11 05:42:06', NULL),
 (4, 'TIC-0004', 4, 3, 'Password reset request', 'Forgot my system password', 'resolved', '2024-10-03 14:20:00', 4, '2025-11-11 05:42:06', NULL),
 (5, 'TIC-0005', 13, NULL, 'Network connectivity', 'Slow internet connection at front desk', 'open', '2024-10-09 11:30:00', 13, '2025-11-11 05:42:06', NULL),
-(6, 'TIC-0006', 10, 3, 'Software installation', 'Need development tools installed', 'resolved', '2024-10-04 13:00:00', 10, '2025-11-11 05:42:06', NULL),
 (7, 'TIC-0007', 7, NULL, 'Phone system issue', 'Extension not receiving calls', 'open', '2024-10-08 15:45:00', 7, '2025-11-11 05:42:06', NULL),
 (9, 'TIC-0009', 1, NULL, 'boot issue', 'walang os yung pc ya', 'open', '2025-11-11 08:56:04', 1, '2025-11-11 08:56:04', NULL),
-(10, 'TIC-0010', 10, NULL, 'issue1', 'emp', 'resolved', '2025-11-11 14:43:20', 10, '2025-11-15 01:42:01', 1),
 (11, 'TIC-0011', 40, NULL, 'Forgot Password Request (Employee): No username provided', 'Employee unknown user has forgotten their password.\n\nI forgot my password \n\nancog.christian.ihao@gmail.com', 'open', '2025-11-15 04:08:43', 40, '2025-11-15 04:08:43', NULL);
 
 -- --------------------------------------------------------
@@ -3654,7 +3650,6 @@ INSERT INTO `users` (`user_id`, `username`, `password`, `role`, `is_active`, `cr
 (5, 'hrsupervisor', '$2a$10$P4d0WRBcLHPwPHwM2ys60.8VkOpwnzAeMXmbTg1.tOLoMJUIKbNfG', 'supervisor', 1, '2025-11-11 05:40:59', '2025-11-11 05:40:59', 1, NULL),
 (6, 'itsupervisor', '$2a$10$P4d0WRBcLHPwPHwM2ys60.8VkOpwnzAeMXmbTg1.tOLoMJUIKbNfG', 'supervisor', 1, '2025-11-11 05:41:06', '2025-11-11 05:41:06', 1, NULL),
 (7, 'frontdesksupervisor', '$2a$10$P4d0WRBcLHPwPHwM2ys60.8VkOpwnzAeMXmbTg1.tOLoMJUIKbNfG', 'supervisor', 1, '2025-11-11 05:41:12', '2025-11-11 05:41:12', 1, NULL),
-(10, 'it.jamesa', '$2b$10$nSPws4pMoyLZnAgcoPmzi.QTGE71WO1j5Ov8TpdRzf3RdJ5MCb36a', 'employee', 1, '2025-11-11 05:41:26', '2025-11-11 14:58:51', 1, 10),
 (12, 'receptionist1', '$2a$10$P4d0WRBcLHPwPHwM2ys60.8VkOpwnzAeMXmbTg1.tOLoMJUIKbNfG', 'employee', 1, '2025-11-11 05:41:34', '2025-11-11 05:41:34', 1, NULL),
 (13, 'receptionist2', '$2a$10$P4d0WRBcLHPwPHwM2ys60.8VkOpwnzAeMXmbTg1.tOLoMJUIKbNfG', 'employee', 1, '2025-11-11 05:41:38', '2025-11-12 03:14:22', 1, 1),
 (18, 'nicole', '$2b$10$1x3fpLTuRoAqgEc1oiEi/Oh2DqQujHc7m4gD8daxEYf5aO/8BWLXC', 'employee', 1, '2025-11-11 15:03:38', '2025-11-11 15:05:36', 1, 1),
@@ -3676,7 +3671,6 @@ INSERT INTO `users` (`user_id`, `username`, `password`, `role`, `is_active`, `cr
 (50, 'christian255', '$2b$10$UpMVx4kwL8DEu5D/K3xykujHh4QrW3UPYah620txJHkJMcRlL/7sC', 'employee', 1, '2025-11-20 16:30:15', '2025-11-20 16:30:15', 1, NULL),
 (56, 'johnwilmer663', '$2b$10$LGNro75LYzcOZJ/gCj59XeGrCamY0VBA/up.XbDT4VoIHRFD.bl8i', 'employee', 1, '2025-11-21 06:46:44', '2025-11-23 11:08:29', 1, 1),
 (57, 'angelo356', '$2b$10$ZLa04xTR9YC/Thb7tjuILuFzar3gVrVW13edRzpc5KOjpEocPb0uG', 'employee', 1, '2025-11-21 16:03:04', '2025-11-21 16:03:04', 1, NULL),
-(59, 'louvel370', '$2b$10$o5SoVNa69y90ITcMZhiYuel.gpbtoJvYb78DIqOXRo4WMZZ6MFB0G', 'employee', 1, '2025-11-21 16:32:17', '2025-11-22 06:24:14', 1, 1),
 (60, 'aaron523', '$2b$10$goj2rCzqCA7XQw.ioASoA.teHnK.Q8Csg1AvRTAU1N8RyrwLm6h4C', 'employee', 1, '2025-11-21 16:53:45', '2025-11-22 06:27:49', 1, 1),
 (61, 'marxelis915', '$2a$12$UJUiPxQVyO86Az8a/cMsGeDEzTFxeYDn9S.sM4qcEDKY1n5Lpb/FW', 'employee', 1, '2025-11-21 17:38:59', '2025-11-21 18:44:59', 1, 1),
 (63, 'cristina270', '$2b$10$xewvrY.AoPYGlxdiNiIadOKEjf969WpHj0blJEHsay.mCFBX34N72', 'employee', 1, '2025-11-23 10:56:24', '2025-11-23 10:56:24', 1, NULL),
@@ -3684,7 +3678,8 @@ INSERT INTO `users` (`user_id`, `username`, `password`, `role`, `is_active`, `cr
 (65, 'vincejoseph916', '$2b$10$HSE1cvNaZG0vPBfHsE/UGesAMv717FOrqNtTpzHqYugSPyC/7oDNu', 'employee', 1, '2025-11-23 11:39:22', '2025-11-23 11:39:22', 1, NULL),
 (66, 'arjay906', '$2b$10$qXfUxsXG/D4eijC6ZzZirOaDRIaISNf1NalZPDChNRiuczUMXB6NC', 'employee', 1, '2025-11-23 11:51:58', '2025-11-23 11:51:58', 1, NULL),
 (70, 'christian710', '$2b$10$NmhQeAq3efru.Qnb4Hf4mO6pPLPQnH0HhptJ7YC../jq8HUjmgc5O', 'employee', 1, '2025-11-23 17:04:29', '2025-11-23 17:04:29', 1, NULL),
-(72, 'christian959', '$2b$10$K.vpKsuUzX9Hj6eFM5WCeOJ0Z6/41mkJ3pYyd5wc03e0KDzfNBnci', 'employee', 1, '2025-11-23 17:30:10', '2025-11-23 17:30:10', 1, NULL);
+(72, 'christian959', '$2b$10$K.vpKsuUzX9Hj6eFM5WCeOJ0Z6/41mkJ3pYyd5wc03e0KDzfNBnci', 'employee', 1, '2025-11-23 17:30:10', '2025-11-23 17:30:10', 1, NULL),
+(73, 'francrandell730', '$2b$10$NDwssmxl6N5IUxhsKLnLV.e5/zHueEtac7ngQHpe5/uDcJoD3T2yy', 'employee', 1, '2025-11-25 03:52:10', '2025-11-25 03:52:10', 1, NULL);
 
 -- --------------------------------------------------------
 
@@ -4337,7 +4332,7 @@ ALTER TABLE `accounting_users`
 -- AUTO_INCREMENT for table `activity_logs`
 --
 ALTER TABLE `activity_logs`
-  MODIFY `log_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=509;
+  MODIFY `log_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=528;
 
 --
 -- AUTO_INCREMENT for table `attendance`
@@ -4415,19 +4410,19 @@ ALTER TABLE `dependants`
 -- AUTO_INCREMENT for table `dependant_address`
 --
 ALTER TABLE `dependant_address`
-  MODIFY `dependant_address_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=130;
+  MODIFY `dependant_address_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=134;
 
 --
 -- AUTO_INCREMENT for table `dependant_contact`
 --
 ALTER TABLE `dependant_contact`
-  MODIFY `dependant_contact_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=131;
+  MODIFY `dependant_contact_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=135;
 
 --
 -- AUTO_INCREMENT for table `dependant_email`
 --
 ALTER TABLE `dependant_email`
-  MODIFY `dependant_email_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
+  MODIFY `dependant_email_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
 
 --
 -- AUTO_INCREMENT for table `employee`
@@ -4445,19 +4440,19 @@ ALTER TABLE `employees`
 -- AUTO_INCREMENT for table `employee_addresses`
 --
 ALTER TABLE `employee_addresses`
-  MODIFY `address_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=53;
+  MODIFY `address_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
 
 --
 -- AUTO_INCREMENT for table `employee_contact_numbers`
 --
 ALTER TABLE `employee_contact_numbers`
-  MODIFY `contact_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=141;
+  MODIFY `contact_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=145;
 
 --
 -- AUTO_INCREMENT for table `employee_emails`
 --
 ALTER TABLE `employee_emails`
-  MODIFY `email_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=172;
+  MODIFY `email_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=176;
 
 --
 -- AUTO_INCREMENT for table `expenses`
@@ -4769,7 +4764,7 @@ ALTER TABLE `tickets`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
+  MODIFY `user_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=74;
 
 --
 -- AUTO_INCREMENT for table `user_roles`
