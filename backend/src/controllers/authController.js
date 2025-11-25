@@ -152,7 +152,7 @@ export const registerUser = async (req, res) => {
 // @access  Public
 export const loginUser = async (req, res) => {
   try {
-    const { email, password, loginType } = req.body;
+    const { email, password } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required" });
@@ -161,134 +161,82 @@ export const loginUser = async (req, res) => {
     let user = null;
     let userType = null;
     let userId = null;
-    let payload = {};
+    let payload = {}; 
 
-    // Option 1: If loginType is specified
-    if (loginType === "customer") {
-      // Login as customer
-      const [customer] = await pool.query(
-        `SELECT client_id, first_name, middle_name, last_name, email, password 
-         FROM tbl_client_users 
-         WHERE email = ? AND is_archived = 0`,
-        [email]
-      );
+    // =========================================================
+    // 1. CHECK CLIENTS (Updated to use tbl_client_users)
+    // =========================================================
+    // We now check 'tbl_client_users' instead of 'customers'
+    const [client] = await pool.query(
+      "SELECT client_id, first_name, last_name, email, password FROM tbl_client_users WHERE email = ?", 
+      [email]
+    );
 
-      if (customer.length > 0) {
-        user = customer[0];
-        userType = "customer";
-        userId = user.client_id;
-        payload = {
-          id: userId,
-          role: userType,
-          firstName: user.first_name,
-          middleName: user.middle_name,
-          lastName: user.last_name,
-          email: user.email
-        };
-      }
-
-    } else if (loginType === "staff" || !loginType) {
-      // Login as staff (or try staff if loginType not specified)
-      const [staff] = await pool.query(
-        `SELECT 
-          u.user_id,
-          u.username,
-          u.password,
-          u.role,
-          u.is_active,
-          e.employee_id,
-          e.first_name,
-          e.middle_name,
-          e.last_name,
-          e.department_id,
-          e.position_id,
-          ee.email
-         FROM users u
-         INNER JOIN employees e ON u.user_id = e.user_id
-         LEFT JOIN employee_emails ee ON e.employee_id = ee.employee_id
-         WHERE ee.email = ? AND e.status = 'active'`,
-        [email]
-      );
-
-      if (staff.length > 0) {
-        user = staff[0];
-        
-        if (!user.is_active) {
-          return res.status(403).json({ message: "Account is inactive. Please contact administrator." });
-        }
-
-        userType = user.role; // admin, supervisor, employee, superadmin
-        userId = user.employee_id;
-        payload = {
-          id: userId,
-          userId: user.user_id,
-          role: userType,
-          username: user.username,
-          firstName: user.first_name,
-          middleName: user.middle_name,
-          lastName: user.last_name,
-          email: user.email,
-          departmentId: user.department_id,
-          positionId: user.position_id
-        };
-      }
-    }
-
-    // If no loginType specified, try customer first, then staff
-    if (!loginType && !user) {
-      const [customer] = await pool.query(
-        `SELECT client_id, first_name, middle_name, last_name, email, password 
-         FROM tbl_client_users 
-         WHERE email = ? AND is_archived = 0`,
-        [email]
-      );
-
-      if (customer.length > 0) {
-        user = customer[0];
-        userType = "customer";
-        userId = user.client_id;
-        payload = {
-          id: userId,
-          role: userType,
-          firstName: user.first_name,
-          middleName: user.middle_name,
-          lastName: user.last_name,
-          email: user.email
-        };
-      }
-    }
-
-    // Verify user was found and password is correct
-    if (user && (await bcrypt.compare(password, user.password))) {
-      const token = jwt.sign(
-        payload,
-        process.env.JWT_SECRET,
-        { expiresIn: "2h" }
-      );
-
-      return res.json({
-        token,
-        user: {
-          id: userId,
-          role: userType,
-          firstName: payload.firstName,
-          lastName: payload.lastName,
-          email: user.email
-        }
-      });
+    if (client.length > 0) {
+      user = client[0];
+      userType = "customer";
+      userId = user.client_id; // Note: ID column is client_id
       
-    } else {
-      return res.status(401).json({ 
-        message: "Invalid credentials: User not found or password incorrect" 
-      });
-    }
+      payload = { 
+        id: userId, 
+        role: userType, 
+        firstName: user.first_name, 
+        lastName: user.last_name 
+      };
+
+      // Verify Password
+      if (await bcrypt.compare(password, user.password)) {
+        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "2h" });
+        return res.json({ token, user: payload });
+      }
+    } 
+
+    // =========================================================
+    // 2. CHECK HRIS EMPLOYEES (Connected to Main System)
+    // =========================================================
+    // This replaces the old 'staff' table check
+    const hrisSql = `
+      SELECT 
+        u.user_id, 
+        u.password, 
+        u.role, 
+        e.first_name, 
+        e.last_name 
+      FROM employee_emails ee
+      JOIN employees e ON ee.employee_id = e.employee_id
+      JOIN users u ON e.user_id = u.user_id
+      WHERE ee.email = ?
+    `;
     
+    const [hrisUser] = await pool.query(hrisSql, [email]);
+
+    if (hrisUser.length > 0) {
+      user = hrisUser[0];
+      userId = user.user_id;
+      
+      // Map HRIS roles (superadmin -> admin)
+      userType = user.role === 'superadmin' ? 'admin' : user.role;
+
+      payload = { 
+        id: userId, 
+        role: userType, 
+        firstName: user.first_name, 
+        lastName: user.last_name
+      };
+
+      // Verify HRIS Password
+      if (await bcrypt.compare(password, user.password)) {
+        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "2h" });
+        return res.json({ token, user: payload });
+      }
+    }
+
+    // If we reach here, no user was found in either table
+    return res.status(401).json({ message: "Invalid credentials: User not found or password incorrect" });
+
   } catch (error) {
     console.error("Login Error:", error);
-    res.status(500).json({ 
-      message: "Server error during login", 
-      error: error.message 
-    });
+    res.status(500).json({ message: "Server error during login", error: error.message });
   }
 };
 
