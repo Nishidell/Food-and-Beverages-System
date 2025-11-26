@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Tag, Calendar, Trash2, CheckCircle, Power, XCircle, Edit } from 'lucide-react';
+import { Plus, Tag, Calendar, Trash2, CheckCircle, Power, XCircle, Megaphone, Save } from 'lucide-react';
 import apiClient from '../../../utils/apiClient';
 import AddPromotionModal from './AddPromotionModal';
 import ApplyPromoModal from './ApplyPromoModal';
@@ -8,28 +8,37 @@ import '../AdminTheme.css';
 
 const PromotionsManagement = () => {
   const [promotions, setPromotions] = useState([]);
-  const [allItems, setAllItems] = useState([]); // We need items to pass to the Apply Modal
+  const [allItems, setAllItems] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [promoToEdit, setPromoToEdit] = useState(null);
   
+  // Announcement State
+  const [announcement, setAnnouncement] = useState('');
+  const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
+  
   // Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedPromoForApply, setSelectedPromoForApply] = useState(null); // If not null, Apply Modal is open
+  const [selectedPromoForApply, setSelectedPromoForApply] = useState(null); 
 
-  // 1. Fetch Data
+  // 1. Fetch Data (Promotions + Announcement)
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [promosRes, itemsRes] = await Promise.all([
+      const [promosRes, itemsRes, annRes] = await Promise.all([
         apiClient('/promotions'),
-        apiClient('/items') // We need all items to show in the checklist
+        apiClient('/items'),
+        apiClient('/announcement') // Fetch the banner message
       ]);
 
       if (promosRes.ok) setPromotions(await promosRes.json());
       if (itemsRes.ok) setAllItems(await itemsRes.json());
+      if (annRes.ok) {
+        const data = await annRes.json();
+        setAnnouncement(data.message || '');
+      }
 
     } catch (err) {
-      console.error("Failed to load promotions data", err);
+      console.error("Failed to load data", err);
     } finally {
       setLoading(false);
     }
@@ -39,26 +48,45 @@ const PromotionsManagement = () => {
     fetchData();
   }, []);
 
+  // --- Handlers ---
+
+  const handleSaveAnnouncement = async () => {
+    setIsSavingAnnouncement(true);
+    try {
+      const res = await apiClient('/announcement', {
+        method: 'PUT',
+        body: JSON.stringify({ message: announcement })
+      });
+
+      if (!res.ok) throw new Error('Failed to update announcement');
+      toast.success('Announcement updated!');
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setIsSavingAnnouncement(false);
+    }
+  };
+
   const handleDelete = async (id) => {
-  if (!window.confirm('Are you sure you want to delete this campaign? All linked items will revert to their original price.')) {
-    return;
-  }
+    if (!window.confirm('Are you sure you want to delete this campaign? All linked items will revert to their original price.')) {
+      return;
+    }
 
-  try {
-    const response = await apiClient(`/promotions/${id}`, {
-      method: 'DELETE',
-    });
+    try {
+      const response = await apiClient(`/promotions/${id}`, {
+        method: 'DELETE',
+      });
 
-    if (!response.ok) throw new Error('Failed to delete promotion');
+      if (!response.ok) throw new Error('Failed to delete promotion');
 
-    toast.success('Promotion deleted successfully');
-    fetchData(); // Refresh the list
-  } catch (error) {
-    toast.error(error.message);
-  }
-};
+      toast.success('Promotion deleted successfully');
+      fetchData(); 
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
 
-const handleToggleStatus = async (id, currentStatus) => {
+  const handleToggleStatus = async (id, currentStatus) => {
     const action = currentStatus ? 'deactivate' : 'activate';
     if (!window.confirm(`Are you sure you want to ${action} this campaign?`)) return;
 
@@ -70,7 +98,7 @@ const handleToggleStatus = async (id, currentStatus) => {
       if (!response.ok) throw new Error('Failed to update status');
       
       toast.success(`Promotion ${action}d successfully`);
-      fetchData(); // Refresh list
+      fetchData(); 
     } catch (error) {
       toast.error(error.message);
     }
@@ -78,10 +106,43 @@ const handleToggleStatus = async (id, currentStatus) => {
 
   return (
     <div className="mt-8">
+      
+      {/* --- NEW: Announcement Editor --- */}
+      <div className="mb-8 bg-white p-6 rounded-lg shadow-sm border border-l-4 border-l-[#F9A825]">
+        <div className="flex items-center gap-2 mb-3 text-[#3C2A21] font-bold text-lg">
+          <Megaphone size={24} className="text-[#F9A825]" />
+          <h2>Global Announcement</h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          This message will appear at the top of the customer menu. Leave empty to hide.
+        </p>
+        <div className="flex gap-4">
+          <input 
+            type="text" 
+            value={announcement}
+            onChange={(e) => setAnnouncement(e.target.value)}
+            placeholder="e.g. Happy Holidays! Enjoy 50% off on all desserts."
+            className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#F9A825]"
+          />
+          <button 
+            onClick={handleSaveAnnouncement}
+            disabled={isSavingAnnouncement}
+            className="bg-[#0B3D2E] text-white font-bold px-6 py-2 rounded-lg hover:bg-[#082f23] disabled:opacity-50 flex items-center gap-2"
+          >
+            <Save size={18} />
+            {isSavingAnnouncement ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+      </div>
+      {/* --- END NEW SECTION --- */}
+
       <div className="flex justify-between items-center mb-6">
         <h2 style={{ color: '#F9A825', fontSize: '1.5rem', fontWeight: 'bold' }}>Promotion Campaigns</h2>
         <button
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={() => {
+              setPromoToEdit(null);
+              setIsAddModalOpen(true);
+          }}
           className="bg-[#F9A825] text-white font-bold py-2 px-4 rounded hover:bg-[#c47b04] transition-colors flex items-center gap-2"
         >
           <Plus size={20} /> Create New Promo
@@ -94,7 +155,7 @@ const handleToggleStatus = async (id, currentStatus) => {
                 <div 
                     key={promo.promotion_id} 
                     className={`admin-card relative border-l-4 ${promo.is_active ? 'border-[#F9A825]' : 'border-gray-400'}`}
-                    style={{ padding: '1.5rem' }} // Ensure padding matches theme
+                    style={{ padding: '1.5rem' }} 
                 >
                     {/* Header */}
                     <div className="flex justify-between items-start">
@@ -107,7 +168,6 @@ const handleToggleStatus = async (id, currentStatus) => {
                             </span>
                         </div>
                         
-                        {/* Status Badge */}
                         <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${promo.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>
                             {promo.is_active ? <CheckCircle size={14}/> : <XCircle size={14}/>}
                             {promo.is_active ? 'ACTIVE' : 'PAUSED'}
@@ -125,9 +185,13 @@ const handleToggleStatus = async (id, currentStatus) => {
 
                     {/* Action Buttons */}
                     <div className="flex gap-2 mt-auto pt-3 border-t border-[#D1C0B6]">
-                        {/* Apply/Manage Button */}
                         <button 
-                            onClick={() => setSelectedPromoForApply(promo)}
+                            onClick={async () => {
+                                // RE-FETCH ITEMS BEFORE OPENING (Fix for stale data)
+                                const itemsRes = await apiClient('/items');
+                                if (itemsRes.ok) setAllItems(await itemsRes.json());
+                                setSelectedPromoForApply(promo);
+                            }}
                             className={`flex-1 font-bold py-2 rounded text-sm flex justify-center items-center gap-2 transition-colors ${
                                 promo.item_count > 0 
                                 ? "bg-[#0B3D2E] text-white hover:bg-[#082f23]" 
@@ -138,7 +202,6 @@ const handleToggleStatus = async (id, currentStatus) => {
                             {promo.item_count > 0 ? `Manage (${promo.item_count})` : "Add Items"}
                         </button>
 
-                        {/* Toggle Status Button */}
                         <button 
                             onClick={() => handleToggleStatus(promo.promotion_id, promo.is_active)}
                             className={`px-3 py-2 font-semibold rounded text-sm flex justify-center items-center border transition-colors ${
@@ -151,7 +214,6 @@ const handleToggleStatus = async (id, currentStatus) => {
                             <Power size={16}/>
                         </button>
                         
-                        {/* Delete Button */}
                         <button 
                             onClick={() => handleDelete(promo.promotion_id)}
                             className="px-3 py-2 bg-red-100 text-red-600 font-semibold rounded hover:bg-red-200 text-sm flex justify-center items-center"
@@ -167,14 +229,14 @@ const handleToggleStatus = async (id, currentStatus) => {
 
       {/* Modals */}
       <AddPromotionModal 
-    isOpen={isAddModalOpen} 
-    onClose={() => {
-        setIsAddModalOpen(false);
-        setPromoToEdit(null); // Clear edit state on close
-    }} 
-    onSave={fetchData}
-    promotionToEdit={promoToEdit} // Pass the data
-  />
+        isOpen={isAddModalOpen} 
+        onClose={() => {
+            setIsAddModalOpen(false);
+            setPromoToEdit(null);
+        }} 
+        onSave={fetchData}
+        promotionToEdit={promoToEdit} 
+      />
       
       <ApplyPromoModal
         isOpen={!!selectedPromoForApply}

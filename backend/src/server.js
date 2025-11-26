@@ -32,6 +32,7 @@ import notificationRoutes from "../src/routes/notificationRoutes.js";
 import tableRoutes from "../src/routes/tableRoutes.js";
 import roomRoutes from "../src/routes/roomRoutes.js";
 import promotionRoutes from "../src/routes/promotionRoutes.js";
+import announcementRoutes from "./routes/announcementRoutes.js";
 
 const app = express();
 app.use(cors());
@@ -66,6 +67,7 @@ app.use("/api/analytics", analyticsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/promotions', promotionRoutes);
+app.use('/api/announcement', announcementRoutes);
 app.use('/api/upload', uploadRoutes); 
 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
