@@ -34,7 +34,6 @@ function MenuPage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [orderType, setOrderType] = useState('Dine-in');
-  const [instructions, setInstructions] = useState('');
   const [deliveryLocation, setDeliveryLocation] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
@@ -51,6 +50,14 @@ function MenuPage() {
   const navigate = useNavigate();
 
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+
+  const handleUpdateItemInstruction = (itemId, newInstruction) => {
+  setCartItems(prevItems =>
+    prevItems.map(item =>
+      item.item_id === itemId ? { ...item, instructions: newInstruction } : item
+    )
+  );
+};
 
   useEffect(() => { setDeliveryLocation(''); }, [orderType]);
   useEffect(() => {
@@ -217,7 +224,6 @@ const handleConfirmPayment = async (paymentInfo) => {
     const orderData = {
       client_id: user.id,
       order_type: orderType,
-      instructions: instructions,
       // Send IDs specifically
       table_id: orderType === 'Dine-in' ? deliveryLocation : null, 
       room_id: orderType === 'Room Dining' ? deliveryLocation : null, 
@@ -228,7 +234,8 @@ const handleConfirmPayment = async (paymentInfo) => {
       items: cartItems.map(item => ({
         item_id: item.item_id,
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
+        instructions: item.instructions || ''
       }))
     };
 
@@ -374,13 +381,12 @@ const handleConfirmPayment = async (paymentInfo) => {
       <CartPanel
         cartItems={cartItems}
         onUpdateQuantity={handleUpdateQuantity}
+        onUpdateItemInstruction={handleUpdateItemInstruction} // <--- NEW
         onPlaceOrder={handleProceedToPayment}
         isOpen={isCartOpen}
         onClose={toggleCart}
         orderType={orderType}
         setOrderType={setOrderType}
-        instructions={instructions}
-        setInstructions={setInstructions}
         onRemoveItem={handleRemoveItem}
         deliveryLocation={deliveryLocation}
         setDeliveryLocation={setDeliveryLocation}

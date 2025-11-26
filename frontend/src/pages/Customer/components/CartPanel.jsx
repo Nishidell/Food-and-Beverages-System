@@ -10,8 +10,8 @@ const CartPanel = ({
   onClose,
   orderType,
   setOrderType,
-  instructions,
-  setInstructions,
+  // Removed 'instructions' and 'setInstructions' props (General Note)
+  onUpdateItemInstruction, // <-- NEW PROP: For specific items
   onRemoveItem,
   deliveryLocation,
   setDeliveryLocation,
@@ -20,7 +20,6 @@ const CartPanel = ({
   const [tables, setTables] = useState([]);
   const [rooms, setRooms] = useState([]);
   
-  // We need local state to control the inputs properly
   const [selectedTableId, setSelectedTableId] = useState('');
   const [selectedRoomId, setSelectedRoomId] = useState('');
 
@@ -41,25 +40,19 @@ const CartPanel = ({
     fetchData();
   }, []);
 
-  // --- RESET LOGIC ---
-  // When order type changes, reset selections
   useEffect(() => {
     if (orderType === 'Dine-in') {
         setSelectedRoomId('');
-        setDeliveryLocation(''); // Clear any old room data
+        setDeliveryLocation('');
     } else if (orderType === 'Room Dining') {
         setSelectedTableId('');
-        setDeliveryLocation(''); // Clear any old table data
+        setDeliveryLocation('');
     }
   }, [orderType, setDeliveryLocation]);
-
-
-  // --- HANDLERS ---
 
   const handleTableChange = (e) => {
     const tId = e.target.value;
     setSelectedTableId(tId);
-    // Important: Pass this ID up to the parent via setDeliveryLocation so validation passes
     setDeliveryLocation(tId); 
   };
 
@@ -69,7 +62,6 @@ const CartPanel = ({
     setDeliveryLocation(rId);
   };
 
-  // Calculations
   const SERVICE_RATE = 0.10; 
   const VAT_RATE = 0.12;     
   const subtotal = cartItems.reduce((total, item) => total + parseFloat(item.price) * item.quantity, 0);
@@ -92,7 +84,6 @@ const CartPanel = ({
         }`}
       >
         <div className="p-6 flex flex-col h-full">
-          {/* Header */}
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-[#3C2A21]">My Order</h2>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-800">
@@ -100,7 +91,6 @@ const CartPanel = ({
             </button>
           </div>
 
-          {/* Order Type Buttons */}
           <div className="flex gap-2 mb-4" >
             <button
               onClick={() => setOrderType('Dine-in')}
@@ -120,7 +110,6 @@ const CartPanel = ({
             </button>
           </div>
 
-          {/* Location Selector */}
           <div className="mb-4">
             <label className="text-sm font-semibold text-gray-700 block mb-1">
               {orderType === 'Dine-in' ? 'Select Table' : 'Select Room'}
@@ -128,7 +117,7 @@ const CartPanel = ({
 
             {orderType === 'Dine-in' ? (
                 <select
-                    value={selectedTableId} // Controlled component
+                    value={selectedTableId}
                     onChange={handleTableChange}
                     className="w-full border border-gray-300 rounded-md p-2 bg-white text-[#3C2A21]"
                 >
@@ -137,7 +126,7 @@ const CartPanel = ({
                         <option 
                             key={table.table_id} 
                             value={table.table_id}
-                            disabled={table.status !== 'Available'} // Optional: Disable occupied tables?
+                            disabled={table.status !== 'Available'}
                         >
                             Table {table.table_number} ({table.capacity} pax) {table.status !== 'Available' ? '- Occupied' : ''}
                         </option>
@@ -145,7 +134,7 @@ const CartPanel = ({
                 </select>
             ) : (
                 <select
-                    value={selectedRoomId} // Controlled component
+                    value={selectedRoomId}
                     onChange={handleRoomChange}
                     className="w-full border border-gray-300 rounded-md p-2 bg-white text-[#3C2A21]"
                 >
@@ -159,17 +148,7 @@ const CartPanel = ({
             )}
           </div>
 
-          {/* Instructions */}
-          <div className="mb-4">
-            <label className="text-sm font-semibold text-gray-700 block mb-1">Special Instructions</label>
-            <textarea
-              rows="2"
-              className="w-full border border-gray-300 rounded-md p-2"
-              placeholder="e.g. No onions, extra sauce..."
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-            />
-          </div>
+          {/* --- REMOVED: General Instructions Textarea --- */}
 
           {/* Items List */}
           <div className="flex-1 overflow-y-auto pr-2 mb-4">
@@ -178,24 +157,35 @@ const CartPanel = ({
             ) : (
               <div className="space-y-4">
                 {cartItems.map((item) => (
-                  <div key={item.item_id} className="flex justify-between items-center">
-                    <div>
-                      <p className="font-semibold text-[#3C2A21]">{item.item_name}</p>
-                      <p className="text-sm text-gray-500">₱{parseFloat(item.price).toFixed(2)}</p>
+                  <div key={item.item_id} className="border-b border-gray-200 pb-4 last:border-0">
+                    {/* Top Row: Name, Price, Quantity */}
+                    <div className="flex justify-between items-start mb-2">
+                        <div>
+                            <p className="font-semibold text-[#3C2A21]">{item.item_name}</p>
+                            <p className="text-sm text-gray-500">₱{parseFloat(item.price).toFixed(2)}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button onClick={() => onUpdateQuantity(item.item_id, item.quantity - 1)} className="bg-gray-200 w-6 h-6 rounded-md font-bold hover:bg-gray-300">-</button>
+                            <span className="w-4 text-center">{item.quantity}</span>
+                            <button onClick={() => onUpdateQuantity(item.item_id, item.quantity + 1)} className="bg-gray-200 w-6 h-6 rounded-md font-bold hover:bg-gray-300">+</button>
+                            <button onClick={() => onRemoveItem(item.item_id)} className="text-red-500 hover:text-red-700 ml-2"><Trash2 size={18} /></button>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => onUpdateQuantity(item.item_id, item.quantity - 1)} className="bg-gray-200 w-6 h-6 rounded-md font-bold hover:bg-gray-300">-</button>
-                      <span className="w-4 text-center">{item.quantity}</span>
-                      <button onClick={() => onUpdateQuantity(item.item_id, item.quantity + 1)} className="bg-gray-200 w-6 h-6 rounded-md font-bold hover:bg-gray-300">+</button>
-                      <button onClick={() => onRemoveItem(item.item_id)} className="text-red-500 hover:text-red-700 ml-2"><Trash2 size={18} /></button>
-                    </div>
+
+                    {/* --- NEW: Item-Specific Instruction --- */}
+                    <input
+                        type="text"
+                        placeholder="Add note (e.g. No onions)"
+                        value={item.instructions || ''}
+                        onChange={(e) => onUpdateItemInstruction(item.item_id, e.target.value)}
+                        className="w-full text-sm border border-gray-300 rounded p-2 text-gray-600 placeholder-gray-400 focus:outline-none focus:border-[#F9A825] bg-white"
+                    />
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Footer */}
           <div className="border-t pt-4 mt-4 space-y-2 text-[#3C2A21]">
              <div className="flex justify-between text-sm">
                 <span>Subtotal</span>

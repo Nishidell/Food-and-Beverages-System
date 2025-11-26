@@ -81,10 +81,7 @@ export const createPosOrder = async (req, res) => {
             // 3. Use the new 'actualPrice' for all calculations
             const subtotal = actualPrice * item.quantity;
             calculatedItemsTotal += subtotal;
-            
-            // BUG FIX #2: Use item-specific instructions if provided, otherwise use general instructions
-            // WHY: Allows per-item customization while maintaining fallback to general instructions
-            // HOW: Check if item has its own instructions, otherwise use the general one
+   
             const itemInstructions = item.instructions || instructions || '';
             
             // UPDATED: Insert 'actualPrice' into 'price_on_purchase'
@@ -157,7 +154,7 @@ export const createOrder = async (req, res) => {
         await connection.beginTransaction();
 
         const client_id = req.user.id; 
-        const { items, order_type, instructions, delivery_location, table_id, room_id } = req.body;
+        const { items, order_type, delivery_location, table_id, room_id } = req.body;
 
         if (!items || items.length === 0) {
             throw new Error("Missing required order information.");

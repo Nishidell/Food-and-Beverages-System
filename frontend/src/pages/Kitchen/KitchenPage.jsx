@@ -184,17 +184,23 @@ function KitchenPage() {
                                 <div className="mt-2 border-t pt-2">
                                     <p className="font-bold text-sm mb-1">Items:</p>
                                     {order.items?.map(item => (
-                                        <div key={item.detail_id} className="item-text">
-                                            {item.quantity} x {item.item_name}
+                                        <div key={item.detail_id} className="mb-2">
+                                            {/* Item Name & Quantity */}
+                                            <div className="item-text font-medium">
+                                                {item.quantity} x {item.item_name}
+                                            </div>
+                                            
+                                            {/* --- FIX: Display Instruction Here --- */}
+                                            {item.instructions && (
+                                                <div className="text-xs text-red-600 italic ml-4 bg-red-50 px-1 rounded inline-block border border-red-100">
+                                                    Note: {item.instructions}
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
                                 
-                                {instructions && (
-                                    <div className="mt-2 p-2 bg-red-50 text-red-600 text-sm rounded italic border border-red-100">
-                                        Note: {instructions}
-                                    </div>
-                                )}
+                                {/* Remove the old "General Note" block from here since we removed general notes */}
                             </div>
 
                             <div className="kitchen-card-footer">
