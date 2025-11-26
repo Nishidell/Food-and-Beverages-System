@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, Trash2, Minus, Plus, MessageSquare } from 'lucide-react';
 import apiClient from '../../../utils/apiClient';
+import '../CustomerTheme.css'; // Import external styles
 
+// Maintain the port fix from previous steps
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:21917/api';
-
 const SERVER_URL = API_URL.split('/api')[0];
 
 const CartPanel = ({
@@ -76,64 +77,51 @@ const CartPanel = ({
     <>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-black/60 z-40 transition-opacity duration-300 ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
+        className={`cart-overlay ${isOpen ? '' : 'hidden'}`}
         onClick={onClose}
       />
 
       {/* Slide-over Panel */}
-      <div
-        className={`fixed top-0 right-0 h-full w-full max-w-md bg-[#fff8f0] shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
+      <div className={`cart-panel ${isOpen ? 'open' : ''}`}>
+        
         {/* --- Header --- */}
-        <div className="px-6 py-5 border-b border-[#e5dccb] bg-[#fff8f0] flex justify-between items-center">
-          <h2 className="text-xl font-bold text-[#3C2A21]">My Order</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition-colors">
+        <div className="cart-header">
+          <h2 className="cart-title">My Order</h2>
+          <button onClick={onClose} className="cart-close-btn">
             <X size={24} />
           </button>
         </div>
 
         {/* --- Scrollable Content --- */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="cart-content">
           
           {/* Order Type Selector */}
-          <div className="bg-[#eae0d5] p-1 rounded-lg flex mb-6">
+          <div className="order-type-container">
             <button
               onClick={() => setOrderType('Dine-in')}
-              className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${
-                orderType === 'Dine-in' 
-                ? 'bg-[#0B3D2E] text-white shadow-md' 
-                : 'text-[#5c4a40] hover:bg-[#decbc0]'
-              }`}
+              className={`order-type-btn ${orderType === 'Dine-in' ? 'active' : 'inactive'}`}
             >
               Dine-in
             </button>
             <button
               onClick={() => setOrderType('Room Dining')}
-              className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${
-                orderType === 'Room Dining' 
-                ? 'bg-[#0B3D2E] text-white shadow-md' 
-                : 'text-[#5c4a40] hover:bg-[#decbc0]'
-              }`}
+              className={`order-type-btn ${orderType === 'Room Dining' ? 'active' : 'inactive'}`}
             >
               Room Dining
             </button>
           </div>
 
           {/* Location Dropdown */}
-          <div className="mb-6">
-            <label className="text-xs font-bold text-[#F9A825] uppercase tracking-wide mb-2 block">
+          <div className="location-container">
+            <label className="location-label">
               {orderType === 'Dine-in' ? 'Select Table' : 'Select Room'}
             </label>
-            <div className="relative">
+            <div className="location-select-wrapper">
                 {orderType === 'Dine-in' ? (
                     <select
                         value={selectedTableId}
                         onChange={handleTableChange}
-                        className="w-full border border-[#d1c0b6] rounded-lg p-3 bg-white text-[#3C2A21] font-medium focus:ring-2 focus:ring-[#F9A825] focus:border-[#F9A825] outline-none appearance-none"
+                        className="location-select"
                     >
                         <option value="">-- Choose a Table --</option>
                         {tables.map(table => (
@@ -146,7 +134,7 @@ const CartPanel = ({
                     <select
                         value={selectedRoomId}
                         onChange={handleRoomChange}
-                        className="w-full border border-[#d1c0b6] rounded-lg p-3 bg-white text-[#3C2A21] font-medium focus:ring-2 focus:ring-[#F9A825] focus:border-[#F9A825] outline-none appearance-none"
+                        className="location-select"
                     >
                         <option value="">-- Choose a Room --</option>
                         {rooms.map(room => (
@@ -156,7 +144,7 @@ const CartPanel = ({
                         ))}
                     </select>
                 )}
-                <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-gray-500">
+                <div className="location-arrow">
                     <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
                 </div>
             </div>
@@ -165,69 +153,66 @@ const CartPanel = ({
           {/* Items List */}
           <div className="space-y-4">
             {cartItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+              <div className="cart-empty-state">
                 <p>Your cart is empty</p>
               </div>
             ) : (
               cartItems.map((item) => {
                 const itemTotal = parseFloat(item.price) * item.quantity;
 
-                // --- FIX: Construct Image URL Correctly ---
                 let imageUrl = '/placeholder-food.png';
                 if (item.image_url) {
                     const cleanPath = item.image_url.replace(/\\/g, '/');
                     if (cleanPath.startsWith('http')) {
                         imageUrl = cleanPath;
                     } else {
-                        // Use the dynamic SERVER_URL instead of hardcoded localhost
                         const path = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
                         imageUrl = `${SERVER_URL}${path}`;
                     }
                 }
-                // -------------------------------
 
                 return (
-                  <div key={item.item_id} className="bg-white p-4 rounded-xl shadow-sm border border-[#e5dccb] flex flex-col gap-3">
+                  <div key={item.item_id} className="cart-item">
                       {/* Top Section: Image + Details + Total */}
-                      <div className="flex gap-4">
+                      <div className="cart-item-top">
                           {/* Image */}
-                          <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                          <div className="cart-item-image">
                               <img 
                                   src={imageUrl} 
                                   alt={item.item_name} 
-                                  className="w-full h-full object-cover"
+                                  className="cart-item-img-tag"
                                   onError={(e) => { e.target.src = '/placeholder-food.png'; }} 
                               />
                           </div>
 
                           {/* Details Column */}
-                          <div className="flex-1 flex flex-col gap-2">
+                          <div className="cart-item-details">
                               {/* Name/Price & Item Total Row */}
-                              <div className="flex justify-between items-start">
+                              <div className="cart-item-header">
                                   <div>
-                                      <h3 className="font-bold text-[#3C2A21] leading-tight">{item.item_name}</h3>
-                                      <p className="text-[#F9A825] font-bold text-sm mt-1">
-                                          ₱{parseFloat(item.price).toFixed(2)} <span className="text-gray-400 font-normal">/ea</span>
+                                      <h3 className="cart-item-name">{item.item_name}</h3>
+                                      <p className="cart-item-price">
+                                          ₱{parseFloat(item.price).toFixed(2)} <span>/ea</span>
                                       </p>
                                   </div>
-                                  <div className="text-lg font-bold text-[#3C2A21]">
+                                  <div className="cart-item-total">
                                       ₱{itemTotal.toFixed(2)}
                                   </div>
                               </div>
                               
                               {/* Controls Row */}
-                              <div className="flex items-center justify-between">
-                                  <div className="flex items-center bg-[#f3f4f6] rounded-lg p-1">
+                              <div className="cart-item-controls">
+                                  <div className="qty-control">
                                       <button 
                                           onClick={() => onUpdateQuantity(item.item_id, item.quantity - 1)} 
-                                          className="w-7 h-7 flex items-center justify-center bg-white rounded-md shadow-sm text-gray-600 hover:text-[#F9A825] active:scale-95 transition-all"
+                                          className="qty-btn"
                                       >
                                           <Minus size={14} strokeWidth={3} />
                                       </button>
-                                      <span className="w-8 text-center font-bold text-[#3C2A21] text-sm">{item.quantity}</span>
+                                      <span className="qty-display">{item.quantity}</span>
                                       <button 
                                           onClick={() => onUpdateQuantity(item.item_id, item.quantity + 1)} 
-                                          className="w-7 h-7 flex items-center justify-center bg-white rounded-md shadow-sm text-gray-600 hover:text-[#F9A825] active:scale-95 transition-all"
+                                          className="qty-btn"
                                       >
                                           <Plus size={14} strokeWidth={3} />
                                       </button>
@@ -235,7 +220,7 @@ const CartPanel = ({
 
                                   <button 
                                       onClick={() => onRemoveItem(item.item_id)} 
-                                      className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                                      className="remove-btn"
                                   >
                                       <Trash2 size={18} />
                                   </button>
@@ -244,16 +229,16 @@ const CartPanel = ({
                       </div>
 
                       {/* Specific Instruction Input */}
-                      <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <MessageSquare size={14} className="text-gray-400" />
+                      <div className="instruction-wrapper">
+                          <div className="instruction-icon">
+                              <MessageSquare size={14} />
                           </div>
                           <input
                               type="text"
                               placeholder="Add notes (e.g. No onions)"
                               value={item.instructions || ''}
                               onChange={(e) => onUpdateItemInstruction(item.item_id, e.target.value)}
-                              className="w-full pl-9 pr-3 py-2 text-sm bg-[#f9f9f9] border border-gray-200 rounded-lg text-gray-600 placeholder-gray-400 focus:outline-none focus:border-[#F9A825] focus:bg-white transition-all"
+                              className="instruction-input"
                           />
                       </div>
                   </div>
@@ -264,21 +249,21 @@ const CartPanel = ({
         </div>
 
         {/* --- Footer (Totals) --- */}
-        <div className="bg-[#fff8f0] border-t border-[#e5dccb] p-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="cart-footer">
              <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-sm text-gray-600">
+                <div className="summary-row">
                     <span>Subtotal</span>
                     <span className="font-medium">₱{subtotal.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-sm text-gray-600">
+                <div className="summary-row">
                     <span>Service Charge (10%)</span>
                     <span className="font-medium">₱{serviceAmount.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-sm text-gray-600">
+                <div className="summary-row">
                     <span>VAT (12%)</span>
                     <span className="font-medium">₱{vatAmount.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-lg font-bold text-[#3C2A21] pt-2 border-t border-dashed border-gray-300">
+                <div className="summary-row total">
                     <span>Total</span>
                     <span>₱{grandTotal.toFixed(2)}</span>
                 </div>
@@ -294,7 +279,7 @@ const CartPanel = ({
                     (orderType === 'Dine-in' && !selectedTableId) || 
                     (orderType === 'Room Dining' && !selectedRoomId)
                 }
-                className="w-full bg-[#0B3D2E] text-white font-bold py-4 rounded-xl shadow-lg hover:bg-[#082f23] disabled:bg-gray-300 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+                className="place-order-btn"
               >
                 {isPlacingOrder ? 'Processing...' : 'Place Order'}
               </button>

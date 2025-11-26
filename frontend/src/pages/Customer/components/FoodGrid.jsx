@@ -1,137 +1,13 @@
 import React from 'react';
-
-// --- All styles are defined here ---
-
-
-
-// --- End of styles ---
+import '../CustomerTheme.css';
 
 const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "customer" }) => {
 
-  // --- Define Theme Colors ---
-  const customerTheme = {
-    cardBg: '#fff2e0',
-    itemName: '#0B3D2E',
-    itemDescription: '#053a34',
-    price: '#053a34',
-    buttonBg: '#0B3D2E',
-    buttonText: 'white',
-    unavailableButtonBg: '#6B7280',
-  };
-
-  const kitchenTheme = {
-    cardBg: '#fff2e0', 
-    itemName: '#3C2A21',
-    itemDescription: '#523a2eff',
-    price: '#3C2A21',
-    buttonBg: '#F9A825', 
-    buttonText: '#3C2A21', 
-    unavailableButtonBg: '#6B7280',
-  };
-
-  const colors = theme === 'kitchen' ? kitchenTheme : customerTheme;
-
-  const cardStyle = {
-  backgroundColor: colors.cardBg,// Your 'secondaryColor'
-  borderRadius: '0.5rem', // 8px
-  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
-  overflow: 'hidden',
-  display: 'flex',
-  flexDirection: 'column',
-};
-
-const cardImageStyle = {
-  width: '100%',
-  height: '224px', // 14rem
-  objectFit: 'cover',
-  cursor: 'pointer',
-};
-
-const promoBadgeStyle = {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  backgroundColor: '#DC2626', // red-600
-  color: 'white',
-  fontWeight: 'bold',
-  fontSize: '0.75rem', // 12px
-  padding: '4px 12px',
-  borderBottomRightRadius: '0.5rem', // 8px
-};
-
-const contentStyle = {
-  padding: '24px',
-  flex: 1,
-  display: 'flex',
-  flexDirection: 'column',
-};
-
-const itemNameStyle = {
-  fontSize: '1.5rem', 
-  fontWeight: 'bold',
-  color: colors.itemName, 
-  marginBottom: '16px',
-};
-
-const itemDescriptionStyle = {
-  fontSize: '1rem',
-  color: colors.itemDescription, 
-  marginBottom: '8px',
-  flex: 1, 
-};
-
-const footerStyle = {
-  marginTop: 'auto', 
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'flex-end', 
-};
-
-const priceContainerStyle = {
-  display: 'flex',
-  flexDirection: 'row',
-  alignItems: 'baseline', 
-  gap: '8px',
-};
-
-const priceStyle = {
-  fontSize: '1.5rem', // 24px
-  fontWeight: '600',
-  color: colors.price
-};
-
-const originalPriceStyle = {
-  fontSize: '1rem',
-  fontWeight: 'normal',
-  color: '#6B7280', // gray-500
-  textDecoration: 'line-through',
-};
-
-// --- REMOVED availableTagStyle and buttonContainerStyle ---
-
-const baseButtonStyle = {
-  backgroundColor: colors.buttonBg,
-  color: colors.buttonText,
-  fontWeight: 'bold',
-  padding: '8px 24px',
-  borderRadius: '0.375rem', // 6px (matches design)
-  border: 'none',
-  cursor: 'pointer',
-};
-
-const unavailableButtonStyle = {
-  ...baseButtonStyle,
-  backgroundColor: colors.unavailableButtonBg,
-  opacity: 0.7,
-  cursor: 'not-allowed',
-};
-
-
   if (!items || items.length === 0) {
-    return <p style={{ textAlign: 'center', marginTop: '48px', color: 'white' }}>No items match your search.</p>;
+    return <p className="no-items-message">No items match your search.</p>;
   }
 
-  // Helper function (no changes)
+  // Helper function to calculate promo price
   const getPromoPrice = (item) => {
     if (!item.is_promo || !item.promo_discount_percentage || !item.promo_expiry_date) {
       return { isActive: false, displayPrice: item.price };
@@ -153,7 +29,8 @@ const unavailableButtonStyle = {
   };
 
   return (
-    <div style={layoutStyle}>
+    // layoutStyle is passed from parent (MenuPage), which we will also refactor next
+    <div className={`menu-grid-layout ${theme === 'customer' ? 'customer-theme' : ''}`} style={layoutStyle}>
       {items.map((item) => {
         
         const { isActive, displayPrice, originalPrice, discountPercent } = getPromoPrice(item);
@@ -162,89 +39,78 @@ const unavailableButtonStyle = {
           ...item,
           price: displayPrice 
         };
-        
-        const dynamicCardStyle = {
-          ...cardStyle,
-          opacity: !item.is_available ? 0.8 : 1,
-        };
 
         return (
           <div
             key={item.item_id}
-            style={dynamicCardStyle}
+            className={`food-card ${!item.is_available ? 'unavailable' : ''}`}
           >
-            <div style={{ position: 'relative' }}>
+            <div className="card-image-container">
               <img
                 src={
-              item.image_url
-                ? `http://localhost:21917${item.image_url}`
-                : 'https://via.placeholder.com/400x300.png?text=No+Image'
-            }
+                  item.image_url
+                    ? `http://localhost:21917${item.image_url}`
+                    : 'https://via.placeholder.com/400x300.png?text=No+Image'
+                }
                 alt={item.item_name}
-                style={cardImageStyle}
-                
+                className="card-image"
                 onClick={() =>
-              onImageClick(
-                item.image_url ? `http://localhost:21917${item.image_url}` : null
-              )
-            }
+                  onImageClick(
+                    item.image_url ? `http://localhost:21917${item.image_url}` : null
+                  )
+                }
               />
               
               {isActive && (
-                <span style={promoBadgeStyle}>
+                <span className="promo-badge">
                   {discountPercent}% OFF
                 </span>
               )}
             </div>
 
-            <div style={contentStyle}>
-              <h3 style={itemNameStyle}>{item.item_name}</h3>
-              <p style={itemDescriptionStyle}>
+            <div className="card-content">
+              <h3 className="item-name">{item.item_name}</h3>
+              <p className="item-description">
                 {item.description || 'No description available.'}
               </p>
 
-              {/* --- UPDATED FOOTER --- */}
-              <div style={footerStyle}>
+              <div className="card-footer">
                 
                 {/* Price Display Logic */}
-                <div style={priceContainerStyle}>
+                <div className="price-container">
                   {isActive ? (
                     <>
-                      <p style={priceStyle}>
+                      <p className="price-text">
                         ₱{parseFloat(displayPrice).toFixed(2)}
                       </p>
-                      <p style={originalPriceStyle}>
+                      <p className="original-price">
                         ₱{parseFloat(originalPrice).toFixed(2)}
                       </p>
                     </>
                   ) : (
-                    <p style={priceStyle}>
+                    <p className="price-text">
                       ₱{parseFloat(displayPrice).toFixed(2)}
                     </p>
                   )}
                 </div>
                 
-                {/* --- CONDITIONAL BUTTON (NO TAG) --- */}
                 {item.is_available ? (
                   <button
                     onClick={() => onAddToCart(itemForCart)}
-                    style={baseButtonStyle}
+                    className="btn-add-cart"
                   >
                     Add
                   </button>
                 ) : (
                   <button
                     disabled
-                    style={unavailableButtonStyle}
+                    className="btn-unavailable"
                   >
                     Unavailable
                   </button>
                 )}
-                {/* --- END OF CONDITIONAL BUTTON --- */}
 
               </div>
-              {/* --- END OF UPDATED FOOTER --- */}
-
             </div>
           </div>
         );
