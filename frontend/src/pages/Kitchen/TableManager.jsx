@@ -3,6 +3,7 @@ import { Users, CheckCircle, XCircle, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import apiClient from '../../utils/apiClient';
 import InternalNavBar from './components/InternalNavBar';
+import './KitchenTheme.css'; 
 
 const pageTitleStyle = {
   fontSize: '1.875rem', // 30px

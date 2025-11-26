@@ -6,76 +6,7 @@ import InternalNavBar from './components/InternalNavBar';
 import IngredientModal from './components/IngredientModal'; 
 import AdjustStockModal from './components/AdjustStockModal'; 
 import apiClient from '../../utils/apiClient'; 
-
-const styles = {
-  container: {
-    backgroundColor: '#523a2eff', 
-    minHeight: 'calc(100vh - 84px)', 
-    padding: '32px 16px'
-  },
-  headerContainer: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',    
-    marginBottom: '24px',      
-    maxWidth: '1500px',        
-    margin: '0 auto 24px auto',   
-  },
-  headerTitle: {
-    color: '#F9A825',
-    fontSize: '1.875rem',
-    fontWeight: 'bold',
-    margin: 0,
-  },
-  addButton: {
-    backgroundColor: '#F9A825',
-    color: 'white',
-    fontWeight: 'bold',
-    padding: '0.5rem 1.5rem',
-    borderRadius: '0.375rem',
-    transition: 'background-color 0.2s',
-    border: 'none',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    whiteSpace: 'nowrap',
-  },
- 
-  tableContainer: {
-    backgroundColor: '#fff2e0', 
-    borderRadius: '0.5rem',
-    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
-    overflow: 'hidden', 
-    maxWidth: '1500px', 
-    margin: '0 auto',   
-  },
-  tableHeader: {
-    color: '#3C2A21', 
-    textTransform: 'uppercase',
-    fontSize: '0.875rem',
-    fontWeight: '600',
-    borderBottom: '2px solid #D1C0B6', 
-    backgroundColor: '#fae5cc', 
-  },
-  tableRow: {
-    borderBottom: '1px solid #D1C0B6',
-    color: '#3C2A21',
-    transition: 'background-color 0.15s',
-  },
-  tableCell: {
-    padding: '12px 16px', 
-  },
-  actionButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    fontWeight: '500',
-  }
-};
+import './KitchenTheme.css'; // Import CSS
 
 const InventoryPage = () => {
   const [ingredients, setIngredients] = useState([]);
@@ -91,9 +22,7 @@ const InventoryPage = () => {
     try {
       setLoading(true);
       const response = await apiClient('/inventory'); 
-      if (!response.ok) {
-        throw new Error('Failed to fetch ingredients.');
-      }
+      if (!response.ok) throw new Error('Failed to fetch ingredients.');
       const data = await response.json();
       setIngredients(data);
       setError(null);
@@ -108,21 +37,19 @@ const InventoryPage = () => {
   };
 
   useEffect(() => {
-    if (token) {
-      fetchIngredients();
-    }
+    if (token) fetchIngredients();
   }, [token]);
 
   const handleOpenAddModal = () => {
     setSelectedIngredient(null);
     setIsIngredientModalOpen(true);
   };
-  const handleOpenEditModal = (ingredient) => {
-    setSelectedIngredient(ingredient);
+  const handleOpenEditModal = (ing) => {
+    setSelectedIngredient(ing);
     setIsIngredientModalOpen(true);
   };
-  const handleOpenAdjustModal = (ingredient) => {
-    setSelectedIngredient(ingredient);
+  const handleOpenAdjustModal = (ing) => {
+    setSelectedIngredient(ing);
     setIsAdjustModalOpen(true);
   };
   const handleCloseModals = () => {
@@ -133,166 +60,90 @@ const InventoryPage = () => {
 
   const handleSaveIngredient = async (formData) => {
     const isEditMode = Boolean(selectedIngredient);
-    const url = isEditMode
-      ? `/inventory/${selectedIngredient.ingredient_id}`
-      : '/inventory';
-    
+    const url = isEditMode ? `/inventory/${selectedIngredient.ingredient_id}` : '/inventory';
     const method = isEditMode ? 'PUT' : 'POST';
-
     try {
-      const response = await apiClient(url, {
-        method: method,
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || `Failed to ${isEditMode ? 'update' : 'create'} ingredient.`);
-      }
-
-      toast.success(`Ingredient ${isEditMode ? 'updated' : 'created'} successfully!`);
+      const response = await apiClient(url, { method, body: JSON.stringify(formData) });
+      if (!response.ok) throw new Error('Failed to save ingredient');
+      toast.success(`Ingredient ${isEditMode ? 'updated' : 'created'}!`);
       handleCloseModals();
       fetchIngredients(); 
     } catch (err) {
-       if (err.message !== 'Session expired') {
-        toast.error(err.message);
-      }
+       toast.error(err.message);
     }
   };
 
   const handleAdjustStock = async (formData) => {
     if (!selectedIngredient) return;
-
-    const url = `/inventory/${selectedIngredient.ingredient_id}/stock`;
-
     try {
-        const response = await apiClient(url, {
-            method: 'PUT',
-            body: JSON.stringify(formData),
+        const response = await apiClient(`/inventory/${selectedIngredient.ingredient_id}/stock`, {
+            method: 'PUT', body: JSON.stringify(formData)
         });
-        
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.message || 'Failed to adjust stock.');
-        }
-        
-        toast.success('Stock adjusted successfully!');
+        if (!response.ok) throw new Error('Failed to adjust stock');
+        toast.success('Stock adjusted!');
         handleCloseModals();
         fetchIngredients(); 
-
     } catch (err) {
-       if (err.message !== 'Session expired') {
-        toast.error(err.message);
-      }
+       toast.error(err.message);
     }
   };
 
   return (
     <>
       <InternalNavBar />
-      <div style={styles.container}>
+      <div className="kitchen-page">
         
-        {/* --- NEW: Wrap Title and Button in headerContainer --- */}
-        <div style={styles.headerContainer}>
-          <h1 style={styles.headerTitle}>
-            Inventory Management
-          </h1>
-          <button
-            onClick={handleOpenAddModal}
-            style={styles.addButton}
-            className="hover:opacity-90"
-          >
-            <Plus size={20} /> {/* Added Plus icon for a better look */}
-            Add New Ingredient
+        {/* Header Row */}
+        <div className="kitchen-header-row">
+          <h1 className="kitchen-title" style={{marginBottom: 0}}>Inventory Management</h1>
+          <button onClick={handleOpenAddModal} className="kitchen-btn btn-accent">
+            <Plus size={20} /> Add Ingredient
           </button>
         </div>
 
-        {/* === LOADING STATE === */}
         {loading ? (
-            <div className="p-8 text-center text-lg" style={{ color: '#ffffff' }}>
-                Loading inventory...
-            </div>
+            <div className="text-center text-white text-xl py-10">Loading inventory...</div>
         ) : error ? (
-            /* === ERROR STATE === */
-            <div className="p-8 text-center text-red-500 bg-white rounded-lg">Error: {error}</div>
+            <div className="text-center text-red-500 text-xl py-10">Error: {error}</div>
         ) : (
-            /* === CONTENT STATE === */
-            <div style={styles.tableContainer}>
-            <table className="min-w-full leading-normal">
+            <div className="kitchen-table-container">
+            <table className="kitchen-table">
                 <thead>
-                <tr style={styles.tableHeader}>
-                    <th style={styles.tableCell} className="text-left">Ingredient Name</th>
-                    <th style={styles.tableCell} className="text-center">Current Stock</th>
-                    <th style={styles.tableCell} className="text-left">Unit</th>
-                    <th style={styles.tableCell} className="text-center">Actions</th>
+                <tr>
+                    <th>Ingredient Name</th>
+                    <th className="text-center">Current Stock</th>
+                    <th>Unit</th>
+                    <th className="text-center">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
                 {ingredients.map((item) => (
-                    <tr
-                    key={item.ingredient_id}
-                    style={styles.tableRow}
-                    className="hover:bg-[#f7dac4]" // Subtle hover effect
-                    >
-                    <td style={styles.tableCell} className="text-left">
-                        <span className="font-bold">{item.name}</span>
-                    </td>
-                    <td style={styles.tableCell} className="text-center">
-                        <span className="font-bold text-lg">
+                    <tr key={item.ingredient_id}>
+                    <td className="font-bold">{item.name}</td>
+                    <td className="text-center font-bold text-lg">
                         {parseFloat(item.stock_level).toFixed(2)}
-                        </span>
                     </td>
-                    <td style={styles.tableCell} className="text-left">
-                        <span className="text-sm font-semibold opacity-80">{item.unit_of_measurement}</span>
-                    </td>
-                    <td style={styles.tableCell} className="text-center">
-                        <div className="flex item-center justify-center gap-6">
-                        <button
-                            onClick={() => handleOpenAdjustModal(item)}
-                            style={{...styles.actionButton, color: '#2563EB'}} // Blue-600
-                            className="hover:text-blue-800"
-                            title="Adjust Stock"
-                        >
-                            <Sliders size={18} />
-                            Adjust
+                    <td className="text-sm opacity-80">{item.unit_of_measurement}</td>
+                    <td className="text-center">
+                        <div className="flex justify-center gap-4">
+                        <button onClick={() => handleOpenAdjustModal(item)} className="text-blue-600 hover:underline flex items-center gap-1">
+                            <Sliders size={16} /> Adjust
                         </button>
-                        <button
-                            onClick={() => handleOpenEditModal(item)}
-                            style={{...styles.actionButton, color: '#4B5563'}} // Gray-600
-                            className="hover:text-black"
-                            title="Edit Details"
-                        >
-                            <Edit2 size={18} />
-                            Edit
+                        <button onClick={() => handleOpenEditModal(item)} className="text-gray-600 hover:underline flex items-center gap-1">
+                            <Edit2 size={16} /> Edit
                         </button>
                         </div>
                     </td>
                     </tr>
                 ))}
-                {ingredients.length === 0 && (
-                    <tr>
-                        <td colSpan="4" className="text-center py-8 text-gray-500">No ingredients found.</td>
-                    </tr>
-                )}
                 </tbody>
             </table>
             </div>
         )}
       </div>
 
-      <IngredientModal
-        isOpen={isIngredientModalOpen}
-        onClose={handleCloseModals}
-        onSave={handleSaveIngredient}
-        ingredientToEdit={selectedIngredient}
-      />
-      
-      <AdjustStockModal
-        isOpen={isAdjustModalOpen}
-        onClose={handleCloseModals}
-        onAdjust={handleAdjustStock}
-        ingredient={selectedIngredient}
-      />
+      <IngredientModal isOpen={isIngredientModalOpen} onClose={handleCloseModals} onSave={handleSaveIngredient} ingredientToEdit={selectedIngredient} />
+      <AdjustStockModal isOpen={isAdjustModalOpen} onClose={handleCloseModals} onAdjust={handleAdjustStock} ingredient={selectedIngredient} />
     </>
   );
 };
