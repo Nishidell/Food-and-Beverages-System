@@ -1,11 +1,12 @@
 /* frontend/src/pages/Customer/CustomerTheme.css */
-:root {
+.customer-page-container{
   --customer-bg-color: #0B3D2E;    /* Deep Green Background */
   --card-bg-color: #fff2e0;        /* Cream Card Background */
-  --text-primary: #3C2A21;         /* Dark Brown Text */
-  --text-secondary: #F9A825;       /* Gold/Orange */
-  --btn-primary: #0B3D2E;          /* Primary Button Color */
-  --btn-text: white;
+  --text-primary: #0B3D2E;
+  --text-secondary: #F9A825;
+  --btn-primary: #0B3D2E;          /* Your Green Button */
+  --btn-hover: #082f23;
+  --btn-text: #F9A825;
   --btn-unavailable: #6B7280;      /* Gray for unavailable */
 }
 
@@ -98,6 +99,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+  gap: 0.5rem;
 }
 
 .price-container {
@@ -125,7 +127,7 @@
   background-color: var(--btn-primary);
   color: var(--btn-text);
   font-weight: bold;
-  padding: 8px 24px;
+  padding: 8px 32px;
   border-radius: 0.375rem;
   border: none;
   cursor: pointer;
@@ -136,11 +138,12 @@
   background-color: var(--btn-unavailable);
   color: white;
   font-weight: bold;
-  padding: 8px 24px;
+  padding: 8px 8px;
   border-radius: 0.375rem;
   border: none;
   opacity: 0.7;
   cursor: not-allowed;
+  margin-left: auto;
 }
 
 .no-items-message {
@@ -228,6 +231,7 @@
 }
 
 .order-type-btn {
+  color: var(--text-primary);
   flex: 1;
   padding: 0.5rem;
   font-size: 0.875rem;
@@ -240,7 +244,7 @@
 
 .order-type-btn.active {
   background-color: var(--btn-primary);
-  color: white;
+  color: #F9A825;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
@@ -261,7 +265,7 @@
 .location-label {
   font-size: 0.75rem;
   font-weight: bold;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 0.5rem;
@@ -364,7 +368,7 @@
 }
 
 .cart-item-price {
-  color: var(--text-secondary);
+  color: var(--text-primary);
   font-weight: bold;
   font-size: 0.875rem;
   margin-top: 0.25rem;
@@ -461,7 +465,7 @@
   background-color: #f9f9f9;
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
-  color: #4b5563;
+  color: #3c4450;
   outline: none;
   transition: all 0.2s;
 }
@@ -500,7 +504,7 @@
 .place-order-btn {
   width: 100%;
   background-color: var(--btn-primary);
-  color: white;
+  color: #F9A825;
   font-weight: bold;
   padding: 1rem;
   border-radius: 0.75rem;
@@ -510,8 +514,12 @@
   transition: background-color 0.2s;
 }
 
+.btn-add-cart:hover {
+  background-color: var(--btn-hover);
+}
+
 .place-order-btn:hover {
-  background-color: #082f23;
+  background-color: var(--btn-hover);
 }
 
 .place-order-btn:disabled {
@@ -521,4 +529,159 @@
 
 .place-order-btn:active {
   transform: scale(0.98);
+}
+
+/* --- Category Tabs --- */
+.category-tabs-wrapper {
+  padding-top: 1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  margin-bottom: 1rem;
+}
+
+.category-tabs-track {
+  /* Border Color: Dark Orange (#D97706) */
+  border: 2px solid #D97706; 
+  border-radius: 50px;
+  padding: 0.5rem;
+  overflow-x: auto;
+  /* Track Background: Dark Green (#0B3D2E) */
+  background-color: var(--customer-bg-color); 
+  
+  /* Hide Scrollbar for cleaner look */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.category-tabs-track::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.category-tabs-list {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.category-tab-btn {
+  padding: 0.5rem 1rem;
+  font-size: 1.125rem; /* 18px */
+  font-weight: 600;
+  /* Inactive Text: Accent Orange (#F9A825) */
+  color: var(--text-secondary); 
+  background-color: transparent;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.category-tab-btn:hover {
+  /* Add a slight glow on hover */
+  background-color: rgba(249, 168, 37, 0.1); 
+}
+
+.category-tab-btn.active {
+  /* Active Background: Accent Orange */
+  background-color: var(--text-secondary);
+  /* Active Text: Dark Green */
+  color: var(--customer-bg-color);
+}
+
+/* --- Header Bar --- */
+.header-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: center;
+  padding: 1rem 1.5rem; /* px-6 py-4 */
+  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); /* shadow-sm */
+  background-color: var(--customer-bg-color); /* #0B3D2E */
+}
+
+.header-col-start {
+  justify-self: start;
+}
+
+.header-logo {
+  height: 5rem; /* h-20 */
+}
+
+.header-col-center {
+  position: relative;
+  width: 100%;
+  max-width: 28rem; /* max-w-md */
+  justify-self: center;
+}
+
+.search-icon-wrapper {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  padding-left: 0.75rem;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  color: #9ca3af; /* text-gray-400 */
+}
+
+.search-input {
+  width: 100%;
+  padding-left: 2.5rem; /* pl-10 */
+  padding-right: 1rem;  /* pr-4 */
+  padding-top: 0.5rem;  /* py-2 */
+  padding-bottom: 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 9999px; /* rounded-full */
+  background-color: #f3f4f6; /* bg-gray-100 */
+  outline: none;
+  transition: box-shadow 0.2s;
+}
+
+.search-input:focus {
+  /* ring-orange-400 approx */
+  box-shadow: 0 0 0 2px var(--text-secondary); 
+}
+
+.header-col-end {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 1rem; /* gap-4 */
+}
+
+/* --- Shared Header Buttons (Notification, Cart, Profile) --- */
+.header-icon-btn {
+  position: relative;
+  background-color: var(--text-secondary); /* #F9A825 */
+  color: var(--text-primary); /* #3C2A21 */
+  padding: 0.75rem; /* p-3 */
+  border-radius: 9999px; /* rounded-full */
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); /* shadow-md */
+  transition: background-color 0.2s;
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-icon-btn:hover {
+  background-color: #f7c36e; /* Lighter orange hover */
+}
+
+.icon-badge {
+  position: absolute;
+  top: -0.25rem; /* -top-1 */
+  right: -0.25rem; /* -right-1 */
+  background-color: #ef4444; /* bg-red-500 */
+  color: white;
+  font-size: 0.75rem; /* text-xs */
+  width: 1.25rem; /* w-5 */
+  height: 1.25rem; /* h-5 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
 }
