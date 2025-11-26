@@ -29,6 +29,7 @@ import analyticsRoutes from "../src/routes/analyticsRoutes.js";
 import dashboardRoutes from "../src/routes/dashboardRoutes.js";
 import notificationRoutes from "../src/routes/notificationRoutes.js";
 import promotionRoutes from "../src/routes/promotionRoutes.js";
+import tableRoutes from "../src/routes/tableRoutes.js";
 
 
 const app = express();
@@ -64,6 +65,7 @@ app.use("/api/analytics", analyticsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/promotions', promotionRoutes);
+app.use('/api/tables', tableRoutes);
 app.use('/api/upload', uploadRoutes); // Upload Image route
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 

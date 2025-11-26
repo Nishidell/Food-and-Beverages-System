@@ -32,21 +32,18 @@ export const createPosOrder = async (req, res) => {
         // Step 2: Calculate totals with promo support
         let calculatedItemsTotal = 0; 
         
-        // BUG FIX #1: Create order BEFORE order details
-        // WHY: We need order_id to insert order details, but the original code
-        // tried to insert details before creating the order (order_id was undefined)
-        // HOW: Move order creation before the detail insertion loop
-        const orderSql = `
-            INSERT INTO fb_orders 
-            (client_id, employee_id, order_type, delivery_location, status, items_total, service_charge_amount, vat_amount, total_amount) 
-            VALUES (NULL, ?, ?, ?, 'pending', 0, 0, 0, 0)
-        `;
-        const [orderResult] = await connection.query(orderSql, [
-            employee_id, 
-            order_type, 
-            delivery_location
-        ]);
-        order_id = orderResult.insertId;
+       const orderSql = "INSERT INTO fb_orders (client_id, staff_id, order_type, delivery_location, table_id, status) VALUES (?, ?, ?, ?, ?, 'pending')";
+        // Note: Make sure you are passing table_id in the values array above if you haven't already updated this query
+        const [orderResult] = await connection.query(orderSql, [client_id, employee_id, order_type, deliveryLocation, table_id]); 
+        const order_id = orderResult.insertId;
+
+        // --- NEW LOGIC: Set Table to Occupied ---
+        if (table_id) {
+            await connection.query(
+                "UPDATE fb_tables SET status = 'Occupied' WHERE table_id = ?", 
+                [table_id]
+            );
+        }
         
         // Step 3: Calculate totals and create order details
         for (const item of items) {
@@ -159,23 +156,41 @@ export const createOrder = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // SECURITY FIX: Get client_id from the authenticated token, NOT the body
         const client_id = req.user.id; 
-        
-        // We removed 'client_id' from the destructuring below
-        const { items, order_type, instructions, delivery_location } = req.body;
+        const { items, order_type, instructions, delivery_location, table_id } = req.body; // <-- Add table_id
 
-        if (!items || items.length === 0 || !delivery_location) {
-            throw new Error("Missing required order information (items or delivery location).");
+        if (!items || items.length === 0) {
+            throw new Error("Missing required order information.");
         }
-        
-        // Insert order
-        const orderSql = "INSERT INTO fb_orders (client_id, order_type, delivery_location, status) VALUES (?, ?, ?, 'pending')";
-        const [orderResult] = await connection.query(orderSql, [client_id, order_type, delivery_location]);
+
+        // --- LOGIC: Handle Table ID vs Text Location ---
+        let finalLocation = delivery_location;
+        let finalTableId = null;
+
+        if (order_type === 'Dine-in' && table_id) {
+            finalTableId = table_id;
+            // Lookup table number for display text (so Kitchen/Admin views still work)
+            const [tables] = await connection.query("SELECT table_number FROM fb_tables WHERE table_id = ?", [table_id]);
+            if (tables.length > 0) {
+                finalLocation = `Table ${tables[0].table_number}`;
+            }
+        }
+        // ------------------------------------------------
+
+        const orderSql = "INSERT INTO fb_orders (client_id, order_type, delivery_location, table_id, status) VALUES (?, ?, ?, ?, 'pending')";
+        const [orderResult] = await connection.query(orderSql, [client_id, order_type, finalLocation, finalTableId]);
         const order_id = orderResult.insertId;
 
-        let calculatedItemsTotal = 0; 
+        // --- NEW LOGIC: Set Table to Occupied ---
+        if (finalTableId) {
+            await connection.query(
+                "UPDATE fb_tables SET status = 'Occupied' WHERE table_id = ?", 
+                [finalTableId]
+            );
+        }
         
+        let calculatedItemsTotal = 0;
+
         for (const item of items) {
             // 1. Fetch price & promo details
             const [rows] = await connection.query(

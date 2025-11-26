@@ -7,13 +7,13 @@ import MenuPage from './pages/Customer/MenuPage';
 import AdminPage from './pages/Admin/AdminPage';
 import KitchenPage from './pages/Kitchen/KitchenPage';
 import ArchivePage from './pages/Kitchen/ArchivePage';
+import TableManager from './pages/Kitchen/TableManager';
 import LoginPage from './pages/Auth/LoginPage';
 import RegisterPage from './pages/Auth/RegisterPage';
 import NotAuthorizedPage from './pages/Auth/NotAuthorizedPage';
 
 import PaymentSuccess from './pages/Customer/PaymentSuccess.jsx';
 import PaymentCancel from './pages/Customer/PaymentCancel.jsx';
-
 import InventoryPage from './pages/Kitchen/InventoryPage.jsx';
 
 // --- NEW: Import the POS Page ---
@@ -82,6 +82,15 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['F&B Admin', 'Kitchen Staffs', 'Cashier', 'Stock Controller']}>
               <KitchenPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/kitchen/tables"
+          element={
+            <ProtectedRoute allowedRoles={['F&B Admin', 'Kitchen Staffs', 'Waiter', 'Cashier']}>
+              <TableManager />
             </ProtectedRoute>
           }
         />

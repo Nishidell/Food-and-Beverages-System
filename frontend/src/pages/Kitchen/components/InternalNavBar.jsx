@@ -69,6 +69,14 @@ const InternalNavBar = () => {
           Kitchen
         </NavLink>
         
+        <NavLink
+          to="/kitchen/tables"
+          end
+          style={({ isActive }) => (isActive ? activeNavLinkStyle : navLinkStyle)}
+        >
+          Table Management
+        </NavLink>
+
         {/* --- NEW LINK ADDED HERE --- */}
         <NavLink
           to="/kitchen/pos"
@@ -96,7 +104,7 @@ const InternalNavBar = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
         
         {/* --- Conditionally render Admin Dashboard link --- */}
-        {user && user.position === 'F&B Admin' && (
+        {user && user.position === 'F&B Admin' && ( 
           <Link
             to="/admin"
             style={isHovered ? { ...baseAdminLinkStyle, ...hoverAdminLinkStyle } : baseAdminLinkStyle}
@@ -106,6 +114,7 @@ const InternalNavBar = () => {
             Go to Admin Dashboard
           </Link>
         )}
+        
 
         <ProfileDropdown />
       </div>

@@ -182,15 +182,14 @@ function MenuPage() {
   // --- 1. THIS IS THE FIX ---
   // We no longer pass the total. We just open the modal.
   // We still calculate the total here *for display* in the PaymentModal.
-  const handleProceedToPayment = () => {
+  const handleProceedToPayment = (data) => {
     if (!isAuthenticated) {
       toast.error("You must be logged in to place an order.");
       navigate('/login');
       return;
     }
-    if (cartItems.length === 0 || !deliveryLocation) {
-      toast.error("Please add items and enter table/room number first.");
-      return;
+    if (data?.tableID) {
+      setDeliveryLocation(data.table_id);
     }
     
     // Calculate total for display
@@ -219,7 +218,9 @@ const handleConfirmPayment = async (paymentInfo) => {
       client_id: user.id,
       order_type: orderType,
       instructions: instructions,
-      delivery_location: deliveryLocation,
+      delivery_location: orderType === 'Room Dining' ? deliveryLocation : null,
+      table_id: orderType === 'Dine-in' ? deliveryLocation : null,
+      
       items: cartItems.map(item => ({
         item_id: item.item_id,
         quantity: item.quantity,
