@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Trash2, Minus, Plus, MessageSquare } from 'lucide-react';
 import apiClient from '../../../utils/apiClient';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:21907/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:21917/api';
 
 const SERVER_URL = API_URL.split('/api')[0];
 
