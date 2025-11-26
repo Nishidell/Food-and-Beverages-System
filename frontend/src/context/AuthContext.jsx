@@ -45,22 +45,37 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   // Handles redirecting the user based on their role
-  const handleRedirect = (role) => {
-    switch (role) {
-      case 'admin':
-        navigate('/admin');
-        break;
-      case 'waiter':
-      case 'cashier':
-        navigate('/kitchen');
-        break;
-      case 'customer':
-        navigate('/');
-        break;
-      default:
-        console.warn(`Unknown user role: ${role}`);
-        navigate('/'); // Default to customer menu
+  const handleRedirect = (decodedUser) => {
+    const { role, position } = decodedUser;
+
+    // 1. Check Position (For Staff)
+    if (position) {
+      switch (position) {
+        case 'F&B Admin':
+          navigate('/admin');
+          break;
+        case 'Kitchen Staffs': // Note: Matches DB spelling
+        case 'Waiter':
+        case 'Cashier':
+        case 'Stock Controller': // Added per your mention
+          navigate('/kitchen');
+          break;
+        default:
+          // Fallback for other staff positions not explicitly handled
+          console.warn(`Unknown staff position: ${position}`);
+          navigate('/kitchen'); 
+      }
+      return;
     }
+
+    // 2. Check Role (For Customers)
+    if (role === 'customer') {
+      navigate('/');
+      return;
+    }
+
+    // 3. Fallback
+    navigate('/');
   };
 
   // Login function
@@ -81,7 +96,7 @@ export const AuthProvider = ({ children }) => {
       // The useEffect will decode the token, but we need the role NOW
       // to redirect. So we decode it here just for the redirect.
       const decoded = jwtDecode(data.token);
-      handleRedirect(decoded.role);
+      handleRedirect(decoded);
       
       toast.success('Logged in successfully!');
       return true;

@@ -64,7 +64,7 @@ function App() {
         <Route
           path="/"
           element={
-            <ProtectedRoute allowedRoles={['customer']}>
+            <ProtectedRoute allowedRoles={['customer', 'F&B Admin', 'Kitchen Staffs', 'Cashier', 'Stock Controller']}>
               <MenuPage />
             </ProtectedRoute>
           }
@@ -72,7 +72,7 @@ function App() {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'employee']}>
+            <ProtectedRoute allowedRoles={['F&B Admin']}>
               <AdminPage />
             </ProtectedRoute>
           }
@@ -80,7 +80,7 @@ function App() {
         <Route
           path="/kitchen"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'waiter', 'cashier','employee']}>
+            <ProtectedRoute allowedRoles={['F&B Admin', 'Kitchen Staffs', 'Cashier', 'Stock Controller']}>
               <KitchenPage />
             </ProtectedRoute>
           }
@@ -90,7 +90,7 @@ function App() {
         <Route
           path="/kitchen/pos"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'waiter', 'cashier', 'employee']}>
+            <ProtectedRoute allowedRoles={['F&B Admin', 'Cashier']}>
               <PosPage />
             </ProtectedRoute>
           }
@@ -99,7 +99,7 @@ function App() {
         <Route
           path="/kitchen/inventory"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'waiter', 'cashier', 'employee']}>
+            <ProtectedRoute allowedRoles={['F&B Admin', 'Stock Controller']}>
               <InventoryPage />
             </ProtectedRoute>
           }
@@ -108,7 +108,7 @@ function App() {
         <Route
           path="/kitchen/archive"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'waiter', 'cashier','employee']}>
+            <ProtectedRoute allowedRoles={['F&B Admin', 'Kitchen Staffs', 'Cashier']}>
               <ArchivePage />
             </ProtectedRoute>
           }
