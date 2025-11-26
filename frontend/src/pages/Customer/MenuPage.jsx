@@ -218,8 +218,12 @@ const handleConfirmPayment = async (paymentInfo) => {
       client_id: user.id,
       order_type: orderType,
       instructions: instructions,
-      delivery_location: orderType === 'Room Dining' ? deliveryLocation : null,
-      table_id: orderType === 'Dine-in' ? deliveryLocation : null,
+      // Send IDs specifically
+      table_id: orderType === 'Dine-in' ? deliveryLocation : null, 
+      room_id: orderType === 'Room Dining' ? deliveryLocation : null, 
+      
+      // We can leave delivery_location null, the backend will fill it with text
+      delivery_location: null,
       
       items: cartItems.map(item => ({
         item_id: item.item_id,

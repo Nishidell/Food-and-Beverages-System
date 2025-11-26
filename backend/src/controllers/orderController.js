@@ -157,7 +157,7 @@ export const createOrder = async (req, res) => {
         await connection.beginTransaction();
 
         const client_id = req.user.id; 
-        const { items, order_type, instructions, delivery_location, table_id } = req.body; // <-- Add table_id
+        const { items, order_type, instructions, delivery_location, table_id, room_id } = req.body;
 
         if (!items || items.length === 0) {
             throw new Error("Missing required order information.");
@@ -166,19 +166,27 @@ export const createOrder = async (req, res) => {
         // --- LOGIC: Handle Table ID vs Text Location ---
         let finalLocation = delivery_location;
         let finalTableId = null;
+        let finalRoomId = null;
 
         if (order_type === 'Dine-in' && table_id) {
             finalTableId = table_id;
-            // Lookup table number for display text (so Kitchen/Admin views still work)
             const [tables] = await connection.query("SELECT table_number FROM fb_tables WHERE table_id = ?", [table_id]);
             if (tables.length > 0) {
                 finalLocation = `Table ${tables[0].table_number}`;
             }
         }
+
+        if (order_type === 'Room Dining' && req.body.room_id) {
+             finalRoomId = req.body.room_id;
+             const [rooms] = await connection.query("SELECT room_num FROM tbl_rooms WHERE room_id = ?", [finalRoomId]);
+             if (rooms.length > 0) {
+                 finalLocation = `Room ${rooms[0].room_num}`;
+             }
+        }
         // ------------------------------------------------
 
-        const orderSql = "INSERT INTO fb_orders (client_id, order_type, delivery_location, table_id, status) VALUES (?, ?, ?, ?, 'pending')";
-        const [orderResult] = await connection.query(orderSql, [client_id, order_type, finalLocation, finalTableId]);
+        const orderSql = "INSERT INTO fb_orders (client_id, order_type, delivery_location, table_id, room_id, status) VALUES (?, ?, ?, ?, ?, 'pending')";
+        const [orderResult] = await connection.query(orderSql, [client_id, order_type, finalLocation, finalTableId, finalRoomId]);
         const order_id = orderResult.insertId;
 
         // --- NEW LOGIC: Set Table to Occupied ---

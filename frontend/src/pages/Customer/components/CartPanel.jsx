@@ -17,35 +17,36 @@ const CartPanel = ({
   setDeliveryLocation,
   isPlacingOrder
 }) => {
-  // --- NEW: State for Tables ---
   const [tables, setTables] = useState([]);
   const [selectedTableId, setSelectedTableId] = useState('');
 
+  const [rooms, setRooms] = useState([]);        // Store fetched rooms
+  const [selectedRoomId, setSelectedRoomId] = useState(''); // Selected Room ID
+
   // Fetch tables when component mounts
   useEffect(() => {
-    const fetchTables = async () => {
+    const fetchData = async () => {
       try {
-        const response = await apiClient('/tables');
-        if (response.ok) {
-          setTables(await response.json());
-        }
+        const [tableRes, roomRes] = await Promise.all([
+            apiClient('/tables'),
+            apiClient('/rooms')
+        ]);
+
+        if (tableRes.ok) setTables(await tableRes.json());
+        if (roomRes.ok) setRooms(await roomRes.json());
       } catch (error) {
-        console.error("Failed to load tables", error);
+        console.error("Failed to load location data", error);
       }
     };
-    fetchTables();
+    fetchData();
   }, []);
 
   // Handle Table Selection
-  const handleTableChange = (e) => {
-    const tId = e.target.value;
-    setSelectedTableId(tId);
-    
-    // We assume the parent component (MenuPage) manages the actual submission data.
-    // We pass the ID back via setDeliveryLocation temporarily or handle it in the wrapper.
-    // For now, let's just set the location text for validity checking.
-    if (tId) {
-        setDeliveryLocation(tId); // Passing ID as location for now
+  const handleLocationChange = (e) => {
+    const rId = e.target.value;
+    setSelectedRoomId(rId);
+    if (rId) {
+        setDeliveryLocation(rId); // Store ID temporarily
     } else {
         setDeliveryLocation('');
     }
@@ -112,7 +113,7 @@ const CartPanel = ({
                 // --- DROPDOWN FOR DINE-IN ---
                 <select
                     value={selectedTableId}
-                    onChange={handleTableChange}
+                    onChange={handleLocationChange}
                     className="w-full border border-gray-300 rounded-md p-2 bg-white"
                 >
                     <option value="">-- Choose a Table --</option>
@@ -123,14 +124,19 @@ const CartPanel = ({
                     ))}
                 </select>
             ) : (
-                // --- TEXT INPUT FOR ROOM DINING ---
-                <input
-                    type="text" 
-                    value={deliveryLocation}
-                    onChange={(e) => setDeliveryLocation(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md p-2"
-                    placeholder="Example: 101"
-                />
+                // --- DROPDOWN FOR ROOM DINING ---
+                <select
+                    value={selectedRoomId}
+                    onChange={handleLocationChange}
+                    className="w-full border border-gray-300 rounded-md p-2 bg-white"
+                >
+                    <option value="">-- Select Room Number --</option>
+                    {rooms.map(room => (
+                        <option key={room.room_id} value={room.room_id}>
+                            Room {room.room_num} ({room.status})
+                        </option>
+                    ))}
+                </select>
             )}
           </div>
 
@@ -178,7 +184,10 @@ const CartPanel = ({
               </div>
               
               <button
-                onClick={() => onPlaceOrder({ table_id: selectedTableId })} // Pass table_id up
+                onClick={() => onPlaceOrder({ 
+                    table_id: orderType === 'Dine-in' ? selectedTableId : null,
+                    room_id: orderType === 'Room Dining' ? selectedRoomId : null 
+                })}
                 disabled={cartItems.length === 0 || (orderType === 'Dine-in' && !selectedTableId) || (orderType === 'Room Dining' && !deliveryLocation)}
                 className="w-full mt-4 bg-[#0B3D2E] text-white font-bold py-3 rounded-lg hover:bg-[#082f23] transition-colors disabled:bg-gray-400"
               >
