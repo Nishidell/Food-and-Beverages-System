@@ -12,17 +12,7 @@ import ReceiptModal from './components/ReceiptModal';
 import NotificationPanel from './components/NotificationPanel';
 import toast from 'react-hot-toast';
 import apiClient from '../../utils/apiClient';
-
-const primaryColor = { backgroundColor: '#0B3D2E' };
-const menuPageGridStyle = {
-  display: 'grid',
-  // This creates columns of 320px, and 'auto-fit' adds as many as fit.
-  gridTemplateColumns: 'repeat(auto-fit, 320px)',
-  // THIS IS THE FIX: It centers the grid of cards on the page.
-  justifyContent: 'center', 
-  gap: '32px',
-  marginTop: '32px',
-};
+import './CustomerTheme.css';
 
 function MenuPage() {
   const [items, setItems] = useState([]);
@@ -34,7 +24,6 @@ function MenuPage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [orderType, setOrderType] = useState('Dine-in');
-  const [instructions, setInstructions] = useState('');
   const [deliveryLocation, setDeliveryLocation] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
@@ -51,6 +40,14 @@ function MenuPage() {
   const navigate = useNavigate();
 
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+
+  const handleUpdateItemInstruction = (itemId, newInstruction) => {
+  setCartItems(prevItems =>
+    prevItems.map(item =>
+      item.item_id === itemId ? { ...item, instructions: newInstruction } : item
+    )
+  );
+};
 
   useEffect(() => { setDeliveryLocation(''); }, [orderType]);
   useEffect(() => {
@@ -182,15 +179,14 @@ function MenuPage() {
   // --- 1. THIS IS THE FIX ---
   // We no longer pass the total. We just open the modal.
   // We still calculate the total here *for display* in the PaymentModal.
-  const handleProceedToPayment = () => {
+  const handleProceedToPayment = (data) => {
     if (!isAuthenticated) {
       toast.error("You must be logged in to place an order.");
       navigate('/login');
       return;
     }
-    if (cartItems.length === 0 || !deliveryLocation) {
-      toast.error("Please add items and enter table/room number first.");
-      return;
+    if (data?.tableID) {
+      setDeliveryLocation(data.table_id);
     }
     
     // Calculate total for display
@@ -216,14 +212,20 @@ const handleConfirmPayment = async (paymentInfo) => {
 
     // Prepare order data - backend will calculate total
     const orderData = {
-      customer_id: user.id,
+      client_id: user.id,
       order_type: orderType,
-      instructions: instructions,
-      delivery_location: deliveryLocation,
+      // Send IDs specifically
+      table_id: orderType === 'Dine-in' ? deliveryLocation : null, 
+      room_id: orderType === 'Room Dining' ? deliveryLocation : null, 
+      
+      // We can leave delivery_location null, the backend will fill it with text
+      delivery_location: null,
+      
       items: cartItems.map(item => ({
         item_id: item.item_id,
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
+        instructions: item.instructions || ''
       }))
     };
 
@@ -341,7 +343,7 @@ const handleConfirmPayment = async (paymentInfo) => {
     .filter(item => item.item_name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
-    <div className="bg-gray-100 min-h-screen" style={primaryColor}>
+    <div className="customer-page-container">
       <HeaderBar
         cartCount={cartCount}
         onCartToggle={toggleCart}
@@ -362,20 +364,18 @@ const handleConfirmPayment = async (paymentInfo) => {
         items={filteredItems}
         onAddToCart={handleAddToCart}
         onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
-        layoutStyle={menuPageGridStyle} 
       />
       </main>
 
       <CartPanel
         cartItems={cartItems}
         onUpdateQuantity={handleUpdateQuantity}
+        onUpdateItemInstruction={handleUpdateItemInstruction} // <--- NEW
         onPlaceOrder={handleProceedToPayment}
         isOpen={isCartOpen}
         onClose={toggleCart}
         orderType={orderType}
         setOrderType={setOrderType}
-        instructions={instructions}
-        setInstructions={setInstructions}
         onRemoveItem={handleRemoveItem}
         deliveryLocation={deliveryLocation}
         setDeliveryLocation={setDeliveryLocation}

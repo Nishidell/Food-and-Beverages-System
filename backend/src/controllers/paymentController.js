@@ -7,14 +7,14 @@ import crypto from "crypto";
 export const createPayMongoPayment = async (req, res) => {
     try {
         const { order_id } = req.params;
-        const customer_id = req.user.id;
+        const client_id = req.user.id;
 
         console.log('Creating PayMongo payment for order:', order_id);
 
         // 1. Get order details
         const [order] = await pool.query(
-            "SELECT * FROM orders WHERE order_id = ? AND customer_id = ?", 
-            [order_id, customer_id]
+            "SELECT * FROM fb_orders WHERE order_id = ? AND client_id = ?", 
+            [order_id, client_id]
         );
         
         if (order.length === 0) {
@@ -24,15 +24,17 @@ export const createPayMongoPayment = async (req, res) => {
         // Check if order is already paid or payment_status is not 'pending'
         // We check for 'pending' because that's what you set it to.
         if (order[0].status !== 'pending') {
-             return res.status(400).json({ message: "Order is not in a payable state." });
+            return res.status(400).json({ message: "Order is not in a payable state." });
         }
 
-        // 2. --- NEW --- Get the individual line items for the order
-        // We must fetch all items from `order_details` and join with `menu_items` to get names and prices.
+        // 2. Get the individual menu items for the order
         const [orderItems] = await pool.query(
-            `SELECT od.quantity, mi.item_name, mi.price 
-             FROM order_details od
-             JOIN menu_items mi ON od.item_id = mi.item_id
+            `SELECT 
+                od.quantity, 
+                mi.item_name, 
+                od.price_on_purchase
+             FROM fb_order_details od
+             JOIN fb_menu_items mi ON od.item_id = mi.item_id
              WHERE od.order_id = ?`,
             [order_id]
         );
@@ -41,14 +43,69 @@ export const createPayMongoPayment = async (req, res) => {
             return res.status(404).json({ message: "No items found for this order" });
         }
 
-        // 3. --- NEW --- Format line_items for PayMongo
-        // We must map our database rows into the array format PayMongo requires.
-        const line_items = orderItems.map(item => ({
-            name: item.item_name,
-            quantity: item.quantity,
-            amount: Math.round(parseFloat(item.price) * 100), // Price per item in cents
-            currency: 'PHP' // Currency must be specified per item
-        }));
+        // 3. Build line items for menu items with promo pricing
+        const menu_line_items = orderItems.map(item => {
+            const actualPrice = parseFloat(item.price_on_purchase);
+
+            return {
+                name: item.item_name,
+                quantity: item.quantity,
+                amount: Math.round(actualPrice * 100), // Convert to centavos
+                currency: 'PHP'
+            };
+        });
+
+        // 🔴 BUG FIX: PayMongo line_items ONLY shows the items you explicitly add
+        // It does NOT automatically calculate service charge or VAT
+        // WHY: PayMongo's Checkout API displays exactly what you send in line_items
+        // HOW: We need to manually add service charge and VAT as separate line items
+
+        // 4. Get the calculated totals from the order table
+        const itemsTotal = parseFloat(order[0].items_total);
+        const serviceCharge = parseFloat(order[0].service_charge_amount);
+        const vatAmount = parseFloat(order[0].vat_amount);
+        const totalAmount = parseFloat(order[0].total_amount);
+
+        // 5. Add service charge as a separate line item
+        const service_charge_line_item = {
+            name: "Service Charge (10%)",
+            quantity: 1,
+            amount: Math.round(serviceCharge * 100), // Convert to centavos
+            currency: 'PHP'
+        };
+
+        // 6. Add VAT as a separate line item
+        const vat_line_item = {
+            name: "VAT (12%)",
+            quantity: 1,
+            amount: Math.round(vatAmount * 100), // Convert to centavos
+            currency: 'PHP'
+        };
+
+        // 7. Combine all line items: menu items + service charge + VAT
+        const all_line_items = [
+            ...menu_line_items,           // All food/beverage items
+            service_charge_line_item,      // Service charge line
+            vat_line_item                  // VAT line
+        ];
+
+        // 8. Verify that our line items sum equals the total
+        // This is a safety check to ensure data integrity
+        const calculatedSum = all_line_items.reduce((sum, item) => {
+            return sum + (item.amount * item.quantity);
+        }, 0);
+        const expectedSum = Math.round(totalAmount * 100);
+
+        if (calculatedSum !== expectedSum) {
+            console.error(`Line items sum mismatch! Calculated: ${calculatedSum}, Expected: ${expectedSum}`);
+            return res.status(500).json({ 
+                message: "Payment calculation error. Please contact support.",
+                debug: {
+                    calculated: calculatedSum / 100,
+                    expected: expectedSum / 100
+                }
+            });
+        }
 
         // Validate PayMongo API key
         if (!process.env.PAYMONGO_SECRET_KEY || !process.env.FRONTEND_URL) {
@@ -58,9 +115,9 @@ export const createPayMongoPayment = async (req, res) => {
             });
         }
 
-        // 4. --- UPDATED PAYLOAD ---
-        // We create the new body for PayMongo
-        console.log('Calling PayMongo API...');
+        console.log('Calling PayMongo API with line items:', all_line_items);
+        
+        // 9. Create PayMongo checkout session
         const paymongoResponse = await fetch('https://api.paymongo.com/v1/checkout_sessions', {
             method: 'POST',
             headers: {
@@ -70,13 +127,10 @@ export const createPayMongoPayment = async (req, res) => {
             body: JSON.stringify({
                 data: {
                     attributes: {
-                        // --- ❌ REMOVED ❌ ---
-                        // amount: Math.round(orderTotal * 100), // PayMongo sums line_items automatically
+                        // ✅ FIXED: Now includes ALL charges in line_items
+                        // PayMongo will sum these automatically and show them on the checkout page
+                        line_items: all_line_items,
                         
-                        // --- ✅ ADDED ✅ ---
-                        line_items: line_items, // The array we just built
-                        
-                        // --- ✅ ADDED ✅ ---
                         payment_method_types: [
                             'gcash',
                             'card',
@@ -84,17 +138,19 @@ export const createPayMongoPayment = async (req, res) => {
                             'grab_pay'
                         ],
 
-                        // --- ✅ ADDED (Best Practice) ✅ ---
-                        // These URLs are where PayMongo redirects the user after payment
                         success_url: `${process.env.FRONTEND_URL}/payment-success?order_id=${order_id}`,
                         cancel_url: `${process.env.FRONTEND_URL}/payment-cancel`,
 
-                        // --- Kept as-is ---
                         description: `Order #${order_id} Payment`,
                         remarks: `Food & Beverages - Order ${order_id}`,
+                        
+                        // ✅ BEST PRACTICE: Show line items breakdown on checkout page
+                        show_line_items: true,
+                        show_description: true,
+                        
                         metadata: {
                             order_id: order_id.toString(),
-                            customer_id: customer_id.toString()
+                            client_id: client_id.toString()
                         }
                     }
                 }
@@ -113,9 +169,6 @@ export const createPayMongoPayment = async (req, res) => {
         }
 
         console.log('PayMongo link created successfully');
-
-        // No need to update status, it should already be 'pending' from MenuPage.jsx
-        // If it wasn't, you would update it here. Your logic is fine.
 
         res.json({
             checkout_url: paymongoData.data.attributes.checkout_url,
@@ -151,7 +204,7 @@ export const paymongoWebhook = async (req, res) => {
 
         const computedSignature = crypto
             .createHmac('sha256', webhookSecret)
-            .update(req.body)
+            .update(JSON.stringify(req.body))
             .digest('hex');
 
         if (signature !== computedSignature) {
@@ -159,7 +212,7 @@ export const paymongoWebhook = async (req, res) => {
             return res.status(401).json({ message: "Invalid webhook signature" });
         }
 
-        const event = JSON.parse(req.body.toString());
+        const event = req.body;
 
         // Handle payment.paid event
         if (event.data.attributes.type === 'payment.paid') {
@@ -177,7 +230,7 @@ export const paymongoWebhook = async (req, res) => {
 
             // Check if payment already recorded
             const [existingPayment] = await connection.query(
-                "SELECT * FROM payments WHERE paymongo_payment_id = ?",
+                "SELECT * FROM fb_payments WHERE paymongo_payment_id = ?",
                 [paymentData.id]
             );
 
@@ -189,7 +242,7 @@ export const paymongoWebhook = async (req, res) => {
 
             // Record the payment
             const paymentSql = `
-                INSERT INTO payments 
+                INSERT INTO fb_payments 
                 (order_id, payment_method, amount, payment_status, paymongo_payment_id, payment_date) 
                 VALUES (?, ?, ?, 'paid', ?, NOW())
             `;
@@ -202,7 +255,7 @@ export const paymongoWebhook = async (req, res) => {
 
             // Update order status to paid
             await connection.query(
-                "UPDATE orders SET status = 'pending' WHERE order_id = ?",
+                "UPDATE fb_orders SET status = 'pending' WHERE order_id = ?",
                 [order_id]
             );
 
@@ -211,14 +264,14 @@ export const paymongoWebhook = async (req, res) => {
             
             return res.status(200).json({ message: "Webhook processed successfully" });
 
-        } else if (event.attributes.type === 'payment.failed') {
+        } else if (event.data.attributes.type === 'payment.failed') {
             // Handle failed payments
-            const paymentData = event.attributes.data;
+            const paymentData = event.data.attributes.data;
             const order_id = paymentData.attributes.metadata?.order_id;
 
             if (order_id) {
                 await pool.query(
-                    "UPDATE orders SET status = 'cancelled' WHERE order_id = ?",
+                    "UPDATE fb_orders SET status = 'cancelled' WHERE order_id = ?",
                     [order_id]
                 );
                 console.log(`❌ Payment failed for Order #${order_id}`);
@@ -253,11 +306,11 @@ export const recordPayment = async (req, res) => {
             return res.status(400).json({ message: "Order ID and amount paid are required."});
         }
 
-        const paymentSql = "INSERT INTO payments (order_id, payment_method, amount, change_amount, payment_status) VALUES (?, ?, ?, ?, 'paid')";
+        const paymentSql = "INSERT INTO fb_payments (order_id, payment_method, amount, change_amount, payment_status) VALUES (?, ?, ?, ?, 'paid')";
         const [paymentResult] = await connection.query(paymentSql, [order_id, payment_method, amount, change_amount || 0]);
 
         // Update order status to paid
-        await connection.query("UPDATE orders SET status = 'paid' WHERE order_id = ?", [order_id]);
+        await connection.query("UPDATE fb_orders SET status = 'paid' WHERE order_id = ?", [order_id]);
 
         await connection.commit();
 
@@ -280,9 +333,9 @@ export const recordPayment = async (req, res) => {
 export const getPaymentsForOrder = async (req, res) => {
     try {
         const { order_id } = req.params;
-        const [payments] = await pool.query("SELECT * FROM payments WHERE order_id = ?", [order_id]);
+        const [payments] = await pool.query("SELECT * FROM fb_payments WHERE order_id = ?", [order_id]);
         res.json(payments);
     } catch (error) {
-        res.status(500).json({ message: "Error fetching payments", error: error.message });
+        res.status(500).json({ message: "Error fetching fb_payments", error: error.message });
     }
 };

@@ -5,7 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import InternalNavBar from './components/InternalNavBar';
 import IngredientModal from './components/IngredientModal'; 
 import AdjustStockModal from './components/AdjustStockModal'; 
-import apiClient from '../../utils/apiClient'; // <-- 1. IMPORT
+import apiClient from '../../utils/apiClient'; 
+import './KitchenTheme.css'; // Import CSS
 
 const InventoryPage = () => {
   const [ingredients, setIngredients] = useState([]);
@@ -19,13 +20,12 @@ const InventoryPage = () => {
 
   const fetchIngredients = async () => {
     try {
-      // --- 2. USE apiClient ---
-      const response = await apiClient('/inventory'); // No headers
-      if (!response.ok) {
-        throw new Error('Failed to fetch ingredients.');
-      }
+      setLoading(true);
+      const response = await apiClient('/inventory'); 
+      if (!response.ok) throw new Error('Failed to fetch ingredients.');
       const data = await response.json();
       setIngredients(data);
+      setError(null);
     } catch (err) {
        if (err.message !== 'Session expired') {
         setError(err.message);
@@ -37,22 +37,19 @@ const InventoryPage = () => {
   };
 
   useEffect(() => {
-    if (token) {
-      fetchIngredients();
-    }
+    if (token) fetchIngredients();
   }, [token]);
 
-  // ... (Modal handlers are unchanged) ...
   const handleOpenAddModal = () => {
     setSelectedIngredient(null);
     setIsIngredientModalOpen(true);
   };
-  const handleOpenEditModal = (ingredient) => {
-    setSelectedIngredient(ingredient);
+  const handleOpenEditModal = (ing) => {
+    setSelectedIngredient(ing);
     setIsIngredientModalOpen(true);
   };
-  const handleOpenAdjustModal = (ingredient) => {
-    setSelectedIngredient(ingredient);
+  const handleOpenAdjustModal = (ing) => {
+    setSelectedIngredient(ing);
     setIsAdjustModalOpen(true);
   };
   const handleCloseModals = () => {
@@ -61,169 +58,92 @@ const InventoryPage = () => {
     setSelectedIngredient(null);
   };
 
-
   const handleSaveIngredient = async (formData) => {
     const isEditMode = Boolean(selectedIngredient);
-    const url = isEditMode
-      ? `/inventory/${selectedIngredient.ingredient_id}`
-      : '/inventory';
-    
+    const url = isEditMode ? `/inventory/${selectedIngredient.ingredient_id}` : '/inventory';
     const method = isEditMode ? 'PUT' : 'POST';
-
     try {
-      // --- 3. USE apiClient ---
-      const response = await apiClient(url, {
-        method: method,
-        // No headers
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || `Failed to ${isEditMode ? 'update' : 'create'} ingredient.`);
-      }
-
-      toast.success(`Ingredient ${isEditMode ? 'updated' : 'created'} successfully!`);
+      const response = await apiClient(url, { method, body: JSON.stringify(formData) });
+      if (!response.ok) throw new Error('Failed to save ingredient');
+      toast.success(`Ingredient ${isEditMode ? 'updated' : 'created'}!`);
       handleCloseModals();
       fetchIngredients(); 
     } catch (err) {
-       if (err.message !== 'Session expired') {
-        toast.error(err.message);
-      }
+       toast.error(err.message);
     }
   };
 
   const handleAdjustStock = async (formData) => {
     if (!selectedIngredient) return;
-
-    const url = `/inventory/${selectedIngredient.ingredient_id}/stock`;
-
     try {
-        // --- 4. USE apiClient ---
-        const response = await apiClient(url, {
-            method: 'PUT',
-            // No headers
-            body: JSON.stringify(formData),
+        const response = await apiClient(`/inventory/${selectedIngredient.ingredient_id}/stock`, {
+            method: 'PUT', body: JSON.stringify(formData)
         });
-        
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.message || 'Failed to adjust stock.');
-        }
-        
-        toast.success('Stock adjusted successfully!');
+        if (!response.ok) throw new Error('Failed to adjust stock');
+        toast.success('Stock adjusted!');
         handleCloseModals();
         fetchIngredients(); 
-
     } catch (err) {
-       if (err.message !== 'Session expired') {
-        toast.error(err.message);
-      }
+       toast.error(err.message);
     }
   };
-
-  // ... (Render logic and JSX is unchanged) ...
-  if (loading) {
-    return (
-      <>
-        <InternalNavBar />
-        <div className="p-8 text-center text-lg">Loading inventory...</div>
-      </>
-    );
-  }
-
-  if (error) {
-    return (
-      <>
-        <InternalNavBar />
-        <div className="p-8 text-center text-red-500">Error: {error}</div>
-      </>
-    );
-  }
 
   return (
     <>
       <InternalNavBar />
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-primary">
-            Inventory Management
-          </h1>
-          <button
-            onClick={handleOpenAddModal}
-            className="bg-[#F9A825] text-white font-bold py-2 px-6 rounded hover:bg-[#c47b04] transition-colors"
-          >
-            Add New Ingredient
+      <div className="kitchen-page">
+        
+        {/* Header Row */}
+        <div className="kitchen-header-row">
+          <h1 className="kitchen-title" style={{marginBottom: 0}}>Inventory Management</h1>
+          <button onClick={handleOpenAddModal} className="kitchen-btn btn-accent">
+            <Plus size={20} /> Add Ingredient
           </button>
         </div>
 
-        <div className="bg-white shadow-md rounded-lg overflow-hidden">
-          <table className="min-w-full leading-normal">
-            <thead>
-              <tr className="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
-                <th className="py-3 px-6 text-left">Ingredient Name</th>
-                <th className="py-3 px-6 text-center">Current Stock</th>
-                <th className="py-3 px-6 text-left">Unit</th>
-                <th className="py-3 px-6 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-gray-600 text-sm font-light">
-              {ingredients.map((item) => (
-                <tr
-                  key={item.ingredient_id}
-                  className="border-b border-gray-200 hover:bg-gray-50"
-                >
-                  <td className="py-3 px-6 text-left">
-                    <span className="font-medium">{item.name}</span>
-                  </td>
-                  <td className="py-3 px-6 text-center">
-                    <span className="font-semibold">
-                      {parseFloat(item.stock_level).toFixed(2)}
-                    </span>
-                  </td>
-                  <td className="py-3 px-6 text-left">
-                    <span>{item.unit_of_measurement}</span>
-                  </td>
-                  <td className="py-3 px-6 text-center">
-                    <div className="flex item-center justify-center gap-4">
-                      <button
-                        onClick={() => handleOpenAdjustModal(item)}
-                        className="flex items-center gap-1 text-blue-600 hover:text-blue-900"
-                        title="Adjust Stock"
-                      >
-                        <Sliders size={18} />
-                        Adjust
-                      </button>
-                      <button
-                        onClick={() => handleOpenEditModal(item)}
-                        className="flex items-center gap-1 text-gray-600 hover:text-black"
-                        title="Edit Details"
-                      >
-                        <Edit2 size={18} />
-                        Edit
-                      </button>
-                    </div>
-                  </td>
+        {loading ? (
+            <div className="text-center text-white text-xl py-10">Loading inventory...</div>
+        ) : error ? (
+            <div className="text-center text-red-500 text-xl py-10">Error: {error}</div>
+        ) : (
+            <div className="kitchen-table-container">
+            <table className="kitchen-table">
+                <thead>
+                <tr>
+                    <th>Ingredient Name</th>
+                    <th className="text-center">Current Stock</th>
+                    <th>Unit</th>
+                    <th className="text-center">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                {ingredients.map((item) => (
+                    <tr key={item.ingredient_id}>
+                    <td className="font-bold">{item.name}</td>
+                    <td className="text-center font-bold text-lg">
+                        {parseFloat(item.stock_level).toFixed(2)}
+                    </td>
+                    <td className="text-sm opacity-80">{item.unit_of_measurement}</td>
+                    <td className="text-center">
+                        <div className="flex justify-center gap-4">
+                        <button onClick={() => handleOpenAdjustModal(item)} className="text-blue-600 hover:underline flex items-center gap-1">
+                            <Sliders size={16} /> Adjust
+                        </button>
+                        <button onClick={() => handleOpenEditModal(item)} className="text-gray-600 hover:underline flex items-center gap-1">
+                            <Edit2 size={16} /> Edit
+                        </button>
+                        </div>
+                    </td>
+                    </tr>
+                ))}
+                </tbody>
+            </table>
+            </div>
+        )}
       </div>
 
-      <IngredientModal
-        isOpen={isIngredientModalOpen}
-        onClose={handleCloseModals}
-        onSave={handleSaveIngredient}
-        ingredientToEdit={selectedIngredient}
-      />
-      
-      <AdjustStockModal
-        isOpen={isAdjustModalOpen}
-        onClose={handleCloseModals}
-        onAdjust={handleAdjustStock}
-        ingredient={selectedIngredient}
-      />
+      <IngredientModal isOpen={isIngredientModalOpen} onClose={handleCloseModals} onSave={handleSaveIngredient} ingredientToEdit={selectedIngredient} />
+      <AdjustStockModal isOpen={isAdjustModalOpen} onClose={handleCloseModals} onAdjust={handleAdjustStock} ingredient={selectedIngredient} />
     </>
   );
 };

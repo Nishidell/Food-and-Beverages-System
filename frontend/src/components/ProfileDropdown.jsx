@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import '../pages/Customer/CustomerTheme.css'; // Import the external CSS
 
 const ProfileDropdown = () => {
   const { user, logout } = useAuth();
@@ -32,22 +33,12 @@ const ProfileDropdown = () => {
   
   if (!user) return null; // Don't show if not logged in
 
-  const profileIconStyle = {
-  backgroundColor: '#F9A825', // Your orange accent color
-  color: '#3C2A21',           // Dark text/icon color for contrast
-  padding: '12px',             // 'p-3'
-  borderRadius: '50%',         // 'rounded-full'
-  boxShadow: '0 4px 6px rgba(0,0,0,0.1)', // 'shadow-md'
-  border: 'none',
-  cursor: 'pointer',
-};
-
   return (
     <div className="relative" ref={dropdownRef}>
            {/* Profile Icon Button */}
             <button
        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-       style={profileIconStyle}
+        className="header-icon-btn"
       >
        <User size={22} />
       </button>

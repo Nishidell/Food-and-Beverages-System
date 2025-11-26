@@ -1,52 +1,52 @@
-import React, { useState, useEffect } from "react";
-import { useAuth } from "../../../context/AuthContext";
-import apiClient from "../../../utils/apiClient";
+import React from "react";
+import '../AdminTheme.css';
 
-// ... (OrderManagementTable component is unchanged) ...
 const OrderManagement = ({ orders }) => (
-  <div className="bg-white shadow-md rounded-lg overflow-hidden">
-    <h2 className="text-2xl font-bold p-6">Order Management</h2>
-    <table className="min-w-full leading-normal">
-      <thead>
-        <tr className="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
-          <th className="py-3 px-6 text-left">Order ID</th>
-          <th className="py-3 px-6 text-left">Customer Name</th>
-          <th className="py-3 px-6 text-left">Type</th>
-          <th className="py-3 px-6 text-left">Location</th>
-          <th className="py-3 px-6 text-center">Total</th>
-          <th className="py-3 px-6 text-center">Status</th>
-          <th className="py-3 px-6 text-left">Date</th>
-        </tr>
-      </thead>
-      <tbody className="text-gray-600 text-sm font-light">
-        {orders.map((order) => (
-          <tr key={order.order_id} className="border-b border-gray-200 hover:bg-gray-50">
-            <td className="py-3 px-6 text-left whitespace-nowrap">{order.order_id}</td>
-            <td className="py-3 px-6 text-left">
-              {order.first_name || order.last_name ? `${order.first_name} ${order.last_name}` : 'Guest'}
-            </td>
-            <td className="py-3 px-6 text-left">{order.order_type}</td>
-            <td className="py-3 px-6 text-left">{order.delivery_location}</td>
-            <td className="py-3 px-6 text-center">
-              ₱{parseFloat(order.total_amount || 0).toFixed(2)}
-            </td>
-            <td className="py-3 px-6 text-center">
-              <span
-                className={`py-1 px-3 rounded-full text-xs font-semibold ${
-                  order.status === 'Pending' ? 'bg-yellow-200 text-yellow-800' :
-                  order.status === 'Completed' ? 'bg-green-200 text-green-800' :
-                  order.status === 'Cancelled' ? 'bg-red-200 text-red-800' :
-                  'bg-gray-200 text-gray-800'
-                }`}
-              >
-                {order.status}
-              </span>
-            </td>
-            <td className="py-3 px-6 text-left">{new Date(order.order_date).toLocaleString()}</td>
+  <div className="admin-section-container">
+    <div className="admin-table-container">
+      <h2 className="admin-page-title p-6">Order Management</h2>
+      <table className="admin-table">
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Customer Name</th>
+            <th>Type</th>
+            <th>Location</th>
+            <th className="text-center">Total</th>
+            <th className="text-center">Status</th>
+            <th>Date</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {orders.map((order) => (
+            <tr key={order.order_id}>
+              <td className="font-medium">{order.order_id}</td>
+              <td>
+                {order.first_name || order.last_name ? `${order.first_name} ${order.last_name}` : 'Guest'}
+              </td>
+              <td>{order.order_type}</td>
+              <td>{order.delivery_location}</td>
+              <td className="text-center font-bold">
+                ₱{parseFloat(order.total_amount || 0).toFixed(2)}
+              </td>
+              <td className="text-center">
+                <span
+                  className={`status-badge ${
+                    order.status === 'Pending' ? 'bg-yellow-200 text-yellow-800' :
+                    order.status === 'Completed' ? 'bg-green-200 text-green-800' :
+                    order.status === 'Cancelled' ? 'bg-red-200 text-red-800' :
+                    'bg-gray-200 text-gray-800'
+                  }`}
+                >
+                  {order.status}
+                </span>
+              </td>
+              <td>{new Date(order.order_date).toLocaleString()}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   </div>
 );
 

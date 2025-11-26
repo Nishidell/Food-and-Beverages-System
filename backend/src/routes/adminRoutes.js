@@ -1,32 +1,21 @@
 import express from "express";
-import { 
-    getAllStaff, 
-    getAllCustomers,
-    createStaff,
-    updateStaff,
-    deleteStaff
-} from "../controllers/adminController.js";
+import { getAllCustomers } from "../controllers/adminController.js";
 import { 
     createMenuItem, 
     updateMenuItem, 
     deleteMenuItem 
-} from "../controllers/itemController.js"; // <-- Import item management functions
+} from "../controllers/itemController.js"; 
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
-
-// --- Staff Management ---
-router.get("/staff", protect, authorizeRoles("admin"), getAllStaff);
-router.post("/staff", protect, authorizeRoles("admin"), createStaff);
-router.put("/staff/:id", protect, authorizeRoles("admin"), updateStaff);
-router.delete("/staff/:id", protect, authorizeRoles("admin"), deleteStaff);
-
 // --- Customer Management ---
-router.get("/customers", protect, authorizeRoles("admin"), getAllCustomers);
+// UPDATED: Allow 'F&B Admin' to view customers
+router.get("/customers", protect, authorizeRoles("F&B Admin"), getAllCustomers);
 
-// --- Menu Item Management --- (FIX: Added these routes)
-router.post("/items", protect, authorizeRoles("admin"), createMenuItem);
-router.put("/items/:id", protect, authorizeRoles("admin"), updateMenuItem);
-router.delete("/items/:id", protect, authorizeRoles("admin"), deleteMenuItem);
+// --- Menu Item Management (Admin Actions) --- 
+// UPDATED: Allow 'F&B Admin' to manage menu
+router.post("/items", protect, authorizeRoles("F&B Admin"), createMenuItem);
+router.put("/items/:id", protect, authorizeRoles("F&B Admin"), updateMenuItem);
+router.delete("/items/:id", protect, authorizeRoles("F&B Admin"), deleteMenuItem);
 
 export default router;

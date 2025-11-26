@@ -8,6 +8,7 @@ import PosCart from './components/PosCart'; // --- IMPORT OUR NEW CART ---
 import toast from 'react-hot-toast';
 import apiClient from '../../utils/apiClient';
 import PosPaymentModal from './components/PosPaymentModal';
+import { Search } from 'lucide-react';
 
 function PosPage() {
   const [items, setItems] = useState([]);
@@ -164,8 +165,20 @@ const handleOpenPaymentModal = (grandTotal) => {
       toast.error("Please enter a customer name or note.");
       return;
     }
-    setTotalDue(grandTotal);
-    setIsPaymentModalOpen(true);
+
+    // --- NEW LOGIC ---
+    if (orderType === 'Phone Order') {
+        // Skip the modal, submit directly as "Pay Later"
+        handleConfirmCashOrder({
+            amount_tendered: 0,
+            change_amount: 0,
+            isPayLater: true // Flag to tell the submit function
+        });
+    } else {
+        // Normal Walk-in Flow -> Open Modal
+        setTotalDue(grandTotal);
+        setIsPaymentModalOpen(true);
+    }
   };
 
   // --- 4. THIS IS THE FINAL API CALL (RENAMED) ---
@@ -174,18 +187,21 @@ const handleOpenPaymentModal = (grandTotal) => {
     toast.loading('Submitting order...');
     
     const orderData = {
+      // ... existing fields ...
       staff_id: user.id, 
       order_type: orderType,
       instructions: instructions,
       delivery_location: deliveryLocation,
-      payment_method: "Cash",
+      
+      // --- UPDATED PAYMENT METHOD ---
+      payment_method: paymentData.isPayLater ? "Pay Later" : "Cash", 
+      
       items: cartItems.map(item => ({
         item_id: item.item_id,
         quantity: item.quantity,
         price: item.price,
       })),
       
-      // --- ADD NEW PAYMENT DATA ---
       amount_tendered: paymentData.amount_tendered,
       change_amount: paymentData.change_amount,
     };
@@ -195,14 +211,14 @@ const handleOpenPaymentModal = (grandTotal) => {
         method: 'POST',
         body: JSON.stringify(orderData),
       });
-
+      
+      // ... (Rest of the function stays the same: success message, reset state, etc.)
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Failed to submit order.');
 
       toast.dismiss();
       toast.success(`Order #${result.order_id} submitted to kitchen!`);
       
-      // Reset everything
       setIsPaymentModalOpen(false);
       setCartItems([]);
       setInstructions('');
@@ -211,10 +227,11 @@ const handleOpenPaymentModal = (grandTotal) => {
       setTotalDue(0);
 
     } catch (err) {
-      toast.dismiss();
-      if (err.message !== 'Session expired') {
-        toast.error(`Error: ${err.message}`);
-      }
+        // ... error handling ...
+        toast.dismiss();
+        if (err.message !== 'Session expired') {
+            toast.error(`Error: ${err.message}`);
+        }
     } finally {
       setIsPlacingOrder(false);
     }
@@ -226,31 +243,46 @@ const handleOpenPaymentModal = (grandTotal) => {
     .filter(item => item.item_name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
-    <div className="flex flex-col h-screen" style={{ backgroundColor: '#0B3D2E' }}>
+    <div className="flex flex-col h-screen" style={{ backgroundColor: '#523a2eff' }}>
       <InternalNavBar />
       <div className="flex flex-1 overflow-hidden">
         
-        {/* Main Content (Menu) */}
         <main className="flex-1 overflow-y-auto p-8">
+
+          <div className="relative w-full max-w-lg mx-auto mb-6">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="text-gray-400" size={20} />
+            </div>
+            <input
+              type="text"
+              placeholder="Search for food..."
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-full bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#F9A825]"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
           <CategoryTabs
             categories={categories}
             selectedCategory={selectedCategory}
             onSelectCategory={handleSelectCategory}
+            theme="kitchen"
           />
           <FoodGrid
        items={filteredItems}
        onAddToCart={handleAddToCart}
        onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
        layoutStyle={posPageGridStyle}
+       theme="kitchen"
         />
         </main>
 
-        {/* Fixed Cart (Right Side) */}
+ 
         <aside className="w-96 border-l border-gray-200 overflow-y-auto h-full">
           <PosCart
             cartItems={cartItems}
             onUpdateQuantity={handleUpdateQuantity}
-            onPlaceOrder={handleOpenPaymentModal} // --- CHANGED
+            onPlaceOrder={handleOpenPaymentModal}
             orderType={orderType}
             setOrderType={setOrderType}
             instructions={instructions}

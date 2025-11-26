@@ -14,14 +14,14 @@ export const getDashboardSummary = async (req, res) => {
     // --- Total Sales ---
     const [salesTodayRows] = await pool.query(`
       SELECT SUM(amount) AS total
-      FROM payments
+      FROM fb_payments
       WHERE payment_status IN ('paid', 'pending')
       AND DATE(payment_date) = CURDATE()
     `);
 
     const [salesYesterdayRows] = await pool.query(`
       SELECT SUM(amount) AS total
-      FROM payments
+      FROM fb_payments
       WHERE payment_status = 'paid'
       AND DATE(payment_date) = CURDATE() - INTERVAL 1 DAY
     `);
@@ -32,13 +32,13 @@ export const getDashboardSummary = async (req, res) => {
     // --- Active Orders ---
     const [ordersTodayRows] = await pool.query(`
       SELECT COUNT(*) AS total
-      FROM orders
+      FROM fb_orders
       WHERE DATE(order_date) = CURDATE() AND status != 'Completed'
     `);
 
     const [ordersYesterdayRows] = await pool.query(`
       SELECT COUNT(*) AS total
-      FROM orders
+      FROM fb_orders
       WHERE DATE(order_date) = CURDATE() - INTERVAL 1 DAY AND status != 'Completed'
     `);
 
@@ -49,7 +49,7 @@ export const getDashboardSummary = async (req, res) => {
     // --- MODIFICATION 1: Using 'reorder_point' ---
     const [lowStockRows] = await pool.query(`
       SELECT COUNT(*) AS total
-      FROM ingredients
+      FROM fb_ingredients
       WHERE stock_level <= reorder_point
     `);
 
@@ -59,19 +59,16 @@ export const getDashboardSummary = async (req, res) => {
     // --- Total Customers ---
     const [staffRows] = await pool.query(`
       SELECT COUNT(*) AS total
-      FROM staff
+      FROM employees
+      WHERE status = 'active'
     `);
-        // --- THIS IS THE FIX ---
-    // You must extract the .total property from the result.
-    // staffRows[0] is the object { total: 5 }
-    // staffRows[0].total is the NUMBER 5
+
     const totalStaff = staffRows[0].total || 0;
-    // --- END OF FIX ---
 
     // --- Recent Orders (last 5) ---
     const [recentOrders] = await pool.query(`
-      SELECT order_id, customer_id, order_date, status, total_amount, order_type, delivery_location
-      FROM orders
+      SELECT order_id, client_id, order_date, status, total_amount, order_type, delivery_location
+      FROM fb_orders
       ORDER BY order_date DESC
       LIMIT 5
     `);
@@ -80,7 +77,7 @@ export const getDashboardSummary = async (req, res) => {
     // --- MODIFICATION 2: Using 'reorder_point' and sorting for urgency ---
     const [stockAlerts] = await pool.query(`
       SELECT ingredient_id, name, stock_level AS stock, 'Default Supplier' AS supplier_name
-      FROM ingredients
+      FROM fb_ingredients
       WHERE stock_level <= reorder_point
       ORDER BY (reorder_point - stock_level) DESC
       LIMIT 5

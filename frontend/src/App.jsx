@@ -7,13 +7,13 @@ import MenuPage from './pages/Customer/MenuPage';
 import AdminPage from './pages/Admin/AdminPage';
 import KitchenPage from './pages/Kitchen/KitchenPage';
 import ArchivePage from './pages/Kitchen/ArchivePage';
+import TableManager from './pages/Kitchen/TableManager';
 import LoginPage from './pages/Auth/LoginPage';
 import RegisterPage from './pages/Auth/RegisterPage';
 import NotAuthorizedPage from './pages/Auth/NotAuthorizedPage';
 
 import PaymentSuccess from './pages/Customer/PaymentSuccess.jsx';
 import PaymentCancel from './pages/Customer/PaymentCancel.jsx';
-
 import InventoryPage from './pages/Kitchen/InventoryPage.jsx';
 
 // --- NEW: Import the POS Page ---
@@ -64,7 +64,7 @@ function App() {
         <Route
           path="/"
           element={
-            <ProtectedRoute allowedRoles={['customer']}>
+            <ProtectedRoute allowedRoles={['customer', 'F&B Admin', 'Kitchen Staffs', 'Cashier', 'Stock Controller']}>
               <MenuPage />
             </ProtectedRoute>
           }
@@ -72,43 +72,56 @@ function App() {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute allowedRoles={['admin']}>
+            <ProtectedRoute allowedRoles={['F&B Admin']}>
               <AdminPage />
             </ProtectedRoute>
           }
         />
+        {/* Kitchen Portal: Orders (Kitchen Staff & Admin only) */}
         <Route
           path="/kitchen"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'waiter', 'cashier']}>
+            <ProtectedRoute allowedRoles={['F&B Admin', 'Kitchen Staffs']}>
               <KitchenPage />
             </ProtectedRoute>
           }
         />
         
-        {/* --- NEW: Add the POS Page Route --- */}
+        {/* POS: Walk-in (Cashier & Admin only) */}
         <Route
           path="/kitchen/pos"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'waiter', 'cashier']}>
+            <ProtectedRoute allowedRoles={['F&B Admin', 'Cashier']}>
               <PosPage />
             </ProtectedRoute>
           }
         />
 
+        {/* Tables: (Kitchen Staff & Admin only) */}
+        <Route
+          path="/kitchen/tables"
+          element={
+            <ProtectedRoute allowedRoles={['F&B Admin', 'Kitchen Staffs']}>
+              <TableManager />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Inventory: (Stock Controller & Admin only) */}
         <Route
           path="/kitchen/inventory"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'waiter', 'cashier']}>
+            <ProtectedRoute allowedRoles={['F&B Admin', 'Stock Controller']}>
               <InventoryPage />
             </ProtectedRoute>
           }
         />
         
+        {/* Archive: (Kitchen Staff & Admin only) */}
         <Route
           path="/kitchen/archive"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'waiter', 'cashier']}>
+            <ProtectedRoute allowedRoles={['F&B Admin', 'Kitchen Staffs']}>
               <ArchivePage />
             </ProtectedRoute>
           }

@@ -12,23 +12,34 @@ import {
 
 const router = express.Router();
 
-// --- ⭐️ FIX: "/logs" MUST be defined before "/:id" ---
-// @access Admin only
-router.get("/logs", protect, authorizeRoles("admin"), getInventoryLogs);
+// --- 1. Inventory Logs ---
+// Allowed: F&B Admin and Stock Controller (Primary), Kitchen Staffs (Optional/View)
+router.get(
+    "/logs", 
+    protect, 
+    authorizeRoles("F&B Admin", "Stock Controller"), 
+    getInventoryLogs
+);
 
-// @access Staff (Admin, Waiter, Cashier)
+// --- 2. Ingredients Management ---
 router.route("/")
-    .get(protect, authorizeRoles("admin", "waiter", "cashier"), getAllIngredients)
-    .post(protect, authorizeRoles("admin", "waiter", "cashier"), createIngredient);
+    // View: All Staff need to see ingredients for Menu/POS to work
+    .get(protect, authorizeRoles("F&B Admin", "Stock Controller"), getAllIngredients)
+    // Create: Only F&B Admin and Stock Controller
+    .post(protect, authorizeRoles("F&B Admin", "Stock Controller"), createIngredient);
 
-// @access Staff (Admin, Waiter, Cashier)
-// This will now correctly handle IDs (e.g., /1, /2) and not "logs"
 router.route("/:id")
-    .get(protect, authorizeRoles("admin", "waiter", "cashier"), getIngredientById)
-    .put(protect, authorizeRoles("admin", "waiter", "cashier"), updateIngredientDetails)
-    .delete(protect, authorizeRoles("admin", "waiter", "cashier"), deleteIngredient);
+    .get(protect, authorizeRoles("F&B Admin", "Stock Controller"), getIngredientById)
+    .put(protect, authorizeRoles("F&B Admin", "Stock Controller"), updateIngredientDetails)
+    .delete(protect, authorizeRoles("F&B Admin"), deleteIngredient);
 
-// @access Staff (Admin, Waiter, Cashier)
-router.put("/:id/stock", protect, authorizeRoles("admin", "waiter", "cashier"), adjustIngredientStock);
+// --- 3. Stock Adjustment ---
+// Allowed: F&B Admin and Stock Controller (Kitchen Staffs added if they need to report waste)
+router.put(
+    "/:id/stock", 
+    protect, 
+    authorizeRoles("F&B Admin", "Stock Controller", "Kitchen Staffs"), 
+    adjustIngredientStock
+);
 
 export default router;

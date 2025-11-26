@@ -14,21 +14,24 @@ const router = express.Router();
 /* -------------------------
    🔒 Protected Routes
 -------------------------- */
-// Customer create Payment
+
+// 1️⃣ Customer create Payment (PayMongo)
+// Allowed: 'customer' (Role)
 router.post('/:order_id/paymongo', protect, authorizeRoles("customer"), createPayMongoPayment);
 
-// 2️⃣ Manual Record (Cashier/Admin use)
-router.post("/", protect, authorizeRoles("cashier", "admin"), recordPayment);
+// 2️⃣ Manual Record (For Cash/POS)
+// Allowed: 'Cashier', 'F&B Admin' (Positions)
+router.post("/", protect, authorizeRoles("Cashier", "F&B Admin", "Waiter"), recordPayment);
 
 // 3️⃣ Get Payments for an Order
-router.get("/:order_id", protect, authorizeRoles("cashier", "admin"), getPaymentsForOrder);
+// Allowed: 'Cashier', 'F&B Admin', 'Waiter' (Positions)
+router.get("/:order_id", protect, authorizeRoles("Cashier", "F&B Admin", "Waiter"), getPaymentsForOrder);
 
 /* -------------------------
    💳 PayMongo Routes
 -------------------------- */
 
-
-// 5️⃣ Webhook (PayMongo calls this directly — no auth, must use raw body)
+// 5️⃣ Webhook (Public)
 router.post(
   "/webhook",
   express.raw({ type: "application/json" }),
