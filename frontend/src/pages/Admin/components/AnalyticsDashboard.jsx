@@ -17,6 +17,7 @@ import {
   Legend,
   CartesianGrid,
 } from "recharts";
+import '../AdminTheme.css'; // Import the Theme
 
 // Helper: PHP currency format
 const formatCurrency = (amount) =>
@@ -25,9 +26,9 @@ const formatCurrency = (amount) =>
     currency: "PHP",
   }).format(amount || 0);
 
-const COLORS = ["#0B3D2E", "#F9A825", "#10B981", "#3B82F6", "#EF4444"];
+// THEME COLORS: [Dark Brown, Gold, Light Brown, Cream-Darker, Accent Red]
+const THEME_COLORS = ["#3C2A21", "#F9A825", "#8D6E63", "#D1C0B6", "#EF4444"];
 
-// --- Main Component ---
 const AnalyticsDashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -54,34 +55,16 @@ const AnalyticsDashboard = () => {
     if (token) fetchAnalytics();
   }, [token]);
 
-  if (loading) return <div style={styles.loading}>Loading analytics...</div>;
-  if (error) return <div style={styles.error}>Error: {error}</div>;
-  if (!data) return <div style={styles.loading}>No data available.</div>;
-
-  // --- Derived totals ---
-  const totalPayments =
-    data.paymentMethods.reduce((sum, p) => sum + p.total_value, 0) || 1;
-  const totalOrders =
-    data.orderTypeDistribution.reduce((sum, o) => sum + o.orders, 0) || 1;
+  if (loading) return <div className="p-8 text-center text-white text-lg">Loading analytics...</div>;
+  if (error) return <div className="p-8 text-center text-red-500">Error: {error}</div>;
+  if (!data) return <div className="p-8 text-center text-white">No data available.</div>;
 
   // --- Chart Data Preparation ---
   const salesTrendData = [
-    {
-      name: "Today",
-      sales: data.salesTrends.today.sales,
-    },
-    {
-      name: "Yesterday",
-      sales: data.salesTrends.yesterday.sales,
-    },
-    {
-      name: "This Week",
-      sales: data.salesTrends.thisWeek.sales,
-    },
-    {
-      name: "This Month",
-      sales: data.salesTrends.thisMonth.sales,
-    },
+    { name: "Today", sales: data.salesTrends.today.sales },
+    { name: "Yesterday", sales: data.salesTrends.yesterday.sales },
+    { name: "This Week", sales: data.salesTrends.thisWeek.sales },
+    { name: "This Month", sales: data.salesTrends.thisMonth.sales },
   ];
 
   const orderTypeData = data.orderTypeDistribution.map((o) => ({
@@ -101,145 +84,109 @@ const AnalyticsDashboard = () => {
   }));
 
   return (
-    <div style={styles.grid}>
+    <div className="admin-section-container grid grid-cols-1 lg:grid-cols-2 gap-6">
+      
       {/* Sales Trend Chart */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>Sales Trends</h3>
-        <ResponsiveContainer width="100%" height={250}>
+      <div className="admin-card">
+        <h3 className="text-xl font-bold mb-4" style={{color: '#3C2A21'}}>Sales Trends</h3>
+        <ResponsiveContainer width="100%" height={300}>
           <LineChart data={salesTrendData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip formatter={(val) => formatCurrency(val)} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#D1C0B6" />
+            <XAxis dataKey="name" stroke="#3C2A21" />
+            <YAxis stroke="#3C2A21" />
+            <Tooltip 
+                formatter={(val) => formatCurrency(val)} 
+                contentStyle={{ backgroundColor: '#fff2e0', borderColor: '#D1C0B6', color: '#3C2A21' }}
+            />
             <Legend />
             <Line
               type="monotone"
               dataKey="sales"
-              stroke="#0B3D2E"
+              stroke="#F9A825" // Gold Line
               strokeWidth={3}
-              activeDot={{ r: 8 }}
+              activeDot={{ r: 8, fill: '#3C2A21' }}
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
       {/* Order Type Distribution */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>Order Type Distribution</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <PieChart>
-            <Pie
-              data={orderTypeData}
-              dataKey="value"
-              nameKey="name"
-              outerRadius={100}
-              label
-            >
-              {orderTypeData.map((_, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip />
-          </PieChart>
-        </ResponsiveContainer>
-        <div style={styles.peakBox}>
-          <span style={{ fontSize: "1.5rem", fontWeight: "bold" }}>
-            {data.peakHour}
-          </span>
-          <br />
-          <span style={{ fontSize: "0.875rem", opacity: 0.8 }}>
-            Peak Hours
-          </span>
+      <div className="admin-card flex flex-col">
+        <h3 className="text-xl font-bold mb-4" style={{color: '#3C2A21'}}>Order Type Distribution</h3>
+        <div className="flex-1 flex items-center justify-center">
+            <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+                <Pie
+                data={orderTypeData}
+                dataKey="value"
+                nameKey="name"
+                outerRadius={100}
+                label
+                >
+                {orderTypeData.map((_, i) => (
+                    <Cell key={i} fill={THEME_COLORS[i % THEME_COLORS.length]} />
+                ))}
+                </Pie>
+                <Tooltip contentStyle={{ backgroundColor: '#fff2e0', borderColor: '#D1C0B6', color: '#3C2A21' }} />
+                <Legend />
+            </PieChart>
+            </ResponsiveContainer>
+        </div>
+        <div className="mt-4 p-4 rounded-lg text-center" style={{ backgroundColor: '#3C2A21', color: '#F9A825' }}>
+            <span className="text-2xl font-bold block">{data.peakHour}</span>
+            <span className="text-sm opacity-90 text-white">Peak Hours</span>
         </div>
       </div>
 
       {/* Top Selling Items */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>Top Selling Items</h3>
-        <ResponsiveContainer width="100%" height={250}>
+      <div className="admin-card">
+        <h3 className="text-xl font-bold mb-4" style={{color: '#3C2A21'}}>Top Selling Items</h3>
+        <ResponsiveContainer width="100%" height={300}>
           <BarChart data={topItemsData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip formatter={(val) => formatCurrency(val)} />
-            <Bar dataKey="sales" fill="#F9A825" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#D1C0B6" />
+            <XAxis dataKey="name" stroke="#3C2A21" />
+            <YAxis stroke="#3C2A21" />
+            <Tooltip 
+                formatter={(val) => formatCurrency(val)} 
+                contentStyle={{ backgroundColor: '#fff2e0', borderColor: '#D1C0B6', color: '#3C2A21' }}
+            />
+            <Bar dataKey="sales" fill="#3C2A21" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       {/* Payment Methods */}
-        <div style={styles.card}>
-      <h3 style={styles.cardTitle}>Payment Methods</h3>
-
-      {paymentMethodData.length === 0 ? (
-        <p style={{ textAlign: "center", color: "#6B7280" }}>
-          No payment data available.
-        </p>
-      ) : (
-        <ResponsiveContainer width="100%" height={250}>
-          <PieChart>
-            <Pie
-              data={paymentMethodData}
-              dataKey="value"
-              nameKey="name"
-              outerRadius={100}
-              label
-            >
-              {paymentMethodData.map((_, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip formatter={(val) => `₱${val.toLocaleString()}`} />
-          </PieChart>
-        </ResponsiveContainer>
-      )}
-    </div>
+      <div className="admin-card">
+        <h3 className="text-xl font-bold mb-4" style={{color: '#3C2A21'}}>Payment Methods</h3>
+        {paymentMethodData.length === 0 ? (
+            <div className="h-64 flex items-center justify-center text-gray-500">
+            No payment data available.
+            </div>
+        ) : (
+            <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+                <Pie
+                data={paymentMethodData}
+                dataKey="value"
+                nameKey="name"
+                outerRadius={100}
+                label
+                >
+                {paymentMethodData.map((_, i) => (
+                    <Cell key={i} fill={THEME_COLORS[i % THEME_COLORS.length]} />
+                ))}
+                </Pie>
+                <Tooltip 
+                    formatter={(val) => `₱${val.toLocaleString()}`} 
+                    contentStyle={{ backgroundColor: '#fff2e0', borderColor: '#D1C0B6', color: '#3C2A21' }}
+                />
+                <Legend />
+            </PieChart>
+            </ResponsiveContainer>
+        )}
+      </div>
     </div>
   );
-};
-
-// --- Styles ---
-const styles = {
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "2fr 1fr",
-    gap: "1.5rem",
-  },
-  card: {
-    backgroundColor: "white",
-    borderRadius: "0.5rem",
-    padding: "1.5rem",
-    boxShadow:
-      "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)",
-  },
-  cardTitle: {
-    fontSize: "1.25rem",
-    fontWeight: "bold",
-    color: "#0B3D2E",
-    marginBottom: "1rem",
-  },
-  loading: {
-    padding: "2rem",
-    textAlign: "center",
-    fontSize: "1.25rem",
-    color: "#6B7280",
-  },
-  error: {
-    padding: "2rem",
-    textAlign: "center",
-    fontSize: "1.25rem",
-    color: "#DC2626",
-    backgroundColor: "#FEF2F2",
-    borderRadius: "0.5rem",
-  },
-  peakBox: {
-    backgroundColor: "#0B3D2E",
-    color: "white",
-    borderRadius: "0.5rem",
-    padding: "1rem",
-    marginTop: "1.5rem",
-    textAlign: "center",
-  },
 };
 
 export default AnalyticsDashboard;

@@ -1,118 +1,118 @@
-import React from 'react';
-import { Edit, Trash2, Search} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import { useAuth } from '../../../context/AuthContext'; 
+import apiClient from '../../../utils/apiClient';
+import '../AdminTheme.css';
 
-const MenuManagementTable = ({ 
-  items,
-  totalItems, 
-  categories, 
-  selectedCategory,
-  searchTerm,
-  onSearchChange,
-  onFilterChange,
-  onClearFilters,
-  onAddItem, 
-  onEditItem, 
-  onDeleteItem 
-}) => {
+const InventoryLogsTable = () => {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [filterSource, setFilterSource] = useState('All');
+  const { token } = useAuth();
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      setLoading(true);
+      try {
+        const response = await apiClient('/inventory/logs');
+        if (!response.ok) throw new Error('Failed to fetch inventory logs.');
+        const data = await response.json();
+        setLogs(data);
+      } catch (err) {
+        if (err.message !== 'Session expired') {
+          setError(err.message);
+          toast.error(err.message);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (token) fetchLogs();
+  }, [token]);
+
+  const getActionStyle = (action) => {
+    let color = '#374151'; 
+    let bgColor = '#F3F4F6';
+
+    if (action.includes('ADD') || action.includes('RESTOCK')) {
+      color = '#059669'; bgColor = '#D1FAE5';
+    } else if (action.includes('SUBTRACT') || action.includes('WASTE')) {
+      color = '#DC2626'; bgColor = '#FEE2E2';
+    } else if (action.includes('INITIAL')) {
+      color = '#4B5563'; bgColor = '#E5E7EB';
+    }
+    return { color, backgroundColor: bgColor };
+  };
+
+  const filteredLogs = logs.filter(log => {
+    if (filterSource === 'All') return true;
+    const isSystemLog = log.staff_name === 'System (Order)';
+    if (filterSource === 'Staff') return !isSystemLog;
+    if (filterSource === 'System') return isSystemLog;
+    return true;
+  });
+
+  if (loading) return <div className="p-8 text-center text-white text-lg">Loading...</div>;
+  if (error) return <div className="p-8 text-center text-red-500">Error: {error}</div>;
+
   return (
-    <div className="mt-12">
-      <div className="flex justify-between items-center mb-6">
-        <h2 style={{ color: '#F9A825' , fontSize: '1.5rem', fontWeight: 'bold' }}>Menu Management</h2>
-        <button
-          onClick={onAddItem}
-          className="bg-[#F9A825] text-white font-bold py-2 px-4 rounded hover:bg-[#c47b04] transition-colors"
-        >
-          Add New Item
-        </button>
-      </div>
-
-      <div className="flex justify-between items-center mb-4 bg-white p-4 rounded-md shadow">
+    <div className="admin-section-container">
       
-      {/* Filters Container */}
-      <div className="flex items-center gap-4">
-        
-        {/* Category Filter */}
+      <div className="admin-header-row">
         <div>
-          <label htmlFor="categoryFilter" className="mr-2 text-sm font-medium text-gray-700">Filter by Category:</label>
+          <h2 className="admin-page-title">Inventory Logs</h2>
+          <p className="text-sm" style={{ color: '#F9A825' }}>Showing {filteredLogs.length} recent actions</p>
+        </div>
+        
+        <div>
+          <label htmlFor="log-filter" className="admin-label" style={{color: '#F9A825'}}>Filter by Source:</label>
           <select 
-            id="categoryFilter"
-            value={selectedCategory}
-            onChange={(e) => onFilterChange(e.target.value)}
-            className="border border-gray-300 rounded-md p-2 text-sm"
+            id="log-filter"
+            className="admin-select"
+            style={{ backgroundColor: '#480c1b', color: '#F9A825', borderColor: '#F9A825' }}
+            value={filterSource}
+            onChange={(e) => setFilterSource(e.target.value)}
           >
-            {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            <option value="All">Show All</option>
+            <option value="Staff">Staff Actions</option>
+            <option value="System">System Actions</option>
           </select>
         </div>
-
-        {/* Search Bar (This section is now fixed) */}
-        <div>
-          <label htmlFor="menuSearch" className="mr-2 text-sm font-medium text-gray-700">Search:</label>
-          <div className="relative inline-block"> {/* This wrapper keeps the icon and input together */}
-            <input
-              type="text"
-              id="menuSearch"
-              placeholder="Search by item name..."
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="border border-gray-300 rounded-md p-2 pl-9 text-sm" // pl-9 for icon padding
-            />
-            {/* The icon is positioned relative to the div above */}
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          </div>
-        </div>
-
       </div>
 
-      {/* Info Container */}
-      <div className="flex items-center gap-4">
-        <span className="text-sm font-medium text-gray-700">
-            Total Menu Items: {totalItems}
-          </span>
-      </div>
-    </div>
-
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        <table className="min-w-full leading-normal">
+      <div className="admin-table-container">
+        <table className="admin-table">
           <thead>
-            <tr className="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
-              <th className="py-3 px-6 text-left">Item Name</th>
-              <th className="py-3 px-6 text-left">Category</th>
-              <th className="py-3 px-6 text-center">Price</th>
-              {/* --- STOCK COLUMN REMOVED --- */}
-              <th className="py-3 px-6 text-center">Actions</th>
+            <tr>
+              <th>Date</th>
+              <th>Ingredient</th>
+              <th>Staff Member</th>
+              <th>Action</th>
+              <th>Qty</th>
+              <th>New Stock</th>
+              <th>Reason</th>
             </tr>
           </thead>
-          <tbody className="text-gray-600 text-sm font-light">
-            {items.map((item) => (
-              <tr key={item.item_id} className="border-b border-gray-200 hover:bg-gray-50">
-                <td className="py-3 px-6 text-left">
-                  <span className="font-medium">{item.item_name}</span>
+          <tbody>
+            {filteredLogs.map((log) => (
+              <tr key={log.log_id}>
+                <td>{new Date(log.timestamp).toLocaleString()}</td>
+                <td className="font-medium">{log.ingredient_name}</td>
+                <td>{log.staff_name}</td>
+                <td>
+                  <span className="status-badge" style={getActionStyle(log.action_type)}>
+                    {log.action_type.replace('_', ' ').toLowerCase()}
+                  </span>
                 </td>
-                <td className="py-3 px-6 text-left">
-                  <span>{item.category}</span>
+                <td style={{
+                     fontWeight: 'bold',
+                     color: (log.action_type.includes('ADD') || log.action_type.includes('RESTOCK') || log.action_type === 'INITIAL') ? '#059669' : '#DC2626'
+                }}>
+                  {(log.action_type.includes('ADD') || log.action_type.includes('RESTOCK') || log.action_type === 'INITIAL') ? '+' : '-'}{log.quantity_change}
                 </td>
-                <td className="py-3 px-6 text-center">
-                  <span>₱{parseFloat(item.price).toFixed(2)}</span>
-                </td>
-                
-                {/* --- STOCK COLUMN REMOVED --- */}
-                
-                <td className="py-3 px-6 text-center">
-                  <div className="flex item-center justify-center gap-4">
-                    <button 
-                      onClick={() => onEditItem(item)} 
-                      className="text-blue-500 hover:text-blue-700"
-                    >
-                      <Edit size={20} />
-                    </button>
-                    <button
-                      onClick={() => onDeleteItem(item.item_id)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 size={20} />
-                    </button>
-                  </div>
-                </td>
+                <td className="font-bold">{log.new_stock_level}</td>
+                <td>{log.reason || 'N/A'}</td>
               </tr>
             ))}
           </tbody>
@@ -122,4 +122,4 @@ const MenuManagementTable = ({
   );
 };
 
-export default MenuManagementTable;
+export default InventoryLogsTable;
