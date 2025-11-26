@@ -13,10 +13,19 @@ const styles = {
     minHeight: 'calc(100vh - 84px)', 
     padding: '32px 16px'
   },
+  headerContainer: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',    
+    marginBottom: '24px',      
+    maxWidth: '1500px',        
+    margin: '0 auto 24px auto',   
+  },
   headerTitle: {
     color: '#F9A825',
     fontSize: '1.875rem',
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    margin: 0,
   },
   addButton: {
     backgroundColor: '#F9A825',
@@ -26,16 +35,20 @@ const styles = {
     borderRadius: '0.375rem',
     transition: 'background-color 0.2s',
     border: 'none',
-    cursor: 'pointer'
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    whiteSpace: 'nowrap',
   },
-  // --- ADJUSTED TABLE STYLES ---
+ 
   tableContainer: {
     backgroundColor: '#fff2e0', 
     borderRadius: '0.5rem',
     boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
     overflow: 'hidden', 
-    maxWidth: '1500px', // Limit the width to make it thinner
-    margin: '0 auto',   // Center the table
+    maxWidth: '1500px', 
+    margin: '0 auto',   
   },
   tableHeader: {
     color: '#3C2A21', 
@@ -178,7 +191,9 @@ const InventoryPage = () => {
     <>
       <InternalNavBar />
       <div style={styles.container}>
-        <div className="flex justify-between items-center mb-6">
+        
+        {/* --- NEW: Wrap Title and Button in headerContainer --- */}
+        <div style={styles.headerContainer}>
           <h1 style={styles.headerTitle}>
             Inventory Management
           </h1>
@@ -187,6 +202,7 @@ const InventoryPage = () => {
             style={styles.addButton}
             className="hover:opacity-90"
           >
+            <Plus size={20} /> {/* Added Plus icon for a better look */}
             Add New Ingredient
           </button>
         </div>
