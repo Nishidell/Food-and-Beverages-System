@@ -3,10 +3,6 @@ import { X, Trash2, Minus, Plus, MessageSquare } from 'lucide-react';
 import apiClient from '../../../utils/apiClient';
 import '../CustomerTheme.css'; // Import external styles
 
-// Maintain the port fix from previous steps
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:21917/api';
-const SERVER_URL = API_URL.split('/api')[0];
-
 const CartPanel = ({
   cartItems = [],
   onUpdateQuantity,
@@ -160,33 +156,17 @@ const CartPanel = ({
               cartItems.map((item) => {
                 const itemTotal = parseFloat(item.price) * item.quantity;
 
-                let imageUrl = '/placeholder-food.png';
-                if (item.image_url) {
-                    const cleanPath = item.image_url.replace(/\\/g, '/');
-                    if (cleanPath.startsWith('http')) {
-                        imageUrl = cleanPath;
-                    } else {
-                        const path = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
-                        imageUrl = `${SERVER_URL}${path}`;
-                    }
-                }
+                // REMOVED: Image URL calculation logic
 
                 return (
                   <div key={item.item_id} className="cart-item">
-                      {/* Top Section: Image + Details + Total */}
+                      {/* Top Section: Details + Total (Image Removed) */}
                       <div className="cart-item-top">
-                          {/* Image */}
-                          <div className="cart-item-image">
-                              <img 
-                                  src={imageUrl} 
-                                  alt={item.item_name} 
-                                  className="cart-item-img-tag"
-                                  onError={(e) => { e.target.src = '/placeholder-food.png'; }} 
-                              />
-                          </div>
+                          
+                          {/* REMOVED: Image Div */}
 
-                          {/* Details Column */}
-                          <div className="cart-item-details">
+                          {/* Details Column - Now full width */}
+                          <div className="cart-item-details w-full"> 
                               {/* Name/Price & Item Total Row */}
                               <div className="cart-item-header">
                                   <div>
