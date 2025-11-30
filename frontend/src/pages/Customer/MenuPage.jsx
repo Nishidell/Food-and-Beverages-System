@@ -201,76 +201,52 @@ function MenuPage() {
   };
   // --- END OF FIX 1 ---
 
-  // --- 2. THIS IS THE FIX ---
-  // `totalAmount` argument is removed.
 const handleConfirmPayment = async (paymentInfo) => {
     setIsPaymentModalOpen(false);
-      setTimeout(() => {
+    setTimeout(() => {
       setIsPlacingOrder(true);
-      toast.loading('Placing your order...');
+      toast.loading('Creating checkout...');
     }, 0);
 
-    // Prepare order data - backend will calculate total
-    const orderData = {
-      client_id: user.id,
-      order_type: orderType,
-      // Send IDs specifically
-      table_id: orderType === 'Dine-in' ? deliveryLocation : null, 
-      room_id: orderType === 'Room Dining' ? deliveryLocation : null, 
-      
-      // We can leave delivery_location null, the backend will fill it with text
-      delivery_location: null,
-      
-      items: cartItems.map(item => ({
+    // ✅ NEW: Send cart data directly to checkout endpoint
+    const checkoutData = {
+      cart_items: cartItems.map(item => ({
         item_id: item.item_id,
-        quantity: item.quantity,
-        price: item.price,
-        instructions: item.instructions || ''
-      }))
+        quantity: item.quantity
+      })),
+      table_number: orderType === 'Dine-in' ? deliveryLocation : null,
+      special_instructions: cartItems
+        .filter(item => item.instructions)
+        .map(item => `${item.item_name}: ${item.instructions}`)
+        .join('; ') || null
     };
 
     try {
-      // Step 1: Create the order
-      const orderResponse = await apiClient('/orders', {
-        method: 'POST',
-        body: JSON.stringify(orderData)
-      });
-      
-      const orderResult = await orderResponse.json();
-      
-      if (!orderResponse.ok) {
-        throw new Error(orderResult.message || 'Failed to create order.');
-      }
-
-      const newOrderId = orderResult.order_id;
-
       toast.dismiss();
       toast.loading('Creating PayMongo checkout...');
 
-      // Step 2: Create PayMongo payment link
-      // ✅ FIX: No body needed - backend gets order total from database
-      const paymentResponse = await apiClient(`/payments/${newOrderId}/paymongo`, {
+      // ✅ NEW: Single endpoint that creates PayMongo link (no order created yet)
+      const paymentResponse = await apiClient('/payments/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
-        }
-        // ❌ OLD (WRONG): body: JSON.stringify({ total_amount: xxx, payment_method: xxx })
-        // ✅ NEW (CORRECT): No body needed!
+        },
+        body: JSON.stringify(checkoutData)
       });
 
       const paymentResult = await paymentResponse.json();
       
       if (!paymentResponse.ok) {
-        throw new Error(paymentResult.message || 'Failed to create PayMongo checkout.');
+        throw new Error(paymentResult.message || 'Failed to create checkout.');
       }
 
       toast.dismiss();
       toast.success('Redirecting to PayMongo...');
 
-      // Step 3: Redirect to PayMongo checkout
+      // Redirect to PayMongo checkout
       if (paymentResult.checkout_url) {
-        // Save order info before redirect (optional - for return handling)
-        localStorage.setItem('pending_order_id', newOrderId);
+        // Clear cart before redirect (order will be created after payment)
+        setCartItems([]);
         
         // Redirect to PayMongo
         window.location.href = paymentResult.checkout_url;
@@ -279,7 +255,7 @@ const handleConfirmPayment = async (paymentInfo) => {
       }
 
     } catch (err) {
-      console.error('Order/Payment Error:', err);
+      console.error('Checkout Error:', err);
       toast.dismiss();
       
       if (err.message !== 'Session expired') {
