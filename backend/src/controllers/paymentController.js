@@ -192,7 +192,7 @@ export const paymongoWebhook = async (req, res) => {
         console.log('Webhook received:', req.body.data?.attributes?.type);
 
         // Verify webhook signature
-        const signature = req.headers['paymongo-signature'];
+        const signatureHeader = req.headers['paymongo-signature'];
         const webhookSecret = process.env.PAYMONGO_WEBHOOK_SECRET;
         
         if (!webhookSecret) {
@@ -200,22 +200,41 @@ export const paymongoWebhook = async (req, res) => {
             return res.status(500).json({ message: "Webhook not configured" });
         }
 
-        // Use raw body for signature verification (important!)
+        // Parse PayMongo signature format: t=timestamp,te=signature,li=livemode
+        const signatureParts = {};
+        signatureHeader.split(',').forEach(part => {
+            const [key, value] = part.split('=');
+            signatureParts[key] = value;
+        });
+
+        const timestamp = signatureParts.t;
+        const receivedSignature = signatureParts.te;
+
+        // Use raw body for signature verification
         const bodyString = req.rawBody || JSON.stringify(req.body);
+        
+        // PayMongo signature format: timestamp.payload
+        const signedPayload = `${timestamp}.${bodyString}`;
         
         const computedSignature = crypto
             .createHmac('sha256', webhookSecret)
-            .update(bodyString)
+            .update(signedPayload)
             .digest('hex');
 
-        console.log('Received signature:', signature);
+        console.log('Received signature:', receivedSignature);
         console.log('Computed signature:', computedSignature);
 
-        if (signature !== computedSignature) {
+        if (receivedSignature !== computedSignature) {
             console.error('Invalid webhook signature');
             return res.status(401).json({ message: "Invalid webhook signature" });
         }
 
+        // Optional: Check timestamp to prevent replay attacks (within 5 minutes)
+        const currentTime = Math.floor(Date.now() / 1000);
+        if (Math.abs(currentTime - parseInt(timestamp)) > 300) {
+            console.error('Webhook timestamp too old');
+            return res.status(401).json({ message: "Webhook timestamp expired" });
+        }
 
         const event = req.body;
 
