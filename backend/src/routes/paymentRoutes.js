@@ -32,10 +32,6 @@ router.get("/:order_id", protect, authorizeRoles("Cashier", "F&B Admin", "Waiter
 -------------------------- */
 
 // 5️⃣ Webhook (Public)
-router.post(
-  "/webhook",
-  express.raw({ type: "application/json" }),
-  paymongoWebhook
-);
+router.post("/webhook", paymongoWebhook);
 
 export default router;
