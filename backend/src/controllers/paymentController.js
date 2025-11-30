@@ -287,7 +287,7 @@ export const paymongoWebhook = async (req, res) => {
                 INSERT INTO fb_orders 
                 (client_id, table_id, room_id, items_total, service_charge_amount, 
                  vat_amount, total_amount, special_instructions, status, order_date) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'paid', NOW())
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
             `;
             
             const [orderResult] = await connection.query(orderSql, [
