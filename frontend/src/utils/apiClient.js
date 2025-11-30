@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast';
 
 // The base URL for your API
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 /**
  * A wrapper around the native fetch function that automatically:
@@ -36,7 +36,7 @@ const apiClient = async (url, options = {}) => {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}${url}`, options);
+    const response = await fetch(`${API_URL}${url}`, options);
 
     // Check for 401 error (Unauthorized)
     if (response.status === 401) {
