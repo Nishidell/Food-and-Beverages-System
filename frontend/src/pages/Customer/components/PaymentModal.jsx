@@ -33,12 +33,12 @@ const PaymentModal = ({
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-auto p-6 relative">
         <h2 className="text-2xl font-bold mb-4 text-center">Payment & Billing Information</h2>
-        <p className="text-gray-600 text-sm text-center mb-6">
+        {/* <p className="text-gray-600 text-sm text-center mb-6">
           Please select payment method and confirm
-        </p>
+        </p> */}
 
         {/* Payment Method */}
-        <div className="mb-6">
+        {/* <div className="mb-6">
           <h3 className="text-lg font-semibold mb-3 text-gray-800">Payment Method</h3>
           <div className="space-y-3">
             {['Online'].map((method) => (
@@ -56,7 +56,7 @@ const PaymentModal = ({
               </label>
             ))}
           </div>
-        </div>
+        </div> */}
 
         {/* Billing Summary (FOR DISPLAY ONLY) */}
         <div className="mb-6">

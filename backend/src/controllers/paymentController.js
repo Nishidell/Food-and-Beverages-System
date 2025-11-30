@@ -1,96 +1,85 @@
 import pool from "../config/mysql.js";
 import crypto from "crypto";
 
-// @desc    Create PayMongo payment link
-// @route   POST /api/payments/:order_id/paymongo
+// @desc    Create order and PayMongo payment link (NO DB insertion yet)
+// @route   POST /api/orders/checkout
 // @access  Customer
 export const createPayMongoPayment = async (req, res) => {
     try {
-        const { order_id } = req.params;
+        const { cart_items, table_number, special_instructions } = req.body;
         const client_id = req.user.id;
 
-        console.log('Creating PayMongo payment for order:', order_id);
+        console.log('Creating PayMongo checkout for client:', client_id);
 
-        // 1. Get order details
-        const [order] = await pool.query(
-            "SELECT * FROM fb_orders WHERE order_id = ? AND client_id = ?", 
-            [order_id, client_id]
-        );
-        
-        if (order.length === 0) {
-            return res.status(404).json({ message: "Order not found or unauthorized" });
+        // 1. Validate cart items
+        if (!cart_items || cart_items.length === 0) {
+            return res.status(400).json({ message: "Cart is empty" });
         }
 
-        // Check if order is already paid or payment_status is not 'pending'
-        // We check for 'pending' because that's what you set it to.
-        if (order[0].status !== 'pending') {
-            return res.status(400).json({ message: "Order is not in a payable state." });
-        }
+        // 2. Calculate totals and build order items
+        let itemsTotal = 0;
+        const orderItemsData = [];
 
-        // 2. Get the individual menu items for the order
-        const [orderItems] = await pool.query(
-            `SELECT 
-                od.quantity, 
-                mi.item_name, 
-                od.price_on_purchase
-             FROM fb_order_details od
-             JOIN fb_menu_items mi ON od.item_id = mi.item_id
-             WHERE od.order_id = ?`,
-            [order_id]
-        );
+        for (const item of cart_items) {
+            const [menuItem] = await pool.query(
+                "SELECT * FROM fb_menu_items WHERE item_id = ?",
+                [item.item_id]
+            );
 
-        if (orderItems.length === 0) {
-            return res.status(404).json({ message: "No items found for this order" });
-        }
+            if (menuItem.length === 0) {
+                return res.status(404).json({ message: `Item ${item.item_id} not found` });
+            }
 
-        // 3. Build line items for menu items with promo pricing
-        const menu_line_items = orderItems.map(item => {
-            const actualPrice = parseFloat(item.price_on_purchase);
+            const price = parseFloat(menuItem[0].price);
+            const subtotal = price * item.quantity;
+            itemsTotal += subtotal;
 
-            return {
-                name: item.item_name,
+            orderItemsData.push({
+                item_id: item.item_id,
+                item_name: menuItem[0].item_name,
                 quantity: item.quantity,
-                amount: Math.round(actualPrice * 100), // Convert to centavos
-                currency: 'PHP'
-            };
-        });
+                price_on_purchase: price
+            });
+        }
 
-        // 🔴 BUG FIX: PayMongo line_items ONLY shows the items you explicitly add
-        // It does NOT automatically calculate service charge or VAT
-        // WHY: PayMongo's Checkout API displays exactly what you send in line_items
-        // HOW: We need to manually add service charge and VAT as separate line items
+        // 3. Calculate service charge and VAT
+        const serviceCharge = itemsTotal * 0.10;
+        const subtotalWithService = itemsTotal + serviceCharge;
+        const vatAmount = subtotalWithService * 0.12;
+        const totalAmount = subtotalWithService + vatAmount;
 
-        // 4. Get the calculated totals from the order table
-        const itemsTotal = parseFloat(order[0].items_total);
-        const serviceCharge = parseFloat(order[0].service_charge_amount);
-        const vatAmount = parseFloat(order[0].vat_amount);
-        const totalAmount = parseFloat(order[0].total_amount);
+        // 4. Build line items for PayMongo (menu items)
+        const menu_line_items = orderItemsData.map(item => ({
+            name: item.item_name,
+            quantity: item.quantity,
+            amount: Math.round(item.price_on_purchase * 100), // Convert to centavos
+            currency: 'PHP'
+        }));
 
-        // 5. Add service charge as a separate line item
+        // 5. Add service charge as separate line item
         const service_charge_line_item = {
             name: "Service Charge (10%)",
             quantity: 1,
-            amount: Math.round(serviceCharge * 100), // Convert to centavos
+            amount: Math.round(serviceCharge * 100),
             currency: 'PHP'
         };
 
-        // 6. Add VAT as a separate line item
+        // 6. Add VAT as separate line item
         const vat_line_item = {
             name: "VAT (12%)",
             quantity: 1,
-            amount: Math.round(vatAmount * 100), // Convert to centavos
+            amount: Math.round(vatAmount * 100),
             currency: 'PHP'
         };
 
-        // 7. Combine all line items: menu items + service charge + VAT
+        // 7. Combine all line items
         const all_line_items = [
-            ...menu_line_items,           // All food/beverage items
-            service_charge_line_item,      // Service charge line
-            vat_line_item                  // VAT line
+            ...menu_line_items,
+            service_charge_line_item,
+            vat_line_item
         ];
 
-        // 8. Verify that our line items sum equals the total
-        // This is a safety check to ensure data integrity
+        // 8. Verify line items sum
         const calculatedSum = all_line_items.reduce((sum, item) => {
             return sum + (item.amount * item.quantity);
         }, 0);
@@ -107,7 +96,19 @@ export const createPayMongoPayment = async (req, res) => {
             });
         }
 
-        // Validate PayMongo API key
+        // 9. Store ALL order data in PayMongo metadata (to create order later)
+        const orderMetadata = {
+            client_id: client_id.toString(),
+            table_number: table_number?.toString() || '',
+            special_instructions: special_instructions || '',
+            items_total: itemsTotal.toFixed(2),
+            service_charge_amount: serviceCharge.toFixed(2),
+            vat_amount: vatAmount.toFixed(2),
+            total_amount: totalAmount.toFixed(2),
+            order_items: JSON.stringify(orderItemsData) // Store items as JSON
+        };
+
+        // Validate PayMongo configuration
         if (!process.env.PAYMONGO_SECRET_KEY || !process.env.FRONTEND_URL) {
             console.error('PAYMONGO_SECRET_KEY or FRONTEND_URL not configured');
             return res.status(500).json({ 
@@ -116,8 +117,8 @@ export const createPayMongoPayment = async (req, res) => {
         }
 
         console.log('Calling PayMongo API with line items:', all_line_items);
-        
-        // 9. Create PayMongo checkout session
+
+        // 10. Create PayMongo checkout session (NO database entry yet!)
         const paymongoResponse = await fetch('https://api.paymongo.com/v1/checkout_sessions', {
             method: 'POST',
             headers: {
@@ -127,8 +128,6 @@ export const createPayMongoPayment = async (req, res) => {
             body: JSON.stringify({
                 data: {
                     attributes: {
-                        // ✅ FIXED: Now includes ALL charges in line_items
-                        // PayMongo will sum these automatically and show them on the checkout page
                         line_items: all_line_items,
                         
                         payment_method_types: [
@@ -138,20 +137,17 @@ export const createPayMongoPayment = async (req, res) => {
                             'grab_pay'
                         ],
 
-                        success_url: `${process.env.FRONTEND_URL}/payment-success?order_id=${order_id}`,
+                        success_url: `${process.env.FRONTEND_URL}/payment-success?`,
                         cancel_url: `${process.env.FRONTEND_URL}/payment-cancel`,
 
-                        description: `Order #${order_id} Payment`,
-                        remarks: `Food & Beverages - Order ${order_id}`,
+                        description: `Food & Beverages Order`,
+                        remarks: `Food & Beverages Order Payment`,
                         
-                        // ✅ BEST PRACTICE: Show line items breakdown on checkout page
                         show_line_items: true,
                         show_description: true,
                         
-                        metadata: {
-                            order_id: order_id.toString(),
-                            client_id: client_id.toString()
-                        }
+                        // Store order data in metadata (used by webhook to create order)
+                        metadata: orderMetadata
                     }
                 }
             })
@@ -168,8 +164,9 @@ export const createPayMongoPayment = async (req, res) => {
             });
         }
 
-        console.log('PayMongo link created successfully');
+        console.log('PayMongo link created successfully (order not in DB yet)');
 
+        // Return checkout URL (no order_id because order doesn't exist yet)
         res.json({
             checkout_url: paymongoData.data.attributes.checkout_url,
             payment_link_id: paymongoData.data.id,
@@ -177,15 +174,15 @@ export const createPayMongoPayment = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Create PayMongo Payment Error:', error);
+        console.error('Create Checkout Error:', error);
         res.status(500).json({ 
-            message: "Failed to create payment", 
+            message: "Failed to create checkout", 
             error: error.message 
         });
     }
 };
 
-// @desc    PayMongo Webhook Handler
+// @desc    PayMongo Webhook Handler - CREATES order after payment
 // @route   POST /api/payments/webhook
 // @access  Public (verified by signature)
 export const paymongoWebhook = async (req, res) => {
@@ -219,25 +216,67 @@ export const paymongoWebhook = async (req, res) => {
             await connection.beginTransaction();
 
             const paymentData = event.data.attributes.data;
-            const order_id = paymentData.attributes.metadata?.order_id;
-            const amount = paymentData.attributes.amount / 100; // Convert from cents
+            const paymongo_payment_id = paymentData.id;
+            const metadata = paymentData.attributes.metadata;
 
-            if (!order_id) {
-                console.error('No order_id in webhook metadata');
-                await connection.rollback();
-                return res.status(400).json({ message: "Invalid webhook data" });
-            }
-
-            // Check if payment already recorded
+            // Check if order already created (using PayMongo payment ID as unique identifier)
             const [existingPayment] = await connection.query(
                 "SELECT * FROM fb_payments WHERE paymongo_payment_id = ?",
-                [paymentData.id]
+                [paymongo_payment_id]
             );
 
             if (existingPayment.length > 0) {
                 await connection.commit();
-                console.log('Payment already processed for order:', order_id);
-                return res.status(200).json({ message: "Payment already processed" });
+                console.log('Order already created for payment:', paymongo_payment_id);
+                return res.status(200).json({ message: "Order already processed" });
+            }
+
+            // Extract order data from metadata
+            const client_id = metadata.client_id;
+            const table_number = metadata.table_number || null;
+            const special_instructions = metadata.special_instructions || null;
+            const items_total = parseFloat(metadata.items_total);
+            const service_charge_amount = parseFloat(metadata.service_charge_amount);
+            const vat_amount = parseFloat(metadata.vat_amount);
+            const total_amount = parseFloat(metadata.total_amount);
+            const order_items = JSON.parse(metadata.order_items);
+
+            console.log('Creating order from payment:', paymongo_payment_id);
+
+            // ✅ CREATE THE ORDER IN DATABASE (only after payment confirmed)
+            const orderSql = `
+                INSERT INTO fb_orders 
+                (client_id, table_number, items_total, service_charge_amount, 
+                 vat_amount, total_amount, special_instructions, status, order_date) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+            `;
+            
+            const [orderResult] = await connection.query(orderSql, [
+                client_id,
+                table_number,
+                items_total,
+                service_charge_amount,
+                vat_amount,
+                total_amount,
+                special_instructions
+            ]);
+
+            const new_order_id = orderResult.insertId;
+
+            // Insert order items
+            const orderDetailsSql = `
+                INSERT INTO fb_order_details 
+                (order_id, item_id, quantity, price_on_purchase) 
+                VALUES (?, ?, ?, ?)
+            `;
+
+            for (const item of order_items) {
+                await connection.query(orderDetailsSql, [
+                    new_order_id,
+                    item.item_id,
+                    item.quantity,
+                    item.price_on_purchase
+                ]);
             }
 
             // Record the payment
@@ -246,38 +285,26 @@ export const paymongoWebhook = async (req, res) => {
                 (order_id, payment_method, amount, payment_status, paymongo_payment_id, payment_date) 
                 VALUES (?, ?, ?, 'paid', ?, NOW())
             `;
+            
             await connection.query(paymentSql, [
-                order_id,
+                new_order_id,
                 paymentData.attributes.source?.type || 'paymongo',
-                amount,
-                paymentData.id
+                total_amount,
+                paymongo_payment_id
             ]);
 
-            // Update order status to paid
-            await connection.query(
-                "UPDATE fb_orders SET status = 'pending' WHERE order_id = ?",
-                [order_id]
-            );
-
             await connection.commit();
-            console.log(`✅ Payment recorded for Order #${order_id}`);
+            console.log(`✅ Order #${new_order_id} created and paid via webhook`);
             
-            return res.status(200).json({ message: "Webhook processed successfully" });
+            return res.status(200).json({ 
+                message: "Order created successfully",
+                order_id: new_order_id
+            });
 
         } else if (event.data.attributes.type === 'payment.failed') {
-            // Handle failed payments
-            const paymentData = event.data.attributes.data;
-            const order_id = paymentData.attributes.metadata?.order_id;
-
-            if (order_id) {
-                await pool.query(
-                    "UPDATE fb_orders SET status = 'cancelled' WHERE order_id = ?",
-                    [order_id]
-                );
-                console.log(`❌ Payment failed for Order #${order_id}`);
-            }
-
-            return res.status(200).json({ message: "Payment failure recorded" });
+            // Payment failed - do nothing (no order was created anyway)
+            console.log('❌ Payment failed - no order created');
+            return res.status(200).json({ message: "Payment failure noted" });
         }
 
         // For other event types, just acknowledge
@@ -286,7 +313,7 @@ export const paymongoWebhook = async (req, res) => {
     } catch (error) {
         if (connection) await connection.rollback();
         console.error("Webhook error:", error);
-        res.status(500).json({ message: "Webhook processing failed" });
+        res.status(500).json({ message: "Webhook processing failed", error: error.message });
     } finally {
         if (connection) connection.release();
     }

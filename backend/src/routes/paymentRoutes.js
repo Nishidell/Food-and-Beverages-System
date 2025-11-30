@@ -17,7 +17,7 @@ const router = express.Router();
 
 // 1️⃣ Customer create Payment (PayMongo)
 // Allowed: 'customer' (Role)
-router.post('/:order_id/paymongo', protect, authorizeRoles("customer"), createPayMongoPayment);
+router.post('/checkout', protect, authorizeRoles("customer"), createPayMongoPayment);
 
 // 2️⃣ Manual Record (For Cash/POS)
 // Allowed: 'Cashier', 'F&B Admin' (Positions)
