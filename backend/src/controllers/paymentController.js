@@ -185,12 +185,17 @@ export const createPayMongoPayment = async (req, res) => {
 // @desc    PayMongo Webhook Handler - CREATES order after payment
 // @route   POST /api/payments/webhook
 // @access  Public (verified by signature)
+// ... imports stay the same ...
 export const paymongoWebhook = async (req, res) => {
     const connection = await pool.getConnection();
     try {
-        console.log('Webhook received:', req.body.data?.attributes?.type);
+        console.log('Webhook received...'); // Log immediately
 
-        // Verify webhook signature
+        // 1. Handle the Raw Body (Buffer) from server.js
+        // req.body is now a Buffer because of express.raw() in server.js
+        const bodyString = req.body.toString(); 
+        
+        // 2. Verify webhook signature
         const signature = req.headers['paymongo-signature'];
         const webhookSecret = process.env.PAYMONGO_WEBHOOK_SECRET;
         
@@ -199,12 +204,9 @@ export const paymongoWebhook = async (req, res) => {
             return res.status(500).json({ message: "Webhook not configured" });
         }
 
-        // Use raw body for signature verification (important!)
-        const bodyString = req.rawBody || JSON.stringify(req.body);
-        
         const computedSignature = crypto
             .createHmac('sha256', webhookSecret)
-            .update(bodyString)
+            .update(bodyString) // Update using the stringified buffer
             .digest('hex');
 
         console.log('Received signature:', signature);
@@ -215,17 +217,19 @@ export const paymongoWebhook = async (req, res) => {
             return res.status(401).json({ message: "Invalid webhook signature" });
         }
         
-        const event = parsedBody; // Use parsedBody instead of req.body
+        // 3. Parse the event manually (Fixing the 'parsedBody is not defined' error)
+        const event = JSON.parse(bodyString);
 
         // Handle payment.paid event
         if (event.data.attributes.type === 'payment.paid') {
+            console.log('Payment paid event detected');
             await connection.beginTransaction();
 
             const paymentData = event.data.attributes.data;
             const paymongo_payment_id = paymentData.id;
             const metadata = paymentData.attributes.metadata;
 
-            // Check if order already created (using PayMongo payment ID as unique identifier)
+            // Check if order already created
             const [existingPayment] = await connection.query(
                 "SELECT * FROM fb_payments WHERE paymongo_payment_id = ?",
                 [paymongo_payment_id]
@@ -245,11 +249,22 @@ export const paymongoWebhook = async (req, res) => {
             const service_charge_amount = parseFloat(metadata.service_charge_amount);
             const vat_amount = parseFloat(metadata.vat_amount);
             const total_amount = parseFloat(metadata.total_amount);
-            const order_items = JSON.parse(metadata.order_items);
+            
+            // 4. Robust JSON Parsing for order_items
+            // Sometimes metadata strips quotes or changes format, so we wrap in try/catch
+            let order_items;
+            try {
+                order_items = typeof metadata.order_items === 'string' 
+                    ? JSON.parse(metadata.order_items) 
+                    : metadata.order_items;
+            } catch (e) {
+                console.error("Failed to parse order_items from metadata:", e);
+                throw new Error("Invalid order items data in webhook");
+            }
 
             console.log('Creating order from payment:', paymongo_payment_id);
 
-            // ✅ CREATE THE ORDER IN DATABASE (only after payment confirmed)
+            // CREATE THE ORDER
             const orderSql = `
                 INSERT INTO fb_orders 
                 (client_id, table_number, items_total, service_charge_amount, 
@@ -308,17 +323,17 @@ export const paymongoWebhook = async (req, res) => {
             });
 
         } else if (event.data.attributes.type === 'payment.failed') {
-            // Payment failed - do nothing (no order was created anyway)
             console.log('❌ Payment failed - no order created');
             return res.status(200).json({ message: "Payment failure noted" });
         }
 
-        // For other event types, just acknowledge
         res.status(200).json({ message: "Event received" });
 
     } catch (error) {
         if (connection) await connection.rollback();
         console.error("Webhook error:", error);
+        // Important: Return 200 even on error to PayMongo won't keep retrying indefinitely if it's a logic error
+        // But for development, 500 helps you debug.
         res.status(500).json({ message: "Webhook processing failed", error: error.message });
     } finally {
         if (connection) connection.release();
