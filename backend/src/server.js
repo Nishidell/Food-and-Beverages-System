@@ -4,11 +4,7 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const envPath = path.resolve(__dirname, '../.env'); 
-dotenv.config({ path: envPath });
-
+// ... imports ... 
 import pool from "../src/config/mysql.js";
 
 // Middleware
@@ -27,14 +23,24 @@ import categoryRoutes from "../src/routes/categoryRoutes.js";
 import analyticsRoutes from "../src/routes/analyticsRoutes.js";
 import dashboardRoutes from "../src/routes/dashboardRoutes.js";
 import notificationRoutes from "../src/routes/notificationRoutes.js";
-
-// --- NEW ROUTES (Added for Normalization & Promos) ---
 import tableRoutes from "../src/routes/tableRoutes.js";
 import roomRoutes from "../src/routes/roomRoutes.js";
 import promotionRoutes from "../src/routes/promotionRoutes.js";
 import announcementRoutes from "./routes/announcementRoutes.js";
 
+// IMPORT THIS DIRECTLY FOR THE WEBHOOK FIX
+import { paymongoWebhook } from "../src/controllers/paymentController.js"; 
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const envPath = path.resolve(__dirname, '../.env'); 
+dotenv.config({ path: envPath });
+
 const app = express();
+
+// --- 1. FIX: Trust Proxy for Render ---
+// This prevents the "X-Forwarded-For" crash
+app.set('trust proxy', 1); 
 
 if (process.env.NODE_ENV !== "production") {
   app.use(cors({
@@ -42,27 +48,34 @@ if (process.env.NODE_ENV !== "production") {
   }));
 }
 
-// CRITICAL: Webhook route with raw body parser MUST come BEFORE express.json()
-app.use('/api/payments/webhook', express.raw({ type: 'application/json' }), paymentRoutes);
+// --- 2. FIX: Webhook Route Placement ---
+// Must define this BEFORE express.json()
+// We call the controller directly to avoid path issues like /webhook/webhook
+app.post(
+  '/api/payments/webhook', 
+  express.raw({ type: 'application/json' }), 
+  paymongoWebhook
+);
 
 // Now apply JSON parsing for all other routes
 app.use(express.json());
 
 // Test DB Connection
 app.get("/api/health", async (req, res) => {
-  try {
-    await pool.query('SELECT 1');
-    res.send({ status: "OK", database: "Connected", time: new Date() });
-  } catch (e) {
-    res.status(500).send({ status: "Error", database: "Not Connected", error: e.message });
-  }
+    // ... existing health check code ...
+    try {
+        await pool.query('SELECT 1');
+        res.send({ status: "OK", database: "Connected", time: new Date() });
+    } catch (e) {
+        res.status(500).send({ status: "Error", database: "Not Connected", error: e.message });
+    }
 });
 
 // Routes exempt from strict Rate Limiter
 app.use("/api/orders", orderRoutes);
 app.use("/api/categories", categoryRoutes); 
-app.use("/api/tables", tableRoutes); // Tables (Public for Menu)
-app.use("/api/rooms", roomRoutes);   // Rooms (Public for Menu)
+app.use("/api/tables", tableRoutes);
+app.use("/api/rooms", roomRoutes);
 
 // Apply the general API rate limiter to all other requests
 app.use("/api/", apiLimiter);
@@ -70,7 +83,10 @@ app.use("/api/", apiLimiter);
 // API routes
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/items", itemRoutes);
-app.use("/api/payments", paymentRoutes); // Note: This handles non-webhook payment routes
+
+// NOTE: The webhook is already handled above, this handles the other payment routes
+app.use("/api/payments", paymentRoutes); 
+
 app.use("/api/admin", adminRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use("/api/analytics", analyticsRoutes); 
@@ -90,7 +106,6 @@ if(process.env.NODE_ENV === "production") {
   })
 }
 
-// Error middleware
 app.use(notFound);
 app.use(errorHandler);
 
