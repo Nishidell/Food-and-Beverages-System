@@ -58,15 +58,12 @@ app.set('io', io);
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
-  console.log('✅ Client connected:', socket.id);
 
   socket.on('join-role', (role) => {
     socket.join(role);
-    console.log(`👤 User joined room: ${role}`);
   });
 
   socket.on('disconnect', () => {
-    console.log('❌ Client disconnected:', socket.id);
   });
 });
 

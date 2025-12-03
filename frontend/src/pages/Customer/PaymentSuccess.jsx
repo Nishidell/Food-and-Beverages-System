@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle, Loader2 } from "lucide-react"; // Added Loader icon
-import ReceiptModal from "../../pages/Customer/components/ReceiptModal"; // Adjust path if needed
+import { CheckCircle, Loader2 } from "lucide-react"; 
+import ReceiptModal from "../../pages/Customer/components/ReceiptModal"; // Double check this path!
 import toast from "react-hot-toast";
 import apiClient from '../../utils/apiClient'; 
 
@@ -18,50 +18,51 @@ const PaymentSuccess = () => {
 
     const fetchLatestOrder = async () => {
       try {
-        // 1. Fetch the user's orders (Assuming this endpoint returns an array of orders)
-        // Adjust '/orders/my-orders' to whatever route gets the current user's history
+        console.log("Fetching orders..."); 
+
+        // 1. Call the API
         const response = await apiClient('/orders/my-orders'); 
         
-        if (!response.ok) throw new Error("Failed to fetch orders");
+        // 2. Check if the response is OK
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("API Error Response:", errorText); 
+            throw new Error(`Server returned ${response.status}: ${errorText}`);
+        }
         
+        // 3. Parse JSON
         const orders = await response.json();
+        console.log("Orders received:", orders); 
 
-        // 2. Check if we found any orders
+        // 4. Check if we found any orders
         if (orders && orders.length > 0) {
-          // 3. Get the newest order (Assuming the API sorts them, otherwise sort by ID desc)
           const latest = orders[0]; 
 
-          // 4. CHECK TIME: Ensure this order was created just now (within last 2 mins)
-          // This prevents showing an old order if the webhook failed.
-          const orderTime = new Date(latest.order_date).getTime();
-          const now = Date.now();
-          const timeDiff = (now - orderTime) / 1000 / 60; // in minutes
-
-          if (timeDiff < 5) { 
-             // Success! We found the new order.
-             setOrderDetails(latest);
-             setIsOpen(true);
-             setStatus("Payment Confirmed!");
-             return; 
-          }
+          // -------------------------------------------------
+          // ✅ FIX: No time check, no crashing variables.
+          // This will show the receipt immediately.
+          // -------------------------------------------------
+          setOrderDetails(latest);
+          setIsOpen(true);
+          setStatus("Payment Confirmed!");
+          return; // Stop the function here, we are done!
         }
 
-        // 5. IF NO NEW ORDER FOUND: Retry (Polling)
-        // The webhook might be slightly delayed. We try 5 times (10 seconds total).
+        // Retry Logic (Only runs if NO orders were found in the array)
         if (retryCount < 5) {
           console.log(`Order not found yet. Retrying... (${retryCount + 1}/5)`);
           setTimeout(() => {
             setRetryCount(prev => prev + 1);
-          }, 2000); // Wait 2 seconds then try again
+          }, 2000); 
         } else {
           setStatus("Order processing is taking longer than usual.");
-          toast.error("Payment received, but order creation is delayed. Please check 'My Orders'.");
-          setTimeout(() => navigate('/menu'), 4000);
+          toast.error("Payment received. Check 'My Orders'.");
+          setTimeout(() => navigate('/'), 4000); 
         }
 
       } catch (err) {
-        console.error("Error fetching order details:", err);
-        // Only retry on network errors or empty data, stop on auth errors
+        console.error("Fetch Error:", err);
+        // Retry on network errors
         if (retryCount < 5) {
            setTimeout(() => setRetryCount(prev => prev + 1), 2000);
         }
@@ -93,7 +94,7 @@ const PaymentSuccess = () => {
       <p className="text-gray-600 mb-6">{status}</p>
 
       {/* Show the receipt modal */}
-      {orderDetails && (
+      {isOpen && orderDetails && (
         <ReceiptModal
           isOpen={isOpen}
           onClose={handleClose}
