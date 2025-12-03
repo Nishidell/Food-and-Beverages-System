@@ -650,56 +650,50 @@ const createOrUpdateNotification = async (order_id, client_id, status, connectio
     }
 };
 
+// @desc    Get logged-in user's orders
+// @route   GET /api/orders/my-orders
+// @access  Private
 export const getMyOrders = async (req, res) => {
     try {
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({ message: "User not authenticated" });
+        }
+
         const client_id = req.user.id; 
 
-        // 1. We select Order info AND use JSON_ARRAYAGG to bundle items
-        //    This avoids the "N+1" problem and makes the receipt load instantly.
-        const sql = `
-            SELECT 
-                o.order_id, 
-                o.order_date, 
-                o.status, 
-                o.total_amount, 
-                o.payment_method,
-                o.delivery_location, 
-                
-                -- Financial breakdown for Receipt
-                o.items_total, 
-                o.service_charge_amount, 
-                o.vat_amount,
+        // 1. Fetch Orders
+        const [orders] = await pool.query(
+            `SELECT * FROM fb_orders 
+             WHERE client_id = ? 
+             ORDER BY order_date DESC`, 
+            [client_id]
+        );
 
-                -- 🔥 The Magic: Bundle all items into a JSON array
-                COALESCE(
-                    JSON_ARRAYAGG(
-                        JSON_OBJECT(
-                            'item_id', od.item_id,
-                            'item_name', m.item_name,  -- We get the name from menu_items table
-                            'quantity', od.quantity,
-                            'price_on_purchase', od.price_on_purchase,
-                            'subtotal', od.subtotal,
-                            'instructions', od.instructions
-                        )
-                    ),
-                    JSON_ARRAY() -- Return empty array if no items found
-                ) as items
+        if (orders.length === 0) {
+            return res.json([]);
+        }
 
-            FROM fb_orders o
-            LEFT JOIN fb_order_details od ON o.order_id = od.order_id
-            LEFT JOIN fb_menu_items m ON od.item_id = m.item_id
+        // 2. Fetch Items
+        const ordersWithItems = await Promise.all(orders.map(async (order) => {
+            const [items] = await pool.query(`
+                SELECT * FROM fb_order_details WHERE order_id = ?
+            `, [order.order_id]);
             
-            WHERE o.client_id = ?
-            GROUP BY o.order_id
-            ORDER BY o.order_date DESC
-        `;
+            const itemsWithNames = await Promise.all(items.map(async (item) => {
+                 const [menu] = await pool.query("SELECT item_name FROM fb_menu_items WHERE item_id = ?", [item.item_id]);
+                 return {
+                    ...item,
+                    item_name: menu.length > 0 ? menu[0].item_name : 'Unknown Item'
+                 };
+            }));
 
-        const [orders] = await pool.query(sql, [client_id]);
+            return { ...order, items: itemsWithNames };
+        }));
 
-        res.json(orders);
+        res.json(ordersWithItems);
 
     } catch (error) {
-        console.error("Error fetching my orders:", error);
-        res.status(500).json({ message: "Failed to fetch your order history" });
+        console.error("Backend Error:", error); // Keep only this one for real errors
+        res.status(500).json({ message: "Server Error" });
     }
 };
