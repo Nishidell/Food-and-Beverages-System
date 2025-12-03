@@ -649,3 +649,57 @@ const createOrUpdateNotification = async (order_id, client_id, status, connectio
         console.error(`Failed to create notification for order ${order_id}:`, error.message);
     }
 };
+
+export const getMyOrders = async (req, res) => {
+    try {
+        const client_id = req.user.id; 
+
+        // 1. We select Order info AND use JSON_ARRAYAGG to bundle items
+        //    This avoids the "N+1" problem and makes the receipt load instantly.
+        const sql = `
+            SELECT 
+                o.order_id, 
+                o.order_date, 
+                o.status, 
+                o.total_amount, 
+                o.payment_method,
+                o.delivery_location, 
+                
+                -- Financial breakdown for Receipt
+                o.items_total, 
+                o.service_charge_amount, 
+                o.vat_amount,
+
+                -- 🔥 The Magic: Bundle all items into a JSON array
+                COALESCE(
+                    JSON_ARRAYAGG(
+                        JSON_OBJECT(
+                            'item_id', od.item_id,
+                            'item_name', m.item_name,  -- We get the name from menu_items table
+                            'quantity', od.quantity,
+                            'price_on_purchase', od.price_on_purchase,
+                            'subtotal', od.subtotal,
+                            'instructions', od.instructions
+                        )
+                    ),
+                    JSON_ARRAY() -- Return empty array if no items found
+                ) as items
+
+            FROM fb_orders o
+            LEFT JOIN fb_order_details od ON o.order_id = od.order_id
+            LEFT JOIN fb_menu_items m ON od.item_id = m.item_id
+            
+            WHERE o.client_id = ?
+            GROUP BY o.order_id
+            ORDER BY o.order_date DESC
+        `;
+
+        const [orders] = await pool.query(sql, [client_id]);
+
+        res.json(orders);
+
+    } catch (error) {
+        console.error("Error fetching my orders:", error);
+        res.status(500).json({ message: "Failed to fetch your order history" });
+    }
+};
