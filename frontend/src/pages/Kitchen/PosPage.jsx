@@ -18,6 +18,7 @@ function PosPage() {
   const [selectedCategory, setSelectedCategory] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
+  const [sortOption, setSortOption] = useState('a-z'); 
   
   // POS-specific state
   const [orderType, setOrderType] = useState('Walk-in');
@@ -237,10 +238,37 @@ const handleOpenPaymentModal = (grandTotal) => {
     }
   };
 
-  // ... (rest of the file is the same)
-  const filteredItems = items
-    .filter(item => selectedCategory === 0 || item.category_id === selectedCategory)
-    .filter(item => item.item_name.toLowerCase().includes(searchTerm.toLowerCase()));
+// --- SORTING & FILTERING LOGIC ---
+  const getProcessedItems = () => {
+    // 1. Filter
+    let result = items
+      .filter(item => selectedCategory === 0 || item.category_id === selectedCategory)
+      .filter(item => item.item_name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    // 2. Sort
+    switch (sortOption) {
+      case 'a-z':
+        result.sort((a, b) => a.item_name.localeCompare(b.item_name));
+        break;
+      case 'z-a':
+        result.sort((a, b) => b.item_name.localeCompare(a.item_name));
+        break;
+      case 'price-low':
+        result.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+        break;
+      case 'price-high':
+        result.sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
+        break;
+      case 'recent':
+        result.sort((a, b) => b.item_id - a.item_id);
+        break;
+      default:
+        break;
+    }
+    return result;
+  };
+
+  const finalItems = getProcessedItems();
 
   return (
     <div className="flex flex-col h-screen" style={{ backgroundColor: '#523a2eff' }}>
@@ -266,15 +294,18 @@ const handleOpenPaymentModal = (grandTotal) => {
             categories={categories}
             selectedCategory={selectedCategory}
             onSelectCategory={handleSelectCategory}
+            sortOption={sortOption}
+            onSortChange={setSortOption}
             theme="kitchen"
           />
+
           <FoodGrid
-       items={filteredItems}
-       onAddToCart={handleAddToCart}
-       onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
-       layoutStyle={posPageGridStyle}
-       theme="kitchen"
-        />
+            items={finalItems} 
+            onAddToCart={handleAddToCart}
+            onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
+            layoutStyle={posPageGridStyle}
+            theme="kitchen"
+          />
         </main>
 
  
