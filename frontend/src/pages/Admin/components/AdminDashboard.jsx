@@ -1,16 +1,20 @@
 import React, { useEffect, useState } from "react";
-import { CircleDollarSign, ShoppingCart, Box, Users } from "lucide-react";
+import { CircleDollarSign, ShoppingCart, Box, Armchair } from "lucide-react"; 
+import { useNavigate } from "react-router-dom"; // ✅ Import useNavigate
 import apiClient from "../../../utils/apiClient";
 import { useSocket } from "../../../context/SocketContext";
 
-const AdminDashboard = () => {
+// ✅ Accept onNavigate prop from AdminPage
+const AdminDashboard = ({ onNavigate }) => {
+  const navigate = useNavigate(); // ✅ Hook for URL navigation
+  
   const [data, setData] = useState({
-    summary: { totalSales: 0, salesGrowth: 0, activeOrders: 0, lowStock: 0, totalStaff: 0 },
+    summary: { totalSales: 0, salesGrowth: 0, activeOrders: 0, lowStock: 0, availableTables: 0, totalTables: 0 },
     recentOrders: [],
     stockAlerts: [],
   });
   
-  const { socket } = useSocket(); // <--- Get Socket
+  const { socket } = useSocket();
 
   const fetchData = async () => {
     try {
@@ -26,17 +30,18 @@ const AdminDashboard = () => {
     fetchData();
 
     if (socket) {
-        // When a new order is placed, sales go up and stock goes down.
-        // So we refresh the dashboard data.
         socket.on('new-order', () => {
             console.log("💰 New Order! Updating Dashboard...");
             fetchData(); 
         });
 
-        // When status changes (e.g. to 'preparing'), stock might be deducted 
-        // depending on your backend logic, so we refresh too.
         socket.on('order-status-updated', () => {
             fetchData();
+        });
+
+        socket.on('table-update', () => {
+             console.log("🪑 Table Updated! Refreshing dashboard...");
+             fetchData();
         });
     }
 
@@ -44,18 +49,26 @@ const AdminDashboard = () => {
         if(socket) {
             socket.off('new-order');
             socket.off('order-status-updated');
+            socket.off('table-update');
         }
     }
   }, [socket]);
 
   const { summary, recentOrders, stockAlerts } = data;
 
+  // ✅ Common style for clickable cards
+  const cardStyle = "bg-[#fff2e0] rounded-xl p-5 shadow-md border border-[#6e1a1a] cursor-pointer transition-transform hover:scale-105 hover:shadow-lg";
+
   return (
     <div className="min-h-screen bg-[#480c1b] text-black p-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        {/* Total Sales */}
-        <div className="bg-[#fff2e0] rounded-xl p-5 shadow-md border border-[#6e1a1a]">
+        
+        {/* Total Sales -> Switch to Analytics Tab */}
+        <div 
+            className={cardStyle}
+            onClick={() => onNavigate('analytics')}
+        >
           <div className="flex justify-between items-center mb-2">
             <CircleDollarSign className="text-orange-400" size={28} />
             <span
@@ -74,8 +87,11 @@ const AdminDashboard = () => {
           </p>
         </div>
 
-        {/* Active Orders */}
-        <div className="bg-[#fff2e0] rounded-xl p-5 shadow-md border border-[#6e1a1a]">
+        {/* Active Orders -> Switch to Orders Tab */}
+        <div 
+            className={cardStyle}
+            onClick={() => onNavigate('orders')}
+        >
           <div className="flex justify-between items-center mb-2">
             <ShoppingCart className="text-blue-400" size={28} />
             <span
@@ -92,35 +108,36 @@ const AdminDashboard = () => {
           <p className="text-3xl font-bold mt-1">{summary.activeOrders}</p>
         </div>
 
-        {/* Low Stock */}
-        {/* --- MODIFICATION 1: Added conditional "Action needed" label --- */}
-        <div className="bg-[#fff2e0] rounded-xl p-5 shadow-md border border-[#6e1a1a]">
+        {/* Low Stock -> Navigate to /kitchen/inventory URL */}
+        <div 
+            className={cardStyle}
+            onClick={() => navigate('/kitchen/inventory')}
+        >
           <div className="flex justify-between items-center mb-2">
             <Box className="text-red-400" size={28} />
-            
-            {/* This logic checks if count is 3 or more */}
             {summary.lowStock >= 3 ? (
               <span className="text-xs font-semibold text-red-300 animate-pulse">
                 Action needed
               </span>
-            ) : (
-              // If not, it shows the original growth %
-              <span className="text-red-300 text-xs font-semibold">
-              </span>
-            )}
-            
+            ) : null}
           </div>
           <h3 className="text-sm text-black">Low Stock Items</h3>
           <p className="text-3xl font-bold mt-1">{summary.lowStock}</p>
         </div>
 
-        {/* Total Customers */}
-        <div className="bg-[#fff2e0] rounded-xl p-5 shadow-md border border-[#6e1a1a]">
+        {/* Available Tables -> Switch to Tables Tab */}
+        <div 
+            className={cardStyle}
+            onClick={() => onNavigate('tables')}
+        >
           <div className="flex justify-between items-center mb-2">
-            <Users className="text-green-400" size={28} />
+            <Armchair className="text-green-600" size={28} />
           </div>
-          <h3 className="text-sm text-black">Total Staff</h3>
-          <p className="text-3xl font-bold mt-1">{summary.totalStaff}</p>
+          <h3 className="text-sm text-black">Available Tables</h3>
+          <div className="flex items-end gap-2">
+            <p className="text-3xl font-bold mt-1">{summary.availableTables}</p>
+            <span className="text-gray-500 mb-1 text-sm">/ {summary.totalTables}</span>
+          </div>
         </div>
       </div>
 
@@ -140,9 +157,6 @@ const AdminDashboard = () => {
                 >
                   <div>
                     <p className="font-semibold">ORD-{order.order_id}</p>
-                    
-                    {/* --- MODIFICATION 2: Fixed to use real data --- */}
-                    {/* This now uses data from the API (order_type and delivery_location) */}
                     <p className="text-gray-600">
                       {order.order_type === 'Dine-in'
                         ? `Table: ${order.delivery_location}`

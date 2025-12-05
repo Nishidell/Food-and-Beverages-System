@@ -11,7 +11,7 @@ const calculateGrowth = (today, yesterday) => {
 // --- GET Dashboard Summary ---
 export const getDashboardSummary = async (req, res) => {
   try {
-    // --- Total Sales ---
+    // 1. Total Sales (Keep this)
     const [salesTodayRows] = await pool.query(`
       SELECT SUM(amount) AS total
       FROM fb_payments
@@ -29,7 +29,7 @@ export const getDashboardSummary = async (req, res) => {
     const totalSales = salesTodayRows[0].total || 0;
     const salesGrowth = calculateGrowth(totalSales, salesYesterdayRows[0].total || 0);
 
-    // --- Active Orders ---
+    // 2. Active Orders (Keep this)
     const [ordersTodayRows] = await pool.query(`
       SELECT COUNT(*) AS total
       FROM fb_orders
@@ -45,8 +45,7 @@ export const getDashboardSummary = async (req, res) => {
     const activeOrders = ordersTodayRows[0].total || 0;
     const ordersGrowth = calculateGrowth(activeOrders, ordersYesterdayRows[0].total || 0);
 
-    // --- Low Stock Items ---
-    // --- MODIFICATION 1: Using 'reorder_point' ---
+    // 3. Low Stock Items (Keep this)
     const [lowStockRows] = await pool.query(`
       SELECT COUNT(*) AS total
       FROM fb_ingredients
@@ -54,18 +53,28 @@ export const getDashboardSummary = async (req, res) => {
     `);
 
     const lowStock = lowStockRows[0].total || 0;
-    const lowStockGrowth = 0; // Could implement historical snapshot if needed
+    const lowStockGrowth = 0; 
 
-    // --- Total Customers ---
-    const [staffRows] = await pool.query(`
+    // 4. ✅ CHANGED: Available Tables (Debug version)
+    const [tableRows] = await pool.query(`
       SELECT COUNT(*) AS total
-      FROM employees
-      WHERE status = 'active'
+      FROM fb_tables
+      WHERE LOWER(status) = 'available'
     `);
+    
+    const [totalTableRows] = await pool.query(`SELECT COUNT(*) AS total FROM fb_tables`);
 
-    const totalStaff = staffRows[0].total || 0;
+    const availableTables = tableRows[0].total || 0;
+    const totalTables = totalTableRows[0].total || 0;
 
-    // --- Recent Orders (last 5) ---
+    // 🔍 DEBUG LOG: Look for this in your VS Code Terminal!
+    console.log("------------------------------------------------");
+    console.log("📊 DASHBOARD DEBUG:");
+    console.log("Total Tables found in DB:", totalTables);
+    console.log("Available Tables found:", availableTables);
+    console.log("------------------------------------------------");
+
+    // 5. Recent Orders (Keep this)
     const [recentOrders] = await pool.query(`
       SELECT order_id, client_id, order_date, status, total_amount, order_type, delivery_location
       FROM fb_orders
@@ -73,8 +82,7 @@ export const getDashboardSummary = async (req, res) => {
       LIMIT 5
     `);
 
-    // --- Low Stock Alerts (full details) ---
-    // --- MODIFICATION 2: Using 'reorder_point' and sorting for urgency ---
+    // 6. Stock Alerts (Keep this)
     const [stockAlerts] = await pool.query(`
       SELECT ingredient_id, name, stock_level AS stock, 'Default Supplier' AS supplier_name
       FROM fb_ingredients
@@ -83,7 +91,7 @@ export const getDashboardSummary = async (req, res) => {
       LIMIT 5
     `);
 
-    // --- Respond with full dashboard data ---
+    // --- Respond with updated data ---
     res.json({
       summary: {
         totalSales,
@@ -92,7 +100,8 @@ export const getDashboardSummary = async (req, res) => {
         ordersGrowth,
         lowStock,
         lowStockGrowth,
-        totalStaff,
+        availableTables, // ✅ Send this instead of totalStaff
+        totalTables      // ✅ Useful for context
       },
       recentOrders,
       stockAlerts,
@@ -102,4 +111,4 @@ export const getDashboardSummary = async (req, res) => {
     console.error("Error fetching dashboard summary:", err);
     res.status(500).json({ message: "Server error fetching dashboard summary", error: err.message });
   }
-};  
+};
