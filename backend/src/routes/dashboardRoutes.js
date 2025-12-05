@@ -7,9 +7,9 @@ const router = express.Router();
 /**
  * @route   GET /api/dashboard/summary
  * @desc    Get dashboard summary data
- * @access  Private (F&B Admin)
+ * @access  Private (F&B Admin, Employee, Admin)
  */
-// UPDATED: Only 'F&B Admin' can view the dashboard summary
-router.get("/summary", protect, authorizeRoles("F&B Admin"), getDashboardSummary);
+// ✅ FIX: Added 'employee' and 'admin' to the authorized roles list
+router.get("/summary", protect, authorizeRoles("F&B Admin", "employee", "admin"), getDashboardSummary);
 
 export default router;
