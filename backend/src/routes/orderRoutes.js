@@ -6,7 +6,8 @@ import {
     updateOrderStatus,
     getKitchenOrders,
     getServedOrders,
-    createPosOrder
+    createPosOrder,
+    getMyOrders
 } from "../controllers/orderController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
@@ -48,6 +49,7 @@ router.put(
 
 // --- 4. Admin/Customer Routes ---
 router.post("/", protect, createOrder); // Customer creates own order (checked by role=customer internally or logic)
+router.get("/my-orders", protect, getMyOrders);
 router.get("/", getOrders); // Usually Admin only, or filtering in controller
 router.get("/:id", getOrderById); // Public/Protected mixed logic in controller
 
