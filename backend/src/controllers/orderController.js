@@ -22,11 +22,14 @@ const emitOrderUpdate = (req, eventName, data) => {
 // @access  Private (Staff)
 export const createPosOrder = async (req, res) => {
     const connection = await pool.getConnection();
+    // Move order_id declaration here so it's available in catch block if needed (optional)
     let order_id; 
 
     try {
         await connection.beginTransaction();
 
+        // --- 1. GET NEW FIELDS FROM req.body ---
+        // UPDATED: Added client_id and table_id to destructuring
         const { 
           items, order_type, instructions, delivery_location, 
           payment_method, change_amount,
@@ -44,8 +47,10 @@ export const createPosOrder = async (req, res) => {
         await validateStock(items, connection);
 
         // Step 2: Create the order
+        // We set totals to 0 initially, they are updated in Step 3
         const orderSql = "INSERT INTO fb_orders (client_id, employee_id, order_type, delivery_location, table_id, status, items_total, service_charge_amount, vat_amount, total_amount) VALUES (?, ?, ?, ?, ?, 'pending', 0, 0, 0, 0)";
         
+        // UPDATED: Use client_id || null, fixed delivery_location variable name
         const [orderResult] = await connection.query(orderSql, [
             client_id || null, 
             employee_id, 
@@ -53,8 +58,9 @@ export const createPosOrder = async (req, res) => {
             delivery_location, 
             table_id || null
         ]); 
-        order_id = orderResult.insertId;
+        order_id = orderResult.insertId; // Assign to the outer variable
 
+        // --- NEW LOGIC: Set Table to Occupied ---
         if (table_id) {
             await connection.query(
                 "UPDATE fb_tables SET status = 'Occupied' WHERE table_id = ?", 
@@ -66,6 +72,7 @@ export const createPosOrder = async (req, res) => {
         let calculatedItemsTotal = 0; 
 
         for (const item of items) {
+            // 1. Fetch the item's price AND promo details
             const [rows] = await connection.query(
                 `SELECT 
                     mi.price, 
@@ -79,11 +86,12 @@ export const createPosOrder = async (req, res) => {
                 [item.item_id]
             );
 
-            if (rows.length === 0) continue;
+            if (rows.length === 0) continue; // Skip if item not found
 
             const dbItem = rows[0];
-            let actualPrice = parseFloat(dbItem.price);
+            let actualPrice = parseFloat(dbItem.price); // Start with the original price
 
+            // 2. Check if the promo is active and valid
             if (dbItem.discount_percentage && dbItem.is_active) {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
@@ -97,20 +105,23 @@ export const createPosOrder = async (req, res) => {
                 }
             }
             
+            // 3. Use the new 'actualPrice' for all calculations
             const subtotal = actualPrice * item.quantity;
             calculatedItemsTotal += subtotal;
    
             const itemInstructions = item.instructions || instructions || '';
             
+            // UPDATED: Insert 'actualPrice' into 'price_on_purchase'
             const detailSql = "INSERT INTO fb_order_details (order_id, item_id, quantity, price_on_purchase, subtotal, instructions) VALUES (?, ?, ?, ?, ?, ?)";
             await connection.query(detailSql, [order_id, item.item_id, item.quantity, actualPrice, subtotal, itemInstructions]);
         }
 
+        // Calculate service charge and VAT
         const calculatedServiceCharge = calculatedItemsTotal * SERVICE_RATE;
         const calculatedVatAmount = (calculatedItemsTotal + calculatedServiceCharge) * VAT_RATE; 
         const calculatedTotalAmount = calculatedItemsTotal + calculatedServiceCharge + calculatedVatAmount;
 
-        // Step 3.1: Update order with calculated totals (Legacy Support)
+        // Step 3.1: Update order with calculated totals
         await connection.query(
             `UPDATE fb_orders 
              SET items_total = ?, service_charge_amount = ?, vat_amount = ?, total_amount = ? 
@@ -118,9 +129,13 @@ export const createPosOrder = async (req, res) => {
             [calculatedItemsTotal, calculatedServiceCharge, calculatedVatAmount, calculatedTotalAmount, order_id]
         );
         
+        // Step 4: Deduct stock
         await adjustStock(items, 'deduct', connection);
+        
+        // Step 5: Log the stock deduction
         await logOrderStockChange(order_id, items, 'ORDER_DEDUCT', connection);
 
+        // Step 6: Record payment
         if (payment_method !== 'Pay Later') {
             const paymentSql =
                 "INSERT INTO fb_payments (order_id, payment_method, amount, change_amount, payment_status) VALUES (?, ?, ?, ?, 'paid')";
@@ -131,11 +146,13 @@ export const createPosOrder = async (req, res) => {
                 change_amount || 0
             ]);
         } else {
+             // Optional: Log that this is a Pay Later order
              console.log(`Order ${order_id} created as Pay Later (Unpaid)`);
         }
 
         await connection.commit();
 
+         // ✅ NEW: Emit real-time notification
         emitOrderUpdate(req, 'new-order', {
             order_id,
             order_type,
@@ -277,6 +294,7 @@ export const createOrder = async (req, res) => {
             order_id
         ]);
 
+        // 🔥 FIX: Fetch customer name for the socket event
         const [clientInfo] = await connection.query(
             "SELECT first_name, last_name FROM tbl_client_users WHERE client_id = ?",
             [client_id]
@@ -286,6 +304,7 @@ export const createOrder = async (req, res) => {
 
         await connection.commit();
 
+        // ✅ FIX: Send complete order data including customer name
         emitOrderUpdate(req, 'new-order', {
             order_id,
             order_type,
@@ -296,7 +315,7 @@ export const createOrder = async (req, res) => {
             status: 'pending',
             first_name: clientInfo[0]?.first_name || '',
             last_name: clientInfo[0]?.last_name || '',
-            order_date: new Date().toISOString(),
+            order_date: new Date().toISOString(), // ✅ Add timestamp
             timestamp: new Date()
         });
 
@@ -325,25 +344,17 @@ export const createOrder = async (req, res) => {
         connection.release();
     }
 };
-
-// ==============================================================================
-//  UPDATED READ FUNCTIONS: USING THE NEW VIEW (fb_view_orders_live)
-// ==============================================================================
-
 // @desc    Get all orders
 // @route   GET /api/orders
 // @access  Private
 export const getOrders = async (req, res) => {
     try {
-        console.log("🚀 DEBUG: Reading from fb_view_orders_live..."); // <--- ADD THIS LINE
-
         const sql = `
             SELECT 
                 o.*,
-                o.calculated_total_amount as total_amount,
                 c.first_name,
                 c.last_name
-            FROM fb_view_orders_live o 
+            FROM fb_orders o
             LEFT JOIN tbl_client_users c ON o.client_id = c.client_id
             ORDER BY o.order_date DESC
         `;
@@ -365,11 +376,9 @@ export const getOrderById = async (req, res) => {
         const [orders] = await pool.query(
             `SELECT 
                 o.*, 
-                -- ✅ MAPPING: We send the calculated total as 'total_amount'
-                o.calculated_total_amount as total_amount,
                 c.first_name, 
                 c.last_name
-            FROM fb_view_orders_live o
+            FROM fb_orders o
             LEFT JOIN tbl_client_users c ON o.client_id = c.client_id
             WHERE o.order_id = ?`,
             [id]
@@ -381,11 +390,14 @@ export const getOrderById = async (req, res) => {
         
         const order = orders[0];
 
+        // BUG FIX #5: Remove detail_id alias that doesn't match frontend expectations
+        // WHY: Frontend might expect order_detail_id consistently
+        // HOW: Use the actual column name without alias for clarity
         const [items] = await pool.query(
             `SELECT 
                 mi.item_name, 
                 od.quantity, 
-                od.price_on_purchase AS price, 
+                od.price_on_purchase AS price, -- UPDATED: Fetch the frozen price from purchase time
                 od.subtotal,
                 od.instructions,
                 od.order_detail_id
@@ -405,11 +417,10 @@ export const getOrderById = async (req, res) => {
             delivery_location: order.delivery_location,
             first_name: order.first_name,
             last_name: order.last_name,
-            // Send calculated values
-            items_total: order.calculated_items_total || order.legacy_items_total,
-            service_charge_amount: order.calculated_service_charge,
-            vat_amount: order.calculated_vat,
-            total_price: order.total_amount, // The View alias handles this
+            items_total: order.items_total,
+            service_charge_amount: order.service_charge_amount,
+            vat_amount: order.vat_amount,
+            total_price: order.total_amount,
             status: order.status,
             items,
             payment_method: payment.payment_method || "PayMongo",
@@ -439,6 +450,9 @@ export const updateOrderStatus = async (req, res) => {
 
     const validStatuses = ['pending', 'preparing', 'ready', 'served', 'cancelled'];
     if (!validStatuses.includes(newStatus)) {
+        // BUG FIX #6: Release connection before returning
+        // WHY: Prevents connection leak when validation fails
+        // HOW: Release connection in all early return paths
         connection.release();
         return res.status(400).json({ message: `Invalid status: ${status}` });
     }
@@ -446,7 +460,6 @@ export const updateOrderStatus = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // ⚠️ IMPORTANT: Writes/Locks still use the BASE TABLE fb_orders for safety
         const [orders] = await connection.query("SELECT status, client_id FROM fb_orders WHERE order_id = ? FOR UPDATE", [id]);
         if (orders.length === 0) {
             await connection.rollback();
@@ -461,6 +474,7 @@ export const updateOrderStatus = async (req, res) => {
             return res.status(400).json({ message: `Order is already ${newStatus}` });
         }
 
+        // BUSINESS LOGIC: Stock management based on status transitions
         if (newStatus === 'preparing' && currentStatus === 'pending') {
             console.log(`Deducting stock for order ${id}...`);
             const [details] = await connection.query("SELECT item_id, quantity FROM fb_order_details WHERE order_id = ?", [id]);
@@ -471,6 +485,9 @@ export const updateOrderStatus = async (req, res) => {
             console.log(`Ingredient stock deducted and logged for order ${id}`);
 
         } else if (newStatus === 'cancelled') {
+            // BUG FIX #7: Only restore stock if order was preparing/ready AND not paid
+            // WHY: Prevents incorrect stock restoration for already-paid orders
+            // HOW: Check both status and payment status before restoring stock
             if (currentStatus === 'preparing' || currentStatus === 'ready') {
                 const [payments] = await connection.query(
                     "SELECT * FROM fb_payments WHERE order_id = ? AND payment_status = 'paid'", 
@@ -489,6 +506,7 @@ export const updateOrderStatus = async (req, res) => {
             }
         }
 
+        // Update the order status
         const [result] = await connection.query(
             "UPDATE fb_orders SET status = ?, employee_id = ? WHERE order_id = ?", 
             [newStatus, employee_id, id]
@@ -498,10 +516,12 @@ export const updateOrderStatus = async (req, res) => {
             throw new Error("Order not found or status unchanged");
         }
 
+        // Create/Update the notification
         await createOrUpdateNotification(id, client_id, newStatus, connection, req);
 
         await connection.commit();
 
+        // ✅ NEW: Emit status update to all clients
         emitOrderUpdate(req, 'order-status-updated', {
             order_id: parseInt(id),
             status: newStatus,
@@ -530,7 +550,7 @@ export const getKitchenOrders = async (req, res) => {
     try {
         const sql = `
             SELECT o.*, c.first_name, c.last_name
-            FROM fb_view_orders_live o  -- ✅ Reading from View
+            FROM fb_orders o
             LEFT JOIN tbl_client_users c ON o.client_id = c.client_id
             WHERE o.status IN ('pending', 'preparing', 'ready')
             ORDER BY o.order_date ASC
@@ -552,7 +572,7 @@ export const getServedOrders = async (req, res) => {
     try {
         const sql = `
             SELECT o.*, c.first_name, c.last_name
-            FROM fb_view_orders_live o  -- ✅ Reading from View
+            FROM fb_orders o
             LEFT JOIN tbl_client_users c ON o.client_id = c.client_id
             WHERE o.status = 'served'
             ORDER BY o.order_date DESC
@@ -612,6 +632,7 @@ const createOrUpdateNotification = async (order_id, client_id, status, connectio
         `;
         await (connection || pool).query(insertSql, [client_id, order_id, title, message]);
 
+        // ✅ NEW: Emit notification via socket (if req is passed)
         if (req) {
             emitOrderUpdate(req, 'new-notification', {
                 client_id,
@@ -640,10 +661,9 @@ export const getMyOrders = async (req, res) => {
 
         const client_id = req.user.id; 
 
-        // 1. Fetch Orders from VIEW
+        // 1. Fetch Orders
         const [orders] = await pool.query(
-            `SELECT *, calculated_total_amount as total_amount 
-             FROM fb_view_orders_live 
+            `SELECT * FROM fb_orders 
              WHERE client_id = ? 
              ORDER BY order_date DESC`, 
             [client_id]
@@ -673,7 +693,7 @@ export const getMyOrders = async (req, res) => {
         res.json(ordersWithItems);
 
     } catch (error) {
-        console.error("Backend Error:", error);
+        console.error("Backend Error:", error); // Keep only this one for real errors
         res.status(500).json({ message: "Server Error" });
     }
 };
