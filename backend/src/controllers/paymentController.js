@@ -193,6 +193,7 @@ export const createPayMongoPayment = async (req, res) => {
                         cancel_url: `${process.env.FRONTEND_URL}/payment-cancel`,
                         description: `Food & Beverages Order`,
                         show_line_items: true,
+                        send_email_receipt: true,
                         metadata: orderMetadata
                     }
                 }
