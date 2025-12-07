@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Trash2, Clock, Package, CheckCircle, CheckCircle2, Calendar } from 'lucide-react'; // Added Calendar Icon
+import { Trash2, Clock, Package, CheckCircle, CheckCircle2 } from 'lucide-react';
 import InternalNavBar from './components/InternalNavBar';
 import apiClient from '../../utils/apiClient';
 import './KitchenTheme.css'; 
@@ -13,9 +13,17 @@ function KitchenPage() {
   // FILTERS
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterType, setFilterType] = useState('All Types');
-  // Default to today's date (Format: YYYY-MM-DD)
-  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  // DATE FILTER
+  // Helper to get YYYY-MM-DD
+  const getTodayStr = () => new Date().toISOString().split('T')[0];
+  const getYesterdayStr = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  };
 
+  const [filterDate, setFilterDate] = useState(getTodayStr());
   const [servedCount, setServedCount] = useState(0);
 
   const { socket } = useSocket();
@@ -40,7 +48,9 @@ function KitchenPage() {
       ]);
       const ordersList = await kitchenResponse.json();
       const servedList = await servedResponse.json();
-      setServedCount(servedList.length);
+      
+      // Count only strictly served items for the summary card
+      setServedCount(servedList.filter(o => o.status === 'served').length);
 
       const ordersWithDetails = await Promise.all(
         ordersList.map(order => fetchOrderDetails(order.order_id))
@@ -145,16 +155,11 @@ function KitchenPage() {
     }
   };
 
-  // Updated filtering to include Date
   const filteredOrders = kitchenOrders.filter(order => {
-    // 1. Status Filter
     const statusMatch = filterStatus === 'All' || order.status?.toLowerCase() === filterStatus.toLowerCase();
-    
-    // 2. Type Filter
     const typeMatch = filterType === 'All Types' || order.order_type?.toLowerCase() === filterType.toLowerCase();
     
-    // 3. Date Filter
-    // Extract YYYY-MM-DD from the order's ISO string
+    // Date Filter
     const orderDatePart = new Date(order.order_date).toISOString().split('T')[0];
     const dateMatch = orderDatePart === filterDate;
 
@@ -196,7 +201,7 @@ function KitchenPage() {
 
         {/* CLICKABLE SUMMARY CARDS */}
         <div className="summary-grid">
-            {/* Pending Card */}
+            {/* Pending */}
             <div 
                 onClick={() => handleFilterClick('Pending')}
                 className={`summary-box cursor-pointer transition-all duration-200 ${filterStatus === 'Pending' ? 'ring-4 ring-amber-400 scale-105 bg-amber-100' : 'hover:scale-105'}`}
@@ -210,7 +215,7 @@ function KitchenPage() {
                 </div>
             </div>
 
-            {/* Preparing Card */}
+            {/* Preparing */}
             <div 
                 onClick={() => handleFilterClick('Preparing')}
                 className={`summary-box cursor-pointer transition-all duration-200 ${filterStatus === 'Preparing' ? 'ring-4 ring-blue-400 scale-105 bg-blue-100' : 'hover:scale-105'}`}
@@ -224,7 +229,7 @@ function KitchenPage() {
                 </div>
             </div>
 
-            {/* Ready Card */}
+            {/* Ready */}
             <div 
                 onClick={() => handleFilterClick('Ready')}
                 className={`summary-box cursor-pointer transition-all duration-200 ${filterStatus === 'Ready' ? 'ring-4 ring-green-400 scale-105 bg-green-100' : 'hover:scale-105'}`}
@@ -238,7 +243,7 @@ function KitchenPage() {
                 </div>
             </div>
 
-            {/* Served Card */}
+            {/* Served */}
             <div className="summary-box opacity-90">
                 <div>
                     <h3 className="font-bold text-sm uppercase text-gray-700">Served</h3>
@@ -250,11 +255,11 @@ function KitchenPage() {
             </div>
         </div>
 
-        {/* Filters Row */}
-        <div className="filter-container items-end">
+        {/* --- FILTERS ROW --- */}
+        <div className="filter-container flex flex-wrap items-end gap-4 justify-between">
             
-            {/* Filter by Type */}
-            <div className="flex-1">
+            {/* Filter by Type (Left) */}
+            <div className="w-full md:w-auto flex-1 min-w-[200px] max-w-xs">
                 <label className="block text-sm font-bold mb-1 text-[#F9A825]">Filter by Type</label>
                 <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="w-full p-2 rounded border border-gray-300">
                     <option value="All Types">All Types</option>
@@ -265,30 +270,37 @@ function KitchenPage() {
                 </select>
             </div>
 
-            {/* Filter by Date */}
-            <div className="flex-1">
-                <label className="block text-sm font-bold mb-1 text-[#F9A825]">Filter by Date</label>
-                <div className="relative">
-                    <input 
-                        type="date" 
-                        value={filterDate} 
-                        onChange={(e) => setFilterDate(e.target.value)} 
-                        className="w-full p-2 pl-2 rounded border border-gray-300"
-                    />
-                </div>
-            </div>
-            
-            {/* Reset Button */}
-            <div className="flex-1 flex items-center justify-start pb-2">
+            {/* Reset Filter Text (Middle) */}
+            <div className="flex-1 flex items-center justify-center pb-2">
                {filterStatus !== 'All' && (
                  <button 
                     onClick={() => setFilterStatus('All')}
-                    className="text-sm text-gray-500 hover:text-[#F9A825] underline ml-2"
+                    className="text-sm text-gray-500 hover:text-[#F9A825] underline"
                  >
-                    Reset Status Filter
+                    Reset Status Filter ({filterStatus})
                  </button>
                )}
             </div>
+
+            {/* Filter by Date (Right - Buttons Only) */}
+            <div className="w-full md:w-auto flex-shrink-0">
+                <label className="block text-sm font-bold mb-1 text-[#F9A825] text-right">Date View</label>
+                <div className="flex gap-2 justify-end">
+                    <button 
+                        onClick={() => setFilterDate(getYesterdayStr())}
+                        className={`px-4 py-2 rounded font-bold text-sm transition-colors ${filterDate === getYesterdayStr() ? 'bg-[#F9A825] text-white' : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'}`}
+                    >
+                        Yesterday
+                    </button>
+                    <button 
+                        onClick={() => setFilterDate(getTodayStr())}
+                        className={`px-4 py-2 rounded font-bold text-sm transition-colors ${filterDate === getTodayStr() ? 'bg-[#F9A825] text-white' : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'}`}
+                    >
+                        Today
+                    </button>
+                </div>
+            </div>
+            
         </div>
 
         {loading ? (
@@ -297,11 +309,6 @@ function KitchenPage() {
             <div className="text-center text-gray-400 text-lg py-10 flex flex-col items-center">
                 <p>No orders found for {filterDate}.</p>
                 {filterStatus !== 'All' && <p className="text-sm">Filter: {filterStatus}</p>}
-                
-                {/* Helper hint for user testing */}
-                {new Date(filterDate).toDateString() === new Date().toDateString() && (
-                     <p className="text-xs text-gray-500 mt-2 italic">(Tip: If you are testing with old sample data, try changing the date)</p>
-                )}
             </div>
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -325,11 +332,9 @@ function KitchenPage() {
                                     <p className="font-bold text-sm mb-1">Items:</p>
                                     {order.items?.map((item, idx) => (
                                         <div key={item.order_detail_id || idx} className="mb-2">
-                                            {/* Item Name & Quantity */}
                                             <div className="item-text font-medium">
                                                 {item.quantity} x {item.item_name}
                                             </div>
-                                            
                                             {item.instructions && (
                                                 <div className="text-xs text-red-600 italic ml-4 bg-red-50 px-1 rounded inline-block border border-red-100">
                                                     Note: {item.instructions}
