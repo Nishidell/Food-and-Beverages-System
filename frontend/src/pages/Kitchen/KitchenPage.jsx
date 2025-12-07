@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // 1. Import Navigation
 import toast from 'react-hot-toast';
 import { Trash2, Clock, Package, CheckCircle, CheckCircle2 } from 'lucide-react';
 import InternalNavBar from './components/InternalNavBar';
@@ -10,12 +11,14 @@ function KitchenPage() {
   const [kitchenOrders, setKitchenOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  // 2. Initialize Navigation
+  const navigate = useNavigate();
+
   // FILTERS
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterType, setFilterType] = useState('All Types');
   
   // DATE FILTER
-  // Helper to get YYYY-MM-DD
   const getTodayStr = () => new Date().toISOString().split('T')[0];
   const getYesterdayStr = () => {
     const d = new Date();
@@ -49,7 +52,6 @@ function KitchenPage() {
       const ordersList = await kitchenResponse.json();
       const servedList = await servedResponse.json();
       
-      // Count only strictly served items for the summary card
       setServedCount(servedList.filter(o => o.status === 'served').length);
 
       const ordersWithDetails = await Promise.all(
@@ -243,8 +245,12 @@ function KitchenPage() {
                 </div>
             </div>
 
-            {/* Served */}
-            <div className="summary-box opacity-90">
+            {/* Served - NOW CLICKABLE */}
+            <div 
+                onClick={() => navigate('/kitchen/archive')} 
+                className="summary-box cursor-pointer hover:scale-105 transition-transform duration-200 hover:ring-4 hover:ring-gray-300"
+                title="View Archive"
+            >
                 <div>
                     <h3 className="font-bold text-sm uppercase text-gray-700">Served</h3>
                     <p className="text-3xl font-bold text-gray-900">{servedCount}</p>
