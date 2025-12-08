@@ -218,6 +218,7 @@ function ArchivePage() {
                         <div className="kitchen-card-header flex justify-between items-start">
                             <div>
                                 <h2 className="text-xl font-bold text-[#3C2A21]">#{order.order_id}</h2>
+                                
                                 <p className="text-xs text-gray-600">{new Date(order.order_date).toLocaleString()}</p>
                             </div>
                             {/* STATUS BADGE */}
@@ -238,6 +239,8 @@ function ArchivePage() {
                         <div className="kitchen-card-body overflow-y-auto max-h-48">
                             <p><span className="info-label">Type:</span> {order.order_type}</p>
                             <p><span className="info-label">Loc:</span> {order.delivery_location}</p>
+                            <p><span className="info-label">Name:</span> {order.first_name ? `${order.first_name} ${order.last_name || ''}` : 'Guest'}</p>
+                            
                             <div className="mt-2 border-t pt-2 border-gray-300">
                                 <h3 className="font-bold text-sm">Items:</h3>
                                 {order.items?.map((item, idx) => (
