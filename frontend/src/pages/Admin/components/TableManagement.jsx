@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Edit, Trash2, Users, Plus } from 'lucide-react'; // Added Plus icon
+import { Edit, Trash2, Users, Plus, Filter } from 'lucide-react'; 
 import toast from 'react-hot-toast';
 import apiClient from '../../../utils/apiClient';
 import TableModal from './TableModal';
@@ -10,6 +10,9 @@ const TableManagement = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTable, setEditingTable] = useState(null);
+  
+  // ✅ NEW: Filter State
+  const [filterStatus, setFilterStatus] = useState('All');
 
   const fetchTables = async () => {
     setLoading(true);
@@ -45,21 +48,47 @@ const TableManagement = () => {
     setIsModalOpen(true);
   };
 
+  // ✅ LOGIC: Filter Tables
+  const filteredTables = tables.filter(table => {
+      if (filterStatus === 'All') return true;
+      return table.status?.toLowerCase() === filterStatus.toLowerCase();
+  });
+
   return (
     <div className="w-full">
-      {/* 1. HEADER ROW (Title Left, Button Right) */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 px-6">
+      {/* 1. HEADER ROW */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
         <div>
            <h2 className="admin-page-title mb-1">Table Management</h2>
-           <p className="text-sm text-gray-300">Total Tables: {tables.length}</p>
+           <p className="text-sm text-gray-500">Total Tables: {filteredTables.length}</p>
         </div>
         
-        <button 
-            onClick={openAddModal} 
-            className="admin-btn admin-btn-primary flex items-center gap-2"
-        >
-          <Plus size={20} /> Add New Table
-        </button>
+        <div className="flex gap-4">
+            {/* ✅ NEW: Status Filter Dropdown */}
+            <div className="relative">
+                <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="admin-select-primary appearance-none pr-10" 
+                    style={{ minWidth: '160px' }}
+                >
+                    <option value="All">All Status</option>
+                    <option value="Available">Available</option>
+                    <option value="Occupied">Occupied</option>
+
+                </select>
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-[#3C2A21]">
+                    <Filter size={18} />
+                </div>
+            </div>
+
+            <button 
+                onClick={openAddModal} 
+                className="admin-btn admin-btn-primary flex items-center gap-2"
+            >
+              <Plus size={20} /> Add New Table
+            </button>
+        </div>
       </div>
 
       {/* 2. TABLE CONTAINER */}
@@ -76,10 +105,10 @@ const TableManagement = () => {
           <tbody>
             {loading ? (
                 <tr><td colSpan="4" className="text-center p-8 text-gray-500">Loading tables...</td></tr>
-            ) : tables.length === 0 ? (
+            ) : filteredTables.length === 0 ? (
                 <tr><td colSpan="4" className="text-center p-8 text-gray-500">No tables found.</td></tr>
             ) : (
-                tables.map((table) => (
+                filteredTables.map((table) => (
                   <tr key={table.table_id}>
                     <td className="font-bold text-lg">Table {table.table_number}</td>
                     <td>
