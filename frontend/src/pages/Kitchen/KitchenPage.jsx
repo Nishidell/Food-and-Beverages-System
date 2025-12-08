@@ -11,13 +11,13 @@ function KitchenPage() {
   const [kitchenOrders, setKitchenOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // 2. Initialize Navigation
   const navigate = useNavigate();
 
-  // FILTERS
+  // --- FILTERS & SORTING ---
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterType, setFilterType] = useState('All Types');
-  
+  const [sortBy, setSortBy] = useState('Oldest'); // Default: Oldest First
+
   // --- DATE FILTER STATE ---
   const todayStr = new Date().toISOString().split('T')[0];
   const [startDate, setStartDate] = useState(todayStr);
@@ -38,7 +38,6 @@ function KitchenPage() {
     }
   };
 
-  // Initial Data Load
   const fetchInitialData = async () => {
     setLoading(true);
     try {
@@ -65,7 +64,6 @@ function KitchenPage() {
   useEffect(() => {
     fetchInitialData();
 
-    // --- REAL-TIME LISTENERS ---
     if (socket) {
         socket.on('new-order', async (data) => {
             console.log('🆕 New order received:', data);
@@ -100,20 +98,10 @@ function KitchenPage() {
         });
 
         socket.on('order-status-updated', (data) => {
-            console.log('🔄 Order status updated:', data);
-            
             setKitchenOrders(prev => {
                 const { order_id, status } = data;
-                
                 if (status === 'served' || status === 'cancelled') {
                     if (status === 'served') setServedCount(c => c + 1);
-                    
-                    const orderName = prev.find(o => o.order_id === order_id);
-                    if (orderName) {
-                        toast.success(`Order #${order_id} ${status === 'served' ? 'Served' : 'Cancelled'}`, {
-                            duration: 2000
-                        });
-                    }
                     return prev.filter(o => o.order_id !== order_id);
                 }
                 return prev.map(o => o.order_id === order_id ? { ...o, status } : o);
@@ -135,17 +123,13 @@ function KitchenPage() {
         method: 'PUT',
         body: JSON.stringify({ status: newStatus.toLowerCase() }),
       });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update status');
-      }
+      if (!response.ok) throw new Error('Failed to update status');
     } catch (err) {
       toast.error(err.message);
     }
   };
 
-  // --- FILTERS LOGIC ---
+  // --- HANDLERS ---
   const handleFilterClick = (status) => {
     if (filterStatus === status) {
         setFilterStatus('All');
@@ -154,7 +138,6 @@ function KitchenPage() {
     }
   };
 
-  // --- DATE FILTER HANDLER ---
   const handleQuickFilterChange = (e) => {
     const filter = e.target.value;
     setQuickFilter(filter);
@@ -169,9 +152,10 @@ function KitchenPage() {
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
         startStr = yesterday.toISOString().split('T')[0];
-        setEndDate(startStr); // Ensure end date is also yesterday
+        setEndDate(startStr);
+        setStartDate(startStr);
+        return;
     } else if (filter === 'This Week') {
-        // Calculate Monday of current week
         const day = today.getDay(); 
         const diff = today.getDate() - (day === 0 ? 6 : day - 1);
         const monday = new Date(today.setDate(diff));
@@ -182,25 +166,46 @@ function KitchenPage() {
         startStr = firstDay.toISOString().split('T')[0];
         setEndDate(endStr);
     } else if (filter === 'Custom') {
-        return; // Don't update dates automatically
+        return; 
     }
 
     if (filter !== 'Custom') {
         setStartDate(startStr);
-        // Only update endDate if we haven't already (Yesterday handles its own endDate)
-        if (filter !== 'Yesterday') setEndDate(endStr);
+        setEndDate(endStr);
     }
   };
 
+  // Helper to count total items in an order
+  const getTotalItems = (order) => {
+      return order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
+  };
+
+  // 1. FILTER
   const filteredOrders = kitchenOrders.filter(order => {
     const statusMatch = filterStatus === 'All' || order.status?.toLowerCase() === filterStatus.toLowerCase();
     const typeMatch = filterType === 'All Types' || order.order_type?.toLowerCase() === filterType.toLowerCase();
     
-    // Date Range Check
+    // Date Range Logic
     const orderDatePart = new Date(order.order_date).toISOString().split('T')[0];
     const dateMatch = orderDatePart >= startDate && orderDatePart <= endDate;
 
     return statusMatch && typeMatch && dateMatch;
+  });
+
+  // 2. SORT
+  const sortedOrders = [...filteredOrders].sort((a, b) => {
+      switch (sortBy) {
+          case 'Newest':
+              return new Date(b.order_date) - new Date(a.order_date);
+          case 'Oldest':
+              return new Date(a.order_date) - new Date(b.order_date);
+          case 'Most Items':
+              return getTotalItems(b) - getTotalItems(a);
+          case 'Least Items':
+              return getTotalItems(a) - getTotalItems(b);
+          default:
+              return 0;
+      }
   });
 
   const pendingCount = kitchenOrders.filter(o => o.status?.toLowerCase() === 'pending').length;
@@ -236,72 +241,35 @@ function KitchenPage() {
       <div className="kitchen-container">
         <h1 className="kitchen-title">Kitchen Order Display (Live)</h1>
 
-        {/* CLICKABLE SUMMARY CARDS */}
+        {/* SUMMARY CARDS */}
         <div className="summary-grid">
-            {/* Pending */}
-            <div 
-                onClick={() => handleFilterClick('Pending')}
-                className={`summary-box cursor-pointer transition-all duration-200 ${filterStatus === 'Pending' ? 'ring-4 ring-amber-400 scale-105 bg-amber-100' : 'hover:scale-105'}`}
-            >
-                <div>
-                    <h3 className="font-bold text-sm uppercase text-gray-700">Pending</h3>
-                    <p className="text-3xl font-bold text-gray-900">{pendingCount}</p>
-                </div>
-                <div className={`p-3 rounded-full text-white ${filterStatus === 'Pending' ? 'bg-amber-600' : 'bg-amber-500'}`}>
-                    <Clock size={24}/>
-                </div>
+            <div onClick={() => handleFilterClick('Pending')} className={`summary-box cursor-pointer transition-all duration-200 ${filterStatus === 'Pending' ? 'ring-4 ring-amber-400 scale-105 bg-amber-100' : 'hover:scale-105'}`}>
+                <div><h3 className="font-bold text-sm uppercase text-gray-700">Pending</h3><p className="text-3xl font-bold text-gray-900">{pendingCount}</p></div>
+                <div className={`p-3 rounded-full text-white ${filterStatus === 'Pending' ? 'bg-amber-600' : 'bg-amber-500'}`}><Clock size={24}/></div>
             </div>
-
-            {/* Preparing */}
-            <div 
-                onClick={() => handleFilterClick('Preparing')}
-                className={`summary-box cursor-pointer transition-all duration-200 ${filterStatus === 'Preparing' ? 'ring-4 ring-blue-400 scale-105 bg-blue-100' : 'hover:scale-105'}`}
-            >
-                <div>
-                    <h3 className="font-bold text-sm uppercase text-gray-700">Preparing</h3>
-                    <p className="text-3xl font-bold text-gray-900">{preparingCount}</p>
-                </div>
-                <div className={`p-3 rounded-full text-white ${filterStatus === 'Preparing' ? 'bg-blue-600' : 'bg-blue-500'}`}>
-                    <Package size={24}/>
-                </div>
+            <div onClick={() => handleFilterClick('Preparing')} className={`summary-box cursor-pointer transition-all duration-200 ${filterStatus === 'Preparing' ? 'ring-4 ring-blue-400 scale-105 bg-blue-100' : 'hover:scale-105'}`}>
+                <div><h3 className="font-bold text-sm uppercase text-gray-700">Preparing</h3><p className="text-3xl font-bold text-gray-900">{preparingCount}</p></div>
+                <div className={`p-3 rounded-full text-white ${filterStatus === 'Preparing' ? 'bg-blue-600' : 'bg-blue-500'}`}><Package size={24}/></div>
             </div>
-
-            {/* Ready */}
-            <div 
-                onClick={() => handleFilterClick('Ready')}
-                className={`summary-box cursor-pointer transition-all duration-200 ${filterStatus === 'Ready' ? 'ring-4 ring-green-400 scale-105 bg-green-100' : 'hover:scale-105'}`}
-            >
-                <div>
-                    <h3 className="font-bold text-sm uppercase text-gray-700">Ready</h3>
-                    <p className="text-3xl font-bold text-gray-900">{readyCount}</p>
-                </div>
-                <div className={`p-3 rounded-full text-white ${filterStatus === 'Ready' ? 'bg-green-600' : 'bg-green-500'}`}>
-                    <CheckCircle size={24}/>
-                </div>
+            <div onClick={() => handleFilterClick('Ready')} className={`summary-box cursor-pointer transition-all duration-200 ${filterStatus === 'Ready' ? 'ring-4 ring-green-400 scale-105 bg-green-100' : 'hover:scale-105'}`}>
+                <div><h3 className="font-bold text-sm uppercase text-gray-700">Ready</h3><p className="text-3xl font-bold text-gray-900">{readyCount}</p></div>
+                <div className={`p-3 rounded-full text-white ${filterStatus === 'Ready' ? 'bg-green-600' : 'bg-green-500'}`}><CheckCircle size={24}/></div>
             </div>
-
-            {/* Served - NOW CLICKABLE */}
             <div 
                 onClick={() => navigate('/kitchen/archive')} 
                 className="summary-box cursor-pointer hover:scale-105 transition-transform duration-200 hover:ring-4 hover:ring-gray-300"
-                title="View Archive"
             >
-                <div>
-                    <h3 className="font-bold text-sm uppercase text-gray-700">Served</h3>
-                    <p className="text-3xl font-bold text-gray-900">{servedCount}</p>
-                </div>
-                <div className="p-3 rounded-full bg-gray-500 text-white">
-                    <CheckCircle2 size={24}/>
-                </div>
+                <div><h3 className="font-bold text-sm uppercase text-gray-700">Served</h3><p className="text-3xl font-bold text-gray-900">{servedCount}</p></div>
+                <div className="p-3 rounded-full bg-gray-500 text-white"><CheckCircle2 size={24}/></div>
             </div>
         </div>
 
-        {/* --- FILTERS ROW --- */}
+        {/* FILTERS ROW */}
         <div className="filter-container flex flex-wrap items-end gap-4 justify-between bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
             
-            {/* Filter by Type (Left) */}
-            <div className="w-full md:w-auto flex-1 min-w-[200px] max-w-xs">
-                <label className="block text-sm font-bold mb-1 text-[#F9A825]">Filter by Type</label>
+            {/* 1. Filter by Type */}
+            <div className="w-full md:w-auto flex-1 min-w-[150px] max-w-xs">
+                <label className="block text-sm font-bold mb-1 text-gray-700">Filter by Type</label>
                 <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="w-full p-2 rounded border border-gray-300 bg-white">
                     <option value="All Types">All Types</option>
                     <option value="Dine-in">Dine-in</option>
@@ -311,26 +279,33 @@ function KitchenPage() {
                 </select>
             </div>
 
-            {/* Reset Filter Text (Middle) */}
+            {/* 2. Sort Orders (NEW) */}
+            <div className="w-full md:w-auto flex-1 min-w-[150px] max-w-xs">
+                <label className="block text-sm font-bold mb-1 text-gray-700">Sort Orders</label>
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-full p-2 rounded border border-gray-300 bg-white">
+                    <option value="Oldest">Oldest First (Default)</option>
+                    <option value="Newest">Newest First</option>
+                    <option value="Most Items">Most Items First</option>
+                    <option value="Least Items">Least Items First</option>
+                </select>
+            </div>
+
+            {/* 3. Reset Filter Link */}
             <div className="flex-1 flex items-center justify-center pb-2">
                {filterStatus !== 'All' && (
-                 <button 
-                    onClick={() => setFilterStatus('All')}
-                    className="text-sm text-gray-500 hover:text-[#F9A825] underline"
-                 >
+                 <button onClick={() => setFilterStatus('All')} className="text-sm text-gray-500 hover:text-[#F9A825] underline">
                     Reset Status Filter ({filterStatus})
                  </button>
                )}
             </div>
 
-            {/* --- DATE FILTER DROPDOWN (Right) --- */}
+            {/* 4. Date Filter (Dropdown + Custom) */}
             <div className="w-full md:w-auto flex-shrink-0 flex flex-col items-end gap-2">
                 <div className="flex items-center gap-2">
                     <Calendar size={18} className="text-gray-500"/>
                     <label className="block text-sm font-bold text-[#F9A825]">Date Period</label>
                 </div>
                 <div className="flex gap-2 items-center flex-wrap justify-end">
-                    {/* The Dropdown */}
                     <select 
                         value={quickFilter} 
                         onChange={handleQuickFilterChange} 
@@ -343,7 +318,6 @@ function KitchenPage() {
                         <option value="Custom">Custom Range</option>
                     </select>
 
-                    {/* Conditional Custom Date Inputs */}
                     {quickFilter === 'Custom' && (
                         <div className="flex gap-2 animate-fadeIn">
                             <input 
@@ -365,19 +339,18 @@ function KitchenPage() {
                     )}
                 </div>
             </div>
-            
         </div>
 
         {loading ? (
             <div className="text-center text-white text-xl py-10">Loading active orders...</div>
-        ) : filteredOrders.length === 0 ? (
+        ) : sortedOrders.length === 0 ? (
             <div className="text-center text-gray-400 text-lg py-10 flex flex-col items-center">
                 <p>No orders found for {startDate === endDate ? startDate : `${startDate} to ${endDate}`}.</p>
                 {filterStatus !== 'All' && <p className="text-sm">Filter: {filterStatus}</p>}
             </div>
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredOrders.map(order => {
+                {sortedOrders.map(order => {
                     return (
                         <div key={order.order_id} className="kitchen-card">
                             <div className="kitchen-card-header relative">
