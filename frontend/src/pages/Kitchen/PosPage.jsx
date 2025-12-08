@@ -13,7 +13,7 @@ import { Search } from 'lucide-react';
 function PosPage() {
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [tables, setTables] = useState([]); // ✅ 1. State for tables
+  const [tables, setTables] = useState([]); 
   const [error, setError] = useState(null);
   const [cartItems, setCartItems] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(0);
@@ -21,15 +21,14 @@ function PosPage() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [sortOption, setSortOption] = useState('a-z'); 
   
-  // POS-specific state
-  // We utilize this local state for Customer Name
+  // POS State
   const [deliveryLocation, setDeliveryLocation] = useState(''); 
-  const [instructions, setInstructions] = useState('');
+  // REMOVED: const [instructions, setInstructions] = useState(''); // <-- General instructions gone
   
   // Payment & Mode State
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [pendingOrderData, setPendingOrderData] = useState(null); // Store Cart Data for Modal
+  const [pendingOrderData, setPendingOrderData] = useState(null); 
 
   const { user, token } = useAuth();
 
@@ -41,19 +40,17 @@ function PosPage() {
     marginTop: '32px',
   };
   
-  // ✅ 2. UPDATED FETCH: Now includes Tables
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [itemsResponse, categoriesResponse, tablesResponse] = await Promise.all([
           apiClient('/items'),
           apiClient('/categories'),
-          apiClient('/tables') // Fetch tables
+          apiClient('/tables')
         ]);
 
         if (!itemsResponse.ok) throw new Error('Failed to fetch menu items.');
         if (!categoriesResponse.ok) throw new Error('Failed to fetch categories.');
-        // tablesResponse might fail if route doesn't exist, handle gracefully if needed
         
         const itemsData = await itemsResponse.json();
         const categoriesData = await categoriesResponse.json();
@@ -61,8 +58,6 @@ function PosPage() {
 
         setItems(itemsData);
         setCategories(categoriesData);
-        
-        // Filter tables (Show ALL for now to debug, then restrict to 'Available' later)
         setTables(tablesData); 
 
       } catch (err) {
@@ -87,7 +82,8 @@ function PosPage() {
             : item
         );
       }
-      return [...prevItems, { ...clickedItem, quantity: 1 }];
+      // Initialize new items with empty instructions string
+      return [...prevItems, { ...clickedItem, quantity: 1, instructions: '' }];
     });
   };
 
@@ -107,16 +103,22 @@ function PosPage() {
     }
   };
 
-  // --- 3. HANDLE OPEN PAYMENT (Updated) ---
-  // Receives the entire orderMeta object from PosCart
+  // ✅ NEW HANDLER: Update instructions for a specific item
+  const handleUpdateItemInstructions = (itemId, newInstructions) => {
+    setCartItems(prevItems =>
+      prevItems.map(item =>
+        item.item_id === itemId ? { ...item, instructions: newInstructions } : item
+      )
+    );
+  };
+
+  // --- 3. HANDLE OPEN PAYMENT ---
   const handleOpenPaymentModal = (orderMeta) => {
     if (cartItems.length === 0) {
       toast.error("Please add items to the cart.");
       return;
     }
     
-    // If Walk-in (Take-out), name is required. If For Here, Table is required.
-    // Basic check:
     if (!orderMeta.customerName && orderMeta.serviceMode === 'Take Out') {
          toast.error("Please enter a customer name.");
          return;
@@ -126,32 +128,30 @@ function PosPage() {
     setIsPaymentModalOpen(true);
   };
 
-  // --- 4. SUBMIT TO BACKEND (Updated) ---
+  // --- 4. SUBMIT TO BACKEND ---
   const handleConfirmCashOrder = async (paymentDetails) => {
     setIsPlacingOrder(true);
     toast.loading('Submitting order...');
     
-    // Construct Payload
     const orderData = {
       staff_id: user.id, 
       order_type: 'Walk-in',
-      
-      // Data from Cart (via pendingOrderData)
       customer_name: pendingOrderData.customerName || 'Guest',
-      
-      // Logic: If table selected, use that. Else use "Counter (Mode)"
       delivery_location: pendingOrderData.tableNumber 
         ? `Table ${pendingOrderData.tableNumber}` 
         : `Counter (${pendingOrderData.serviceMode})`,
       
       table_id: pendingOrderData.tableId || null,
 
-      instructions: instructions,
+      // REMOVED: instructions: instructions, (General instructions gone)
+      
       payment_method: "Cash",
+      // The backend already knows how to read 'instructions' inside the items array
       items: cartItems.map(item => ({
         item_id: item.item_id,
         quantity: item.quantity,
         price: item.price,
+        instructions: item.instructions // Pass per-item instructions
       })),
       amount_tendered: paymentDetails.amount_tendered,
       change_amount: paymentDetails.change_amount,
@@ -172,7 +172,7 @@ function PosPage() {
       // Reset
       setIsPaymentModalOpen(false);
       setCartItems([]);
-      setInstructions('');
+      // setInstructions(''); // No longer needed
       setDeliveryLocation(''); 
       setPendingOrderData(null);
 
@@ -245,12 +245,12 @@ function PosPage() {
         <aside className="w-96 border-l border-gray-200 overflow-y-auto h-full">
           <PosCart
             cartItems={cartItems}
-            availableTables={tables} // ✅ 5. Pass tables prop
+            availableTables={tables}
             onUpdateQuantity={handleUpdateQuantity}
             onPlaceOrder={handleOpenPaymentModal}
-            instructions={instructions}
-            setInstructions={setInstructions}
+            // Removed general instructions props
             onRemoveItem={handleRemoveItem}
+            onUpdateItemInstructions={handleUpdateItemInstructions} // ✅ Pass new handler
             deliveryLocation={deliveryLocation} 
             setDeliveryLocation={setDeliveryLocation}
           />
@@ -260,7 +260,7 @@ function PosPage() {
       <PosPaymentModal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
-        totalDue={pendingOrderData?.totalAmount || 0} // ✅ Use stored total
+        totalDue={pendingOrderData?.totalAmount || 0}
         onConfirmPayment={handleConfirmCashOrder}
       />
 
