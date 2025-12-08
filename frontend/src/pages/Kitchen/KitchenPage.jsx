@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; 
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Trash2, Clock, Package, CheckCircle, CheckCircle2, Calendar } from 'lucide-react';
 import InternalNavBar from './components/InternalNavBar';
@@ -16,10 +16,16 @@ function KitchenPage() {
   // --- FILTERS & SORTING ---
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterType, setFilterType] = useState('All Types');
-  const [sortBy, setSortBy] = useState('Oldest'); // Default: Oldest First
+  const [sortBy, setSortBy] = useState('Oldest');
 
   // --- DATE FILTER STATE ---
-  const todayStr = new Date().toISOString().split('T')[0];
+  // ✅ FIX 1: Get Local Date String (YYYY-MM-DD) instead of UTC
+  const getLocalTodayStr = () => {
+      const now = new Date();
+      return now.toLocaleDateString('en-CA'); // Returns "2025-12-08" in local time
+  };
+
+  const todayStr = getLocalTodayStr();
   const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate] = useState(todayStr);
   const [quickFilter, setQuickFilter] = useState('Today'); 
@@ -27,6 +33,26 @@ function KitchenPage() {
   const [servedCount, setServedCount] = useState(0);
 
   const { socket } = useSocket();
+
+  // 🌍 TIMEZONE FIXER (For Display)
+  // This helps render the time correctly (e.g. 2:00 PM)
+  const fixDate = (dateInput) => {
+      if (!dateInput) return new Date();
+      const dateStr = typeof dateInput === 'string' ? dateInput : new Date(dateInput).toISOString();
+      if (dateStr.includes(' ') && !dateStr.includes('T')) {
+          return new Date(dateStr.replace(' ', 'T') + 'Z');
+      }
+      if (dateStr.includes('T') && !dateStr.endsWith('Z') && !dateStr.includes('+')) {
+          return new Date(dateStr + 'Z');
+      }
+      return new Date(dateStr);
+  };
+
+  // 📅 LOCAL DATE HELPER (For Filtering)
+  // Extracts "2025-12-08" from a date object based on LOCAL time, not UTC
+  const getLocalDatePart = (dateObj) => {
+      return new Date(dateObj).toLocaleDateString('en-CA');
+  };
 
   const fetchOrderDetails = async (orderId) => {
     try {
@@ -129,6 +155,27 @@ function KitchenPage() {
     }
   };
 
+  // --- HELPERS (Updated to use Local Time) ---
+  const getStartOfWeek = (date) => {
+    const d = new Date(date);
+    const day = d.getDay(); // 0 is Sunday, 1 is Monday
+    // Calculate difference to get to Monday (if day is Sunday (0), go back 6 days)
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
+    const monday = new Date(d.setDate(diff));
+    return monday.toLocaleDateString('en-CA');
+  };
+
+  const getStartOfMonth = (date) => {
+    const d = new Date(date);
+    // Create new date for 1st of month
+    const firstDay = new Date(d.getFullYear(), d.getMonth(), 1);
+    return firstDay.toLocaleDateString('en-CA');
+  };
+
+  const getTotalItems = (order) => {
+      return order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
+  };
+
   // --- HANDLERS ---
   const handleFilterClick = (status) => {
     if (filterStatus === status) {
@@ -143,7 +190,8 @@ function KitchenPage() {
     setQuickFilter(filter);
 
     const today = new Date();
-    const endStr = today.toISOString().split('T')[0];
+    // Use local time string for Today
+    const endStr = today.toLocaleDateString('en-CA'); 
     let startStr = endStr;
 
     if (filter === 'Today') {
@@ -151,19 +199,15 @@ function KitchenPage() {
     } else if (filter === 'Yesterday') {
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
-        startStr = yesterday.toISOString().split('T')[0];
+        startStr = yesterday.toLocaleDateString('en-CA');
         setEndDate(startStr);
         setStartDate(startStr);
         return;
     } else if (filter === 'This Week') {
-        const day = today.getDay(); 
-        const diff = today.getDate() - (day === 0 ? 6 : day - 1);
-        const monday = new Date(today.setDate(diff));
-        startStr = monday.toISOString().split('T')[0];
+        startStr = getStartOfWeek(today);
         setEndDate(endStr);
     } else if (filter === 'This Month') {
-        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-        startStr = firstDay.toISOString().split('T')[0];
+        startStr = getStartOfMonth(today);
         setEndDate(endStr);
     } else if (filter === 'Custom') {
         return; 
@@ -175,24 +219,24 @@ function KitchenPage() {
     }
   };
 
-  // Helper to count total items in an order
-  const getTotalItems = (order) => {
-      return order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
-  };
-
-  // 1. FILTER
+  // 1. FILTER LOGIC
   const filteredOrders = kitchenOrders.filter(order => {
     const statusMatch = filterStatus === 'All' || order.status?.toLowerCase() === filterStatus.toLowerCase();
     const typeMatch = filterType === 'All Types' || order.order_type?.toLowerCase() === filterType.toLowerCase();
     
-    // Date Range Logic
-    const orderDatePart = new Date(order.order_date).toISOString().split('T')[0];
+    // ✅ FIX 2: Compare LOCAL dates, not UTC ISO strings
+    // Convert order date (which might be UTC or Local from DB) to a proper Date object first
+    const orderDateObj = fixDate(order.order_date);
+    // Then extract the Local YYYY-MM-DD part
+    const orderDatePart = getLocalDatePart(orderDateObj);
+    
+    // String comparison works safely for YYYY-MM-DD
     const dateMatch = orderDatePart >= startDate && orderDatePart <= endDate;
 
     return statusMatch && typeMatch && dateMatch;
   });
 
-  // 2. SORT
+  // 2. SORT LOGIC
   const sortedOrders = [...filteredOrders].sort((a, b) => {
       switch (sortBy) {
           case 'Newest':
@@ -223,8 +267,7 @@ function KitchenPage() {
 
   const formatOrderTime = (dateString) => {
     try {
-      const date = new Date(dateString);
-      return date.toLocaleTimeString('en-US', {
+      return fixDate(dateString).toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true
@@ -258,6 +301,7 @@ function KitchenPage() {
             <div 
                 onClick={() => navigate('/kitchen/archive')} 
                 className="summary-box cursor-pointer hover:scale-105 transition-transform duration-200 hover:ring-4 hover:ring-gray-300"
+                title="View Archive"
             >
                 <div><h3 className="font-bold text-sm uppercase text-gray-700">Served</h3><p className="text-3xl font-bold text-gray-900">{servedCount}</p></div>
                 <div className="p-3 rounded-full bg-gray-500 text-white"><CheckCircle2 size={24}/></div>
@@ -279,7 +323,7 @@ function KitchenPage() {
                 </select>
             </div>
 
-            {/* 2. Sort Orders (NEW) */}
+            {/* 2. Sort Orders */}
             <div className="w-full md:w-auto flex-1 min-w-[150px] max-w-xs">
                 <label className="block text-sm font-bold mb-1 text-gray-700">Sort Orders</label>
                 <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-full p-2 rounded border border-gray-300 bg-white">
@@ -299,7 +343,7 @@ function KitchenPage() {
                )}
             </div>
 
-            {/* 4. Date Filter (Dropdown + Custom) */}
+            {/* 4. Date Filter */}
             <div className="w-full md:w-auto flex-shrink-0 flex flex-col items-end gap-2">
                 <div className="flex items-center gap-2">
                     <Calendar size={18} className="text-gray-500"/>
@@ -358,13 +402,13 @@ function KitchenPage() {
                                     {order.status}
                                 </span>
                                 <h2 className="text-xl font-bold text-gray-800">#{order.order_id}</h2>
+                                <p className="text-sm font-bold text-gray-700">{order.first_name ? `${order.first_name} ${order.last_name || ''}` : 'Guest'}</p>
                                 <p className="text-sm text-gray-500">{formatOrderTime(order.order_date)}</p>
                             </div>
                             
                             <div className="kitchen-card-body">
                                 <p><span className="info-label">Type:</span> {order.order_type}</p>
                                 <p><span className="info-label">Loc:</span> {order.delivery_location}</p>
-                                <p><span className="info-label">Name:</span> {order.first_name} {order.last_name}</p>
                                 
                                 <div className="mt-2 border-t pt-2">
                                     <p className="font-bold text-sm mb-1">Items:</p>
