@@ -188,3 +188,81 @@
 .animate-fadeIn {
   animation: fadeIn 0.3s ease-out forwards;
 }
+
+/* --- PRINT STYLES (Landscape & Centered) --- */
+@media print {
+  /* 1. Page Setup */
+  @page {
+    size: landscape;
+    margin: 0; /* Reset browser margins so we can control them */
+  }
+
+  /* 2. Global Reset */
+  body, html {
+    visibility: hidden;
+    background-color: white !important;
+    color: black !important;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible !important;
+  }
+
+  /* 3. The Target Container (Centered Grid) */
+  #printable-dashboard {
+    visibility: visible;
+    position: absolute;
+    
+    /* Positioning */
+    top: 15mm; /* Give it some headroom */
+    left: 0;
+    width: 110%; /* Span full paper width */
+    
+    /* Layout */
+    display: grid !important;
+    grid-template-columns: 1.25fr 1.2fr !important; /* 2 Columns */
+    gap: 1rem !important;
+    padding: 0 1rem !important; /* Internal breathing room */
+    
+    /* SCALING & CENTERING MAGIC */
+    transform: scale(0.82); /* Shrink slightly to fit margins */
+    transform-origin: top center; /* Shrink towards the middle, not the left */
+  }
+
+  /* 4. Print Header (If you added one in JSX) */
+  /* This ensures the title creates space before the grid starts */
+  #printable-dashboard::before {
+    content: "Analytics Report"; /* Fallback title if JSX header is hidden */
+    display: block;
+    width: 100%;
+    text-align: center;
+    font-size: 24pt;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    grid-column: 1 / -1; /* Span across both columns */
+  }
+
+  /* 5. Card Styling */
+  .admin-card {
+    background-color: white !important;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    padding: 1rem !important;
+    break-inside: avoid;
+    width: 100% !important; /* Fill the grid cell */
+  }
+
+  /* 6. Hide UI Elements */
+  .admin-card > div:first-child, /* Card Headers/Buttons */
+  .admin-section-container > div:first-child, /* Main Dashboard Header */
+  nav, header, aside, .no-print {
+    display: none !important;
+  }
+  
+  /* 7. Chart Text Fix */
+  text {
+    fill: black !important;
+    font-size: 12px !important;
+  }
+}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import apiClient from "../../../utils/apiClient";
 import toast from "react-hot-toast";
-import { Filter, Download, FileSpreadsheet } from "lucide-react"; 
+import { Filter, Download, FileSpreadsheet, Printer } from "lucide-react"; // ✅ Added Printer Icon
 import * as XLSX from "xlsx";
 import {
   ResponsiveContainer,
@@ -159,10 +159,9 @@ const AnalyticsDashboard = () => {
   return (
     <div className="w-full">
       
-      {/* --- HEADER ROW (Title Left, Controls Right) --- */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+      {/* HEADER ROW */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 no-print"> {/* Added 'no-print' class */}
         <div>
-            {/* ✅ UPDATED: Use Theme Class */}
             <h2 className="admin-page-title">Analytics Dashboard</h2>
             <p className="text-sm text-gray-300">Overview of sales and performance</p>
         </div>
@@ -185,6 +184,15 @@ const AnalyticsDashboard = () => {
                 </div>
             </div>
 
+            {/* ✅ NEW: Print Button */}
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-transform hover:scale-105 shadow-lg bg-white text-[#3C2A21] hover:bg-gray-100"
+            >
+              <Printer size={20} />
+              Print PDF
+            </button>
+
             <button
               onClick={handleExportAll}
               className="flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-transform hover:scale-105 shadow-lg"
@@ -196,7 +204,8 @@ const AnalyticsDashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* ✅ ID for Print Layout Targeting */}
+      <div id="printable-dashboard" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* CARD 1: Sales Trends */}
         <div className="admin-card bg-[#fff2e0] p-6 rounded-xl shadow-md border border-[#6e1a1a]">
@@ -207,7 +216,7 @@ const AnalyticsDashboard = () => {
                 salesTrendData.map(d => ({ Period: d.name, 'Total Sales (PHP)': d.sales, 'Total Orders': d.orders })), 
                 'Sales_Trends_Report'
               )}
-              className="text-[#3C2A21] hover:text-[#F9A825] transition-colors"
+              className="text-[#3C2A21] hover:text-[#F9A825] transition-colors no-print"
             >
               <Download size={20} />
             </button>
@@ -233,12 +242,11 @@ const AnalyticsDashboard = () => {
                 orderTypeData.map(d => ({ 'Order Type': d.name, 'Order Count': d.value, 'Total Revenue': Number(d.revenue) })), 
                 'Order_Type_Report'
               )}
-              className="text-[#3C2A21] hover:text-[#F9A825] transition-colors"
+              className="text-[#3C2A21] hover:text-[#F9A825] transition-colors no-print"
             >
               <Download size={20} />
             </button>
           </div>
-          
           <div className="flex-1 flex items-center justify-center">
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
@@ -252,10 +260,6 @@ const AnalyticsDashboard = () => {
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="mt-4 p-4 rounded-lg text-center" style={{ backgroundColor: '#3C2A21', color: '#F9A825' }}>
-            <span className="text-2xl font-bold block">{data.peakHour}</span>
-            <span className="text-sm opacity-90 text-white">Peak Hours</span>
-          </div>
         </div>
 
         {/* CARD 3: Top Selling Items */}
@@ -267,12 +271,11 @@ const AnalyticsDashboard = () => {
                 topItemsData.map((d, index) => ({ Rank: index + 1, 'Item Name': d.name, 'Quantity Sold': d.sold, 'Total Sales (PHP)': d.sales })), 
                 'Top_Selling_Items_Report'
               )}
-              className="text-[#3C2A21] hover:text-[#F9A825] transition-colors"
+              className="text-[#3C2A21] hover:text-[#F9A825] transition-colors no-print"
             >
               <Download size={20} />
             </button>
           </div>
-
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={topItemsData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#D1C0B6" />
@@ -293,17 +296,12 @@ const AnalyticsDashboard = () => {
                 paymentMethodData.map(d => ({ 'Payment Method': d.name, 'Transactions': d.count, 'Total Value (PHP)': d.value })), 
                 'Payment_Methods_Report'
               )}
-              className="text-[#3C2A21] hover:text-[#F9A825] transition-colors"
+              className="text-[#3C2A21] hover:text-[#F9A825] transition-colors no-print"
             >
               <Download size={20} />
             </button>
           </div>
-
-          {paymentMethodData.length === 0 ? (
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              No payment data available.
-            </div>
-          ) : (
+          {(data.paymentMethods && data.paymentMethods.length > 0) ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie data={paymentMethodData} dataKey="value" nameKey="name" outerRadius={100} label>
@@ -315,6 +313,8 @@ const AnalyticsDashboard = () => {
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-500">No payment data available.</div>
           )}
         </div>
       </div>
