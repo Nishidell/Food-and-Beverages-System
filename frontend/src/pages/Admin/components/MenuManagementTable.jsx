@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Pencil, Trash2, Plus, Filter } from 'lucide-react';
+import { Pencil, Trash2, Plus, Filter, FolderCog } from 'lucide-react'; // Changed icon to FolderCog
 import { useAuth } from '../../../context/AuthContext';
 import apiClient from '../../../utils/apiClient';
 import '../AdminTheme.css';
 import AddItemModal from './AddItemModal';
+import ManageCategoriesModal from './ManageCategoriesModal'; // ✅ Updated Import
 
 const MenuManagementTable = () => {
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState('All');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Modal States
+  const [isItemModalOpen, setIsItemModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  
   const { token } = useAuth();
 
   const fetchData = async () => {
@@ -54,14 +59,14 @@ const MenuManagementTable = () => {
       }
       if (!res.ok) throw new Error('Failed to save item');
       toast.success(editingItem ? 'Item updated!' : 'Item created!');
-      setIsModalOpen(false);
+      setIsItemModalOpen(false);
       setEditingItem(null);
       fetchData();
     } catch (error) { toast.error(error.message); }
   };
 
-  const openAddModal = () => { setEditingItem(null); setIsModalOpen(true); };
-  const openEditModal = (item) => { setEditingItem(item); setIsModalOpen(true); };
+  const openAddItemModal = () => { setEditingItem(null); setIsItemModalOpen(true); };
+  const openEditItemModal = (item) => { setEditingItem(item); setIsItemModalOpen(true); };
 
   const filteredItems = items.filter(item => filterCategory === 'All' || item.category_id == filterCategory);
 
@@ -72,8 +77,7 @@ const MenuManagementTable = () => {
       {/* HEADER & CONTROLS */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
         <div>
-            {/* ✅ UPDATED: Use Theme Class */}
-            <h2 className="admin-page-title">Menu Management</h2>
+            <h2 className="admin-page-title mb-1">Menu Management</h2>
             <p className="text-sm text-gray-300">Total Items: {filteredItems.length}</p>
         </div>
 
@@ -83,8 +87,8 @@ const MenuManagementTable = () => {
                 <select
                     value={filterCategory}
                     onChange={(e) => setFilterCategory(e.target.value)}
-                    className="appearance-none px-4 py-3 pr-10 rounded-lg font-bold shadow-lg outline-none cursor-pointer hover:scale-105 transition-transform"
-                    style={{ backgroundColor: '#F9A825', color: '#3C2A21', border: 'none' }}
+                    className="admin-select-primary appearance-none pr-10" 
+                    style={{ minWidth: '180px' }}
                 >
                     <option value="All">All Categories</option>
                     {categories.map(cat => (
@@ -96,11 +100,18 @@ const MenuManagementTable = () => {
                 </div>
             </div>
 
-            {/* Add Button */}
+            {/* ✅ UPDATED: Manage Categories Button */}
             <button 
-                onClick={openAddModal} 
-                className="flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-transform hover:scale-105 shadow-lg"
-                style={{ backgroundColor: '#F9A825', color: '#3C2A21' }}
+                onClick={() => setIsCategoryModalOpen(true)} 
+                className="admin-btn bg-white text-[#3C2A21] hover:bg-gray-100 shadow-lg"
+            >
+                <FolderCog size={20} /> Manage Categories
+            </button>
+
+            {/* Add Item Button */}
+            <button 
+                onClick={openAddItemModal} 
+                className="admin-btn admin-btn-primary"
             >
                 <Plus size={20} /> Add Item
             </button>
@@ -140,7 +151,7 @@ const MenuManagementTable = () => {
                 </td>
                 <td>
                   <div className="flex gap-2">
-                    <button onClick={() => openEditModal(item)} className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"><Pencil size={18} /></button>
+                    <button onClick={() => openEditItemModal(item)} className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"><Pencil size={18} /></button>
                     <button onClick={() => handleDelete(item.item_id)} className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"><Trash2 size={18} /></button>
                   </div>
                 </td>
@@ -153,15 +164,22 @@ const MenuManagementTable = () => {
         </table>
       </div>
 
-      {isModalOpen && (
+      {isItemModalOpen && (
         <AddItemModal 
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          isOpen={isItemModalOpen}
+          onClose={() => setIsItemModalOpen(false)}
           onSave={handleSaveItem}
           categories={categories}
           itemToEdit={editingItem}
         />
       )}
+      
+      {/* ✅ New Manager Modal */}
+      <ManageCategoriesModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        onDataChange={fetchData} // Updates the main dropdown when you change things in modal
+      />
     </div>
   );
 };
