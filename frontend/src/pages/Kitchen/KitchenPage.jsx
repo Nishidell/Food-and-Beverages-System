@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Trash2, Clock, Package, CheckCircle, CheckCircle2, Calendar } from 'lucide-react';
+import { Trash2, Clock, Package, CheckCircle, CheckCircle2, Calendar, AlertTriangle, X } from 'lucide-react';
 import InternalNavBar from './components/InternalNavBar';
 import apiClient from '../../utils/apiClient';
 import './KitchenTheme.css'; 
@@ -16,15 +16,10 @@ function KitchenPage() {
   // --- FILTERS & SORTING ---
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterType, setFilterType] = useState('All Types');
-  const [sortBy, setSortBy] = useState('Oldest');
+  const [sortBy, setSortBy] = useState('Oldest'); 
 
   // --- DATE FILTER STATE ---
-  // ✅ FIX 1: Get Local Date String (YYYY-MM-DD) instead of UTC
-  const getLocalTodayStr = () => {
-      const now = new Date();
-      return now.toLocaleDateString('en-CA'); // Returns "2025-12-08" in local time
-  };
-
+  const getLocalTodayStr = () => new Date().toLocaleDateString('en-CA');
   const todayStr = getLocalTodayStr();
   const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate] = useState(todayStr);
@@ -32,27 +27,22 @@ function KitchenPage() {
 
   const [servedCount, setServedCount] = useState(0);
 
+  // --- MODAL STATE (For Cancellation) ---
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [orderIdToCancel, setOrderIdToCancel] = useState(null);
+
   const { socket } = useSocket();
 
-  // 🌍 TIMEZONE FIXER (For Display)
-  // This helps render the time correctly (e.g. 2:00 PM)
+  // --- HELPERS ---
   const fixDate = (dateInput) => {
       if (!dateInput) return new Date();
       const dateStr = typeof dateInput === 'string' ? dateInput : new Date(dateInput).toISOString();
-      if (dateStr.includes(' ') && !dateStr.includes('T')) {
-          return new Date(dateStr.replace(' ', 'T') + 'Z');
-      }
-      if (dateStr.includes('T') && !dateStr.endsWith('Z') && !dateStr.includes('+')) {
-          return new Date(dateStr + 'Z');
-      }
+      if (dateStr.includes(' ') && !dateStr.includes('T')) return new Date(dateStr.replace(' ', 'T') + 'Z');
+      if (dateStr.includes('T') && !dateStr.endsWith('Z') && !dateStr.includes('+')) return new Date(dateStr + 'Z');
       return new Date(dateStr);
   };
 
-  // 📅 LOCAL DATE HELPER (For Filtering)
-  // Extracts "2025-12-08" from a date object based on LOCAL time, not UTC
-  const getLocalDatePart = (dateObj) => {
-      return new Date(dateObj).toLocaleDateString('en-CA');
-  };
+  const getLocalDatePart = (dateObj) => new Date(dateObj).toLocaleDateString('en-CA');
 
   const fetchOrderDetails = async (orderId) => {
     try {
@@ -64,7 +54,6 @@ function KitchenPage() {
     }
   };
 
-  // Initial Data Load
   const fetchInitialData = async () => {
     setLoading(true);
     try {
@@ -75,17 +64,11 @@ function KitchenPage() {
       const ordersList = await kitchenResponse.json();
       const servedList = await servedResponse.json();
       
-      // ✅ UPDATED LOGIC: Count only items served TODAY
-      const todayDate = getLocalTodayStr(); // Get "2025-12-08"
-      
+      const todayDate = getLocalTodayStr();
       const todayServedCount = servedList.filter(o => {
-          // 1. Must be served
           const isServed = o.status === 'served';
-          
-          // 2. Must be from today (using our timezone helpers)
           const orderDatePart = getLocalDatePart(fixDate(o.order_date));
           const isToday = orderDatePart === todayDate;
-          
           return isServed && isToday;
       }).length;
 
@@ -104,7 +87,6 @@ function KitchenPage() {
 
   useEffect(() => {
     fetchInitialData();
-
     if (socket) {
         socket.on('new-order', async (data) => {
             console.log('🆕 New order received:', data);
@@ -131,10 +113,7 @@ function KitchenPage() {
                     if (prev.find(o => o.order_id === fullOrder.order_id)) return prev;
                     return [fullOrder, ...prev]; 
                 });
-                toast.success(`New Order #${data.order_id} Received!`, {
-                    duration: 3000,
-                    position: 'top-right'
-                });
+                toast.success(`New Order #${data.order_id} Received!`, { duration: 3000, position: 'top-right' });
             }
         });
 
@@ -165,105 +144,82 @@ function KitchenPage() {
         body: JSON.stringify({ status: newStatus.toLowerCase() }),
       });
       if (!response.ok) throw new Error('Failed to update status');
+      toast.success(`Order #${orderId} marked as ${newStatus}`);
     } catch (err) {
       toast.error(err.message);
     }
   };
 
-  // --- HELPERS (Updated to use Local Time) ---
+  // --- CANCELLATION HANDLERS ---
+  const handlePromptCancel = (orderId) => {
+      setOrderIdToCancel(orderId);
+      setShowCancelModal(true);
+  };
+
+  const handleConfirmCancel = () => {
+      if (orderIdToCancel) {
+          handleUpdateStatus(orderIdToCancel, 'Cancelled');
+          setShowCancelModal(false);
+          setOrderIdToCancel(null);
+      }
+  };
+
   const getStartOfWeek = (date) => {
     const d = new Date(date);
-    const day = d.getDay(); // 0 is Sunday, 1 is Monday
-    // Calculate difference to get to Monday (if day is Sunday (0), go back 6 days)
+    const day = d.getDay(); 
     const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
-    const monday = new Date(d.setDate(diff));
-    return monday.toLocaleDateString('en-CA');
+    return new Date(d.setDate(diff)).toLocaleDateString('en-CA');
   };
 
   const getStartOfMonth = (date) => {
     const d = new Date(date);
-    // Create new date for 1st of month
-    const firstDay = new Date(d.getFullYear(), d.getMonth(), 1);
-    return firstDay.toLocaleDateString('en-CA');
+    return new Date(d.getFullYear(), d.getMonth(), 1).toLocaleDateString('en-CA');
   };
 
   const getTotalItems = (order) => {
       return order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
   };
 
-  // --- HANDLERS ---
   const handleFilterClick = (status) => {
-    if (filterStatus === status) {
-        setFilterStatus('All');
-    } else {
-        setFilterStatus(status);
-    }
+    if (filterStatus === status) { setFilterStatus('All'); } else { setFilterStatus(status); }
   };
 
   const handleQuickFilterChange = (e) => {
     const filter = e.target.value;
     setQuickFilter(filter);
-
     const today = new Date();
-    // Use local time string for Today
     const endStr = today.toLocaleDateString('en-CA'); 
     let startStr = endStr;
 
-    if (filter === 'Today') {
-        startStr = endStr;
-    } else if (filter === 'Yesterday') {
+    if (filter === 'Today') { startStr = endStr; }
+    else if (filter === 'Yesterday') {
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
         startStr = yesterday.toLocaleDateString('en-CA');
-        setEndDate(startStr);
-        setStartDate(startStr);
-        return;
-    } else if (filter === 'This Week') {
-        startStr = getStartOfWeek(today);
-        setEndDate(endStr);
-    } else if (filter === 'This Month') {
-        startStr = getStartOfMonth(today);
-        setEndDate(endStr);
-    } else if (filter === 'Custom') {
-        return; 
-    }
+        setEndDate(startStr); setStartDate(startStr); return;
+    } else if (filter === 'This Week') { startStr = getStartOfWeek(today); setEndDate(endStr); }
+    else if (filter === 'This Month') { startStr = getStartOfMonth(today); setEndDate(endStr); }
+    else if (filter === 'Custom') { return; }
 
-    if (filter !== 'Custom') {
-        setStartDate(startStr);
-        setEndDate(endStr);
-    }
+    if (filter !== 'Custom') { setStartDate(startStr); setEndDate(endStr); }
   };
 
-  // 1. FILTER LOGIC
   const filteredOrders = kitchenOrders.filter(order => {
     const statusMatch = filterStatus === 'All' || order.status?.toLowerCase() === filterStatus.toLowerCase();
     const typeMatch = filterType === 'All Types' || order.order_type?.toLowerCase() === filterType.toLowerCase();
-    
-    // ✅ FIX 2: Compare LOCAL dates, not UTC ISO strings
-    // Convert order date (which might be UTC or Local from DB) to a proper Date object first
     const orderDateObj = fixDate(order.order_date);
-    // Then extract the Local YYYY-MM-DD part
     const orderDatePart = getLocalDatePart(orderDateObj);
-    
-    // String comparison works safely for YYYY-MM-DD
     const dateMatch = orderDatePart >= startDate && orderDatePart <= endDate;
-
     return statusMatch && typeMatch && dateMatch;
   });
 
-  // 2. SORT LOGIC
   const sortedOrders = [...filteredOrders].sort((a, b) => {
       switch (sortBy) {
-          case 'Newest':
-              return new Date(b.order_date) - new Date(a.order_date);
-          case 'Oldest':
-              return new Date(a.order_date) - new Date(b.order_date);
-          case 'Most Items':
-              return getTotalItems(b) - getTotalItems(a);
-          case 'Least Items':
-              return getTotalItems(a) - getTotalItems(b);
-          default:
-              return 0;
+          case 'Newest': return new Date(b.order_date) - new Date(a.order_date);
+          case 'Oldest': return new Date(a.order_date) - new Date(b.order_date);
+          case 'Most Items': return getTotalItems(b) - getTotalItems(a);
+          case 'Least Items': return getTotalItems(a) - getTotalItems(b);
+          default: return 0;
       }
   });
 
@@ -287,9 +243,7 @@ function KitchenPage() {
         minute: '2-digit',
         hour12: true
       });
-    } catch (err) {
-      return 'N/A';
-    }
+    } catch (err) { return 'N/A'; }
   };
 
   return (
@@ -313,23 +267,17 @@ function KitchenPage() {
                 <div><h3 className="font-bold text-sm uppercase text-gray-700">Ready</h3><p className="text-3xl font-bold text-gray-900">{readyCount}</p></div>
                 <div className={`p-3 rounded-full text-white ${filterStatus === 'Ready' ? 'bg-green-600' : 'bg-green-500'}`}><CheckCircle size={24}/></div>
             </div>
-            <div 
-                onClick={() => navigate('/kitchen/archive')} 
-                className="summary-box cursor-pointer hover:scale-105 transition-transform duration-200 hover:ring-4 hover:ring-gray-300"
-                title="View Archive"
-            >
-                <div><h3 className="font-bold text-sm uppercase text-gray-700">Served Today</h3><p className="text-3xl font-bold text-gray-900">{servedCount}</p></div>
+            <div onClick={() => navigate('/kitchen/archive')} className="summary-box cursor-pointer hover:scale-105 transition-transform duration-200 hover:ring-4 hover:ring-gray-300" title="View Archive">
+                <div><h3 className="font-bold text-sm uppercase text-gray-700">Served</h3><p className="text-3xl font-bold text-gray-900">{servedCount}</p></div>
                 <div className="p-3 rounded-full bg-gray-500 text-white"><CheckCircle2 size={24}/></div>
             </div>
         </div>
 
-        {/* FILTERS ROW */}
-        <div className="filter-container flex flex-wrap items-end gap-4 justify-between bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
-            
-            {/* 1. Filter by Type */}
-            <div className="w-full md:w-auto flex-1 min-w-[150px] max-w-xs">
-                <label className="block text-sm font-bold mb-1 text-gray-700">Filter by Type</label>
-                <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="w-full p-2 rounded border border-gray-300 bg-white">
+       
+        <div className="filter-container flex flex-wrap items-end gap-4 justify-between p-4 rounded-lg shadow-md border border-[#D1C0B6] mb-6" style={{ backgroundColor: '#fff2e0' }}>
+            <div className="w-full md:w-auto flex-1 min-w-[150px] max-w-xs">  
+                <label className="block text-sm font-bold mb-1 text-[#3C2A21]">Filter by Type</label>
+                <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="kitchen-select w-full">
                     <option value="All Types">All Types</option>
                     <option value="Dine-in">Dine-in</option>
                     <option value="Room Dining">Room Dining</option>
@@ -337,63 +285,42 @@ function KitchenPage() {
                     <option value="Phone Order">Phone Order</option>
                 </select>
             </div>
-
-            {/* 2. Sort Orders */}
             <div className="w-full md:w-auto flex-1 min-w-[150px] max-w-xs">
-                <label className="block text-sm font-bold mb-1 text-gray-700">Sort Orders</label>
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-full p-2 rounded border border-gray-300 bg-white">
+                {/* ✅ FIX: Label color */}
+                <label className="block text-sm font-bold mb-1 text-[#3C2A21]">Sort Orders</label>
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="kitchen-select w-full">
                     <option value="Oldest">Oldest First (Default)</option>
                     <option value="Newest">Newest First</option>
                     <option value="Most Items">Most Items First</option>
                     <option value="Least Items">Least Items First</option>
                 </select>
             </div>
-
-            {/* 3. Reset Filter Link */}
             <div className="flex-1 flex items-center justify-center pb-2">
                {filterStatus !== 'All' && (
-                 <button onClick={() => setFilterStatus('All')} className="text-sm text-gray-500 hover:text-[#F9A825] underline">
+               
+                 <button onClick={() => setFilterStatus('All')} className="text-sm text-[#3C2A21] hover:text-[#F9A825] underline font-medium">
                     Reset Status Filter ({filterStatus})
                  </button>
                )}
             </div>
-
-            {/* 4. Date Filter */}
             <div className="w-full md:w-auto flex-shrink-0 flex flex-col items-end gap-2">
                 <div className="flex items-center gap-2">
-                    <Calendar size={18} className="text-gray-500"/>
+                    <Calendar size={18} className="text-[#F9A825]"/>
                     <label className="block text-sm font-bold text-[#F9A825]">Date Period</label>
                 </div>
                 <div className="flex gap-2 items-center flex-wrap justify-end">
-                    <select 
-                        value={quickFilter} 
-                        onChange={handleQuickFilterChange} 
-                        className="p-2 rounded border border-gray-300 bg-white font-medium text-sm focus:ring-2 focus:ring-[#F9A825] outline-none"
-                    >
+                    <select value={quickFilter} onChange={handleQuickFilterChange} className="kitchen-select text-sm font-medium" style={{height: '38px'}}>
                         <option value="Today">Today</option>
                         <option value="Yesterday">Yesterday</option>
                         <option value="This Week">This Week</option>
                         <option value="This Month">This Month</option>
                         <option value="Custom">Custom Range</option>
                     </select>
-
                     {quickFilter === 'Custom' && (
-                        <div className="flex gap-2 animate-fadeIn">
-                            <input 
-                                type="date" 
-                                value={startDate} 
-                                onChange={(e) => setStartDate(e.target.value)}
-                                className="p-2 rounded border border-gray-300 text-sm"
-                                max={endDate} 
-                            />
-                            <span className="text-gray-400 self-center">to</span>
-                            <input 
-                                type="date" 
-                                value={endDate} 
-                                onChange={(e) => setEndDate(e.target.value)}
-                                className="p-2 rounded border border-gray-300 text-sm"
-                                min={startDate} 
-                            />
+                        <div className="flex gap-2 animate-fadeIn bg-white p-1 rounded border border-[#D1C0B6]">
+                            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="p-1 text-sm outline-none" max={endDate} />
+                            <span className="text-gray-400 self-center">-</span>
+                            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="p-1 text-sm outline-none" min={startDate} />
                         </div>
                     )}
                 </div>
@@ -424,7 +351,6 @@ function KitchenPage() {
                             <div className="kitchen-card-body">
                                 <p><span className="info-label">Type:</span> {order.order_type}</p>
                                 <p><span className="info-label">Loc:</span> {order.delivery_location}</p>
-                                
                                 <div className="mt-2 border-t pt-2">
                                     <p className="font-bold text-sm mb-1">Items:</p>
                                     {order.items?.map((item, idx) => (
@@ -446,13 +372,13 @@ function KitchenPage() {
                                 {order.status?.toLowerCase() === 'pending' && (
                                     <div className="flex gap-2">
                                         <button onClick={() => handleUpdateStatus(order.order_id, 'Preparing')} className="kitchen-btn btn-green flex-1">Accept</button>
-                                        <button onClick={() => handleUpdateStatus(order.order_id, 'Cancelled')} className="kitchen-btn btn-red"><Trash2 size={18}/></button>
+                                        <button onClick={() => handlePromptCancel(order.order_id)} className="kitchen-btn btn-red"><Trash2 size={18}/></button>
                                     </div>
                                 )}
                                 {order.status?.toLowerCase() === 'preparing' && (
                                     <div className="flex gap-2">
                                         <button onClick={() => handleUpdateStatus(order.order_id, 'Ready')} className="kitchen-btn btn-blue flex-1">Ready</button>
-                                        <button onClick={() => handleUpdateStatus(order.order_id, 'Cancelled')} className="kitchen-btn btn-red"><Trash2 size={18}/></button>
+                                        <button onClick={() => handlePromptCancel(order.order_id)} className="kitchen-btn btn-red"><Trash2 size={18}/></button>
                                     </div>
                                 )}
                                 {order.status?.toLowerCase() === 'ready' && (
@@ -465,6 +391,47 @@ function KitchenPage() {
             </div>
         )}
       </div>
+
+      {/* ✅ CONFIRMATION MODAL */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn" style={{backgroundColor: 'rgba(0,0,0,0.6)'}}>
+            <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-2xl relative border-t-4 border-red-500">
+                <button 
+                    onClick={() => setShowCancelModal(false)}
+                    className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+                >
+                    <X size={20} />
+                </button>
+                
+                <div className="flex flex-col items-center text-center mb-6">
+                    <div className="bg-red-100 p-3 rounded-full mb-3">
+                        <AlertTriangle size={32} className="text-red-600" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-800">Cancel Order?</h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                        Are you sure you want to cancel <span className="font-bold text-gray-800">Order #{orderIdToCancel}</span>? 
+                        This action cannot be undone.
+                    </p>
+                </div>
+                
+                <div className="flex gap-3">
+                    <button 
+                        onClick={() => setShowCancelModal(false)}
+                        className="flex-1 py-2 rounded-lg font-bold border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors"
+                    >
+                        Keep Order
+                    </button>
+                    <button 
+                        onClick={handleConfirmCancel}
+                        className="flex-1 py-2 rounded-lg font-bold bg-red-600 text-white hover:bg-red-700 shadow-md transition-colors"
+                    >
+                        Yes, Cancel it
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
     </div>
     </>
   );
