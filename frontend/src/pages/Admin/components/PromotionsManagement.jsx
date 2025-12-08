@@ -20,14 +20,14 @@ const PromotionsManagement = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedPromoForApply, setSelectedPromoForApply] = useState(null); 
 
-  // 1. Fetch Data (Promotions + Announcement)
+  // 1. Fetch Data
   const fetchData = async () => {
     setLoading(true);
     try {
       const [promosRes, itemsRes, annRes] = await Promise.all([
         apiClient('/promotions'),
         apiClient('/items'),
-        apiClient('/announcement') // Fetch the banner message
+        apiClient('/announcement')
       ]);
 
       if (promosRes.ok) setPromotions(await promosRes.json());
@@ -44,12 +44,9 @@ const PromotionsManagement = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   // --- Handlers ---
-
   const handleSaveAnnouncement = async () => {
     setIsSavingAnnouncement(true);
     try {
@@ -57,7 +54,6 @@ const PromotionsManagement = () => {
         method: 'PUT',
         body: JSON.stringify({ message: announcement })
       });
-
       if (!res.ok) throw new Error('Failed to update announcement');
       toast.success('Announcement updated!');
     } catch (error) {
@@ -68,18 +64,11 @@ const PromotionsManagement = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this campaign? All linked items will revert to their original price.')) {
-      return;
-    }
-
+    if (!window.confirm('Are you sure you want to delete this campaign?')) return;
     try {
-      const response = await apiClient(`/promotions/${id}`, {
-        method: 'DELETE',
-      });
-
+      const response = await apiClient(`/promotions/${id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete promotion');
-
-      toast.success('Promotion deleted successfully');
+      toast.success('Promotion deleted');
       fetchData(); 
     } catch (error) {
       toast.error(error.message);
@@ -89,15 +78,10 @@ const PromotionsManagement = () => {
   const handleToggleStatus = async (id, currentStatus) => {
     const action = currentStatus ? 'deactivate' : 'activate';
     if (!window.confirm(`Are you sure you want to ${action} this campaign?`)) return;
-
     try {
-      const response = await apiClient(`/promotions/${id}/status`, {
-        method: 'PUT',
-      });
-
+      const response = await apiClient(`/promotions/${id}/status`, { method: 'PUT' });
       if (!response.ok) throw new Error('Failed to update status');
-      
-      toast.success(`Promotion ${action}d successfully`);
+      toast.success(`Promotion ${action}d`);
       fetchData(); 
     } catch (error) {
       toast.error(error.message);
@@ -105,16 +89,31 @@ const PromotionsManagement = () => {
   };
 
   return (
-    <div className="mt-8">
+    <div className="w-full">
       
-      {/* --- NEW: Announcement Editor --- */}
-      <div className="mb-8 bg-white p-6 rounded-lg shadow-sm border border-l-4 border-l-[#F9A825]">
+      {/* 1. HEADER ROW */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+        <div>
+            <h2 className="admin-page-title mb-1">Promo Management</h2>
+            <p className="text-sm text-gray-300">Manage discounts and announcements</p>
+        </div>
+        
+        <button
+          onClick={() => { setPromoToEdit(null); setIsAddModalOpen(true); }}
+          className="admin-btn admin-btn-primary"
+        >
+          <Plus size={20} /> Create New Promo
+        </button>
+      </div>
+      
+      {/* 2. ANNOUNCEMENT CARD */}
+      <div className="admin-card border-l-4" style={{ borderLeftColor: '#F9A825' }}>
         <div className="flex items-center gap-2 mb-3 text-[#3C2A21] font-bold text-lg">
           <Megaphone size={24} className="text-[#F9A825]" />
           <h2>Global Announcement</h2>
         </div>
         <p className="text-sm text-gray-500 mb-4">
-          This message will appear at the top of the customer menu. Leave empty to hide.
+          This message will appear at the top of the customer menu.
         </p>
         <div className="flex gap-4">
           <input 
@@ -122,43 +121,29 @@ const PromotionsManagement = () => {
             value={announcement}
             onChange={(e) => setAnnouncement(e.target.value)}
             placeholder="e.g. Happy Holidays! Enjoy 50% off on all desserts."
-            className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#F9A825]"
+            className="flex-1 p-2 rounded border border-[#D1C0B6] bg-white outline-none focus:border-[#F9A825] focus:ring-1 focus:ring-[#F9A825]"
           />
           <button 
             onClick={handleSaveAnnouncement}
             disabled={isSavingAnnouncement}
-            className="bg-[#0B3D2E] text-white font-bold px-6 py-2 rounded-lg hover:bg-[#082f23] disabled:opacity-50 flex items-center gap-2"
+            className="admin-btn bg-[#0B3D2E] text-white hover:bg-[#082f23] disabled:opacity-50"
           >
             <Save size={18} />
             {isSavingAnnouncement ? 'Saving...' : 'Save'}
           </button>
         </div>
       </div>
-      {/* --- END NEW SECTION --- */}
 
-      <div className="flex justify-between items-center mb-6">
-        <h2 style={{ color: '#F9A825', fontSize: '1.5rem', fontWeight: 'bold' }}>Promotion Campaigns</h2>
-        <button
-          onClick={() => {
-              setPromoToEdit(null);
-              setIsAddModalOpen(true);
-          }}
-          className="bg-[#F9A825] text-white font-bold py-2 px-4 rounded hover:bg-[#c47b04] transition-colors flex items-center gap-2"
-        >
-          <Plus size={20} /> Create New Promo
-        </button>
-      </div>
-
-      {loading ? <p className="text-white">Loading campaigns...</p> : (
+      {/* 3. PROMO GRID */}
+      {loading ? <p className="text-white text-center p-8">Loading campaigns...</p> : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {promotions.map(promo => (
                 <div 
                     key={promo.promotion_id} 
-                    className={`admin-card relative border-l-4 ${promo.is_active ? 'border-[#F9A825]' : 'border-gray-400'}`}
-                    style={{ padding: '1.5rem' }} 
+                    className={`admin-card relative border-l-4 p-6 flex flex-col h-full ${promo.is_active ? 'border-l-[#F9A825]' : 'border-l-gray-400'}`}
                 >
-                    {/* Header */}
-                    <div className="flex justify-between items-start">
+                    {/* Card Header */}
+                    <div className="flex justify-between items-start mb-2">
                         <div>
                             <h3 className={`text-lg font-bold ${promo.is_active ? 'text-[#3C2A21]' : 'text-gray-500'}`}>
                                 {promo.name}
@@ -174,20 +159,21 @@ const PromotionsManagement = () => {
                         </div>
                     </div>
                     
-                    <p className="text-sm mt-3 mb-4 min-h-[40px]" style={{ color: '#503C30' }}>
+                    {/* Description */}
+                    <p className="text-sm mt-3 mb-4 flex-1" style={{ color: '#503C30' }}>
                         {promo.description || "No description provided."}
                     </p>
 
-                    <div className="flex items-center text-xs mb-4" style={{ color: '#8D6E63' }}>
+                    {/* Date */}
+                    <div className="flex items-center text-xs mb-4 text-gray-500 font-medium">
                         <Calendar size={14} className="mr-1"/> 
                         {new Date(promo.start_date).toLocaleDateString()} - {new Date(promo.end_date).toLocaleDateString()}
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 mt-auto pt-3 border-t border-[#D1C0B6]">
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-3 border-t border-[#D1C0B6]">
                         <button 
                             onClick={async () => {
-                                // RE-FETCH ITEMS BEFORE OPENING (Fix for stale data)
                                 const itemsRes = await apiClient('/items');
                                 if (itemsRes.ok) setAllItems(await itemsRes.json());
                                 setSelectedPromoForApply(promo);
@@ -230,10 +216,7 @@ const PromotionsManagement = () => {
       {/* Modals */}
       <AddPromotionModal 
         isOpen={isAddModalOpen} 
-        onClose={() => {
-            setIsAddModalOpen(false);
-            setPromoToEdit(null);
-        }} 
+        onClose={() => { setIsAddModalOpen(false); setPromoToEdit(null); }} 
         onSave={fetchData}
         promotionToEdit={promoToEdit} 
       />

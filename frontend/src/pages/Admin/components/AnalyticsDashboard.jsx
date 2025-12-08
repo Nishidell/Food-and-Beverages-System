@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import apiClient from "../../../utils/apiClient";
 import toast from "react-hot-toast";
-import { Filter, Download, FileSpreadsheet } from "lucide-react"; // ✅ Added FileSpreadsheet icon
+import { Filter, Download, FileSpreadsheet } from "lucide-react"; 
 import * as XLSX from "xlsx";
 import {
   ResponsiveContainer,
@@ -58,22 +58,13 @@ const AnalyticsDashboard = () => {
     if (token) fetchAnalytics();
   }, [token, filterType]);
 
-  // ✅ HELPER: Creates a professional worksheet with Title, Date, and Totals
   const createSheet = (dataToExport, reportTitle) => {
-    if (!dataToExport || dataToExport.length === 0) {
-      // Return empty sheet if no data
-      return XLSX.utils.json_to_sheet([]);
-    }
-
-    // 1. Convert Data to Sheet (starting at A4)
+    if (!dataToExport || dataToExport.length === 0) return XLSX.utils.json_to_sheet([]);
     const worksheet = XLSX.utils.json_to_sheet(dataToExport, { origin: "A4" });
-
-    // 2. Add Header Info (Title & Date)
     const title = [{ v: reportTitle.toUpperCase(), t: "s" }];
     const date = [{ v: `Generated: ${new Date().toLocaleString()}`, t: "s" }];
     XLSX.utils.sheet_add_aoa(worksheet, [title, date], { origin: "A1" });
-
-    // 3. Calculate Totals Row
+    
     const totalRow = {};
     const firstItem = dataToExport[0];
     Object.keys(firstItem).forEach(key => {
@@ -86,18 +77,12 @@ const AnalyticsDashboard = () => {
         totalRow[key] = "";
       }
     });
-
-    // 4. Append Total Row
     XLSX.utils.sheet_add_json(worksheet, [totalRow], { origin: -1, skipHeader: true });
-
     return worksheet;
   };
 
-  // ✅ NEW: Export ALL Data to One Excel File
   const handleExportAll = () => {
     if (!data) return;
-
-    // 1. Prepare Data Sets
     const salesData = [
       { name: "Today", sales: data.salesTrends.today?.sales || 0, orders: data.salesTrends.today?.fb_orders || 0 },
       { name: "Yesterday", sales: data.salesTrends.yesterday?.sales || 0, orders: data.salesTrends.yesterday?.fb_orders || 0 },
@@ -124,28 +109,16 @@ const AnalyticsDashboard = () => {
       'Total Value (PHP)': Number(method.total_value) || 0
     }));
 
-    // 2. Create Workbook
     const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, createSheet(salesData, "Sales Trends Report"), "Sales Trends");
+    XLSX.utils.book_append_sheet(workbook, createSheet(orderData, "Order Type Report"), "Order Types");
+    XLSX.utils.book_append_sheet(workbook, createSheet(itemsData, "Top Selling Items"), "Top Items");
+    XLSX.utils.book_append_sheet(workbook, createSheet(paymentData, "Payment Methods"), "Payments");
 
-    // 3. Create Sheets using the Helper and Append to Workbook
-    const sheet1 = createSheet(salesData, "Sales Trends Report");
-    XLSX.utils.book_append_sheet(workbook, sheet1, "Sales Trends");
-
-    const sheet2 = createSheet(orderData, "Order Type Report");
-    XLSX.utils.book_append_sheet(workbook, sheet2, "Order Types");
-
-    const sheet3 = createSheet(itemsData, "Top Selling Items");
-    XLSX.utils.book_append_sheet(workbook, sheet3, "Top Items");
-
-    const sheet4 = createSheet(paymentData, "Payment Methods");
-    XLSX.utils.book_append_sheet(workbook, sheet4, "Payments");
-
-    // 4. Download
     XLSX.writeFile(workbook, `Daily_Sales_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
     toast.success("Full Daily Report Downloaded!");
   };
 
-  // ✅ Keep this for the individual card buttons (uses the same helper logic internally)
   const exportToExcel = (dataToExport, fileName, sheetName) => {
     const worksheet = createSheet(dataToExport, fileName.replace(/_/g, " "));
     const workbook = XLSX.utils.book_new();
@@ -158,7 +131,6 @@ const AnalyticsDashboard = () => {
   if (error) return <div className="p-8 text-center text-red-500">Error: {error}</div>;
   if (!data) return <div className="p-8 text-center text-white">No data available.</div>;
 
-  // --- PREPARE DATA FOR CHARTS (For Display) ---
   const salesTrendData = [
     { name: "Today", sales: data.salesTrends.today?.sales || 0, orders: data.salesTrends.today?.fb_orders || 0 },
     { name: "Yesterday", sales: data.salesTrends.yesterday?.sales || 0, orders: data.salesTrends.yesterday?.fb_orders || 0 },
@@ -187,34 +159,41 @@ const AnalyticsDashboard = () => {
   return (
     <div className="w-full">
       
-      {/* --- CONTROLS AREA --- */}
-      <div className="flex flex-col sm:flex-row justify-end items-center gap-4 mb-6">
-        <div className="relative">
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="appearance-none px-6 py-3 pr-10 rounded-lg font-bold shadow-lg outline-none cursor-pointer transition-transform hover:scale-105"
-              style={{ backgroundColor: '#F9A825', color: '#3C2A21', border: 'none', textAlign: 'center' }}
-            >
-              <option value="All">All Orders</option>
-              <option value="Dine-in">Dine-in</option>
-              <option value="Room Service">Room Service</option>
-              <option value="Walk-in">Walk-in</option>
-            </select>
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-[#3C2A21]">
-                <Filter size={18} />
-            </div>
+      {/* --- HEADER ROW (Title Left, Controls Right) --- */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+        <div>
+            {/* ✅ UPDATED: Use Theme Class */}
+            <h2 className="admin-page-title">Analytics Dashboard</h2>
+            <p className="text-sm text-gray-300">Overview of sales and performance</p>
         </div>
 
-        {/* ✅ UPDATED: Export All Button */}
-        <button
-          onClick={handleExportAll}
-          className="flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-transform hover:scale-105 shadow-lg"
-          style={{ backgroundColor: '#F9A825', color: '#3C2A21' }}
-        >
-          <FileSpreadsheet size={20} />
-          Export Report
-        </button>
+        <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative">
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="appearance-none px-6 py-3 pr-10 rounded-lg font-bold shadow-lg outline-none cursor-pointer transition-transform hover:scale-105"
+                  style={{ backgroundColor: '#F9A825', color: '#3C2A21', border: 'none', textAlign: 'center' }}
+                >
+                  <option value="All">All Orders</option>
+                  <option value="Dine-in">Dine-in</option>
+                  <option value="Room Service">Room Service</option>
+                  <option value="Walk-in">Walk-in</option>
+                </select>
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-[#3C2A21]">
+                    <Filter size={18} />
+                </div>
+            </div>
+
+            <button
+              onClick={handleExportAll}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-transform hover:scale-105 shadow-lg"
+              style={{ backgroundColor: '#F9A825', color: '#3C2A21' }}
+            >
+              <FileSpreadsheet size={20} />
+              Export Report
+            </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -233,7 +212,6 @@ const AnalyticsDashboard = () => {
               <Download size={20} />
             </button>
           </div>
-
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={salesTrendData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#D1C0B6" />

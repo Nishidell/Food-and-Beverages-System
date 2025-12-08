@@ -1,28 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Pencil, Trash2, Plus, Filter } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import apiClient from '../../../utils/apiClient';
 import '../AdminTheme.css';
-
-// Import Modals
 import AddItemModal from './AddItemModal';
 
 const MenuManagementTable = () => {
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  // Filter State
   const [filterCategory, setFilterCategory] = useState('All');
-
-  // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  
   const { token } = useAuth();
 
-  // --- Fetch Data ---
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -30,9 +22,7 @@ const MenuManagementTable = () => {
         apiClient('/items'),
         apiClient('/categories')
       ]);
-      
       if (!itemsRes.ok || !catsRes.ok) throw new Error('Failed to fetch data');
-
       setItems(await itemsRes.json());
       setCategories(await catsRes.json());
     } catch (error) {
@@ -42,106 +32,82 @@ const MenuManagementTable = () => {
     }
   };
 
-  useEffect(() => {
-    if (token) fetchData();
-  }, [token]);
+  useEffect(() => { if (token) fetchData(); }, [token]);
 
-  // --- Handlers ---
   const handleDelete = async (itemId) => {
     if (!window.confirm('Are you sure you want to delete this item?')) return;
     try {
       const res = await apiClient(`/admin/items/${itemId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete item');
-      
       toast.success('Item deleted');
       setItems(items.filter(i => i.item_id !== itemId));
-    } catch (error) {
-      toast.error(error.message);
-    }
+    } catch (error) { toast.error(error.message); }
   };
 
   const handleSaveItem = async (formData) => {
     try {
       let res;
       if (editingItem) {
-        // Update
-        res = await apiClient(`/admin/items/${editingItem.item_id}`, {
-          method: 'PUT',
-          body: JSON.stringify(formData)
-        });
+        res = await apiClient(`/admin/items/${editingItem.item_id}`, { method: 'PUT', body: JSON.stringify(formData) });
       } else {
-        // Create
-        res = await apiClient('/admin/items', {
-          method: 'POST',
-          body: JSON.stringify(formData)
-        });
+        res = await apiClient('/admin/items', { method: 'POST', body: JSON.stringify(formData) });
       }
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || 'Failed to save item');
-      }
-
+      if (!res.ok) throw new Error('Failed to save item');
       toast.success(editingItem ? 'Item updated!' : 'Item created!');
       setIsModalOpen(false);
       setEditingItem(null);
-      fetchData(); // Refresh list to get new IDs/Links
-    } catch (error) {
-      toast.error(error.message);
-    }
+      fetchData();
+    } catch (error) { toast.error(error.message); }
   };
 
-  const openAddModal = () => {
-    setEditingItem(null);
-    setIsModalOpen(true);
-  };
+  const openAddModal = () => { setEditingItem(null); setIsModalOpen(true); };
+  const openEditModal = (item) => { setEditingItem(item); setIsModalOpen(true); };
 
-  const openEditModal = (item) => {
-    setEditingItem(item);
-    setIsModalOpen(true);
-  };
-
-  // --- Filtering Logic ---
-  const filteredItems = items.filter(item => {
-    if (filterCategory === 'All') return true;
-    // item.category_id is usually a number, filterCategory is a string from select
-    return item.category_id == filterCategory;
-  });
+  const filteredItems = items.filter(item => filterCategory === 'All' || item.category_id == filterCategory);
 
   if (loading) return <div className="p-8 text-center text-white">Loading Menu...</div>;
 
   return (
-    <div className="admin-section-container">
-      {/* Header Row */}
-      <div className="admin-header-row">
+    <div className="w-full">
+      {/* HEADER & CONTROLS */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
         <div>
-          <h2 className="admin-page-title">Menu Management</h2>
-          <p className="text-sm" style={{ color: '#F9A825' }}>
-            Total Menu Items: {filteredItems.length}
-          </p>
+            {/* ✅ UPDATED: Use Theme Class */}
+            <h2 className="admin-page-title">Menu Management</h2>
+            <p className="text-sm text-gray-300">Total Items: {filteredItems.length}</p>
         </div>
 
-        <div className="flex gap-4 items-center">
-            {/* Category Filter Dropdown */}
-            <select
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                className="admin-select-themed"
-                style={{ minWidth: '200px' }}
-            >
-                <option value="All">All Categories</option>
-                {categories.map(cat => (
-                    <option key={cat.category_id} value={cat.category_id}>{cat.name}</option>
-                ))}
-            </select>
+        <div className="flex gap-4">
+            {/* Filter Dropdown */}
+            <div className="relative">
+                <select
+                    value={filterCategory}
+                    onChange={(e) => setFilterCategory(e.target.value)}
+                    className="appearance-none px-4 py-3 pr-10 rounded-lg font-bold shadow-lg outline-none cursor-pointer hover:scale-105 transition-transform"
+                    style={{ backgroundColor: '#F9A825', color: '#3C2A21', border: 'none' }}
+                >
+                    <option value="All">All Categories</option>
+                    {categories.map(cat => (
+                        <option key={cat.category_id} value={cat.category_id}>{cat.name}</option>
+                    ))}
+                </select>
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-[#3C2A21]">
+                    <Filter size={18} />
+                </div>
+            </div>
 
-            <button onClick={openAddModal} className="admin-btn flex items-center gap-2">
-                <Plus size={20} /> Add New Item
+            {/* Add Button */}
+            <button 
+                onClick={openAddModal} 
+                className="flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-transform hover:scale-105 shadow-lg"
+                style={{ backgroundColor: '#F9A825', color: '#3C2A21' }}
+            >
+                <Plus size={20} /> Add Item
             </button>
         </div>
       </div>
 
-      {/* Table */}
+      {/* TABLE CONTAINER */}
       <div className="admin-table-container">
         <table className="admin-table">
           <thead>
@@ -174,37 +140,19 @@ const MenuManagementTable = () => {
                 </td>
                 <td>
                   <div className="flex gap-2">
-                    <button 
-                        onClick={() => openEditModal(item)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                        title="Edit Item"
-                    >
-                      <Pencil size={18} />
-                    </button>
-
-                    <button 
-                        onClick={() => handleDelete(item.item_id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
-                        title="Delete Item"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    <button onClick={() => openEditModal(item)} className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"><Pencil size={18} /></button>
+                    <button onClick={() => handleDelete(item.item_id)} className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"><Trash2 size={18} /></button>
                   </div>
                 </td>
               </tr>
             ))}
             {filteredItems.length === 0 && (
-                <tr>
-                    <td colSpan="6" className="text-center py-8 text-gray-500">
-                        No menu items found for this category.
-                    </td>
-                </tr>
+                <tr><td colSpan="6" className="text-center py-8 text-gray-500">No menu items found.</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {/* Modals */}
       {isModalOpen && (
         <AddItemModal 
           isOpen={isModalOpen}

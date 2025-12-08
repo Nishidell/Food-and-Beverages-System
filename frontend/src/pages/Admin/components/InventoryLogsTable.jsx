@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { Filter } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext'; 
 import apiClient from '../../../utils/apiClient';
 import '../AdminTheme.css';
@@ -32,55 +33,50 @@ const InventoryLogsTable = () => {
   }, [token]);
 
   const getActionStyle = (action) => {
-    let color = '#374151'; 
-    let bgColor = '#F3F4F6';
-
-    if (action.includes('ADD') || action.includes('RESTOCK')) {
-      color = '#059669'; bgColor = '#D1FAE5';
-    } else if (action.includes('SUBTRACT') || action.includes('WASTE')) {
-      color = '#DC2626'; bgColor = '#FEE2E2';
-    } else if (action.includes('INITIAL')) {
-      color = '#4B5563'; bgColor = '#E5E7EB';
-    }
-    return { color, backgroundColor: bgColor };
+    if (action.includes('ADD') || action.includes('RESTOCK')) return { color: '#059669', backgroundColor: '#D1FAE5' };
+    if (action.includes('SUBTRACT') || action.includes('WASTE')) return { color: '#DC2626', backgroundColor: '#FEE2E2' };
+    return { color: '#4B5563', backgroundColor: '#E5E7EB' };
   };
 
   const filteredLogs = logs.filter(log => {
     if (filterSource === 'All') return true;
     const isSystemLog = log.staff_name === 'System (Order)';
-    if (filterSource === 'Staff') return !isSystemLog;
-    if (filterSource === 'System') return isSystemLog;
-    return true;
+    return filterSource === 'System' ? isSystemLog : !isSystemLog;
   });
 
   if (loading) return <div className="p-8 text-center text-white text-lg">Loading...</div>;
   if (error) return <div className="p-8 text-center text-red-500">Error: {error}</div>;
 
   return (
-    <div className="admin-section-container">
+    <div className="w-full">
       
-      <div className="admin-header-row">
+      {/* HEADER & FILTER */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
         <div>
-          <h2 className="admin-page-title">Inventory Logs</h2>
-          <p className="text-sm" style={{ color: '#F9A825' }}>Showing {filteredLogs.length} recent actions</p>
+            {/* ✅ UPDATED: Use Theme Class */}
+            <h2 className="admin-page-title">Inventory Logs</h2>
+            <p className="text-sm text-gray-300">Recent Activity: {filteredLogs.length} entries</p>
         </div>
         
-        <div>
-          <label htmlFor="log-filter" className="admin-label" style={{color: '#F9A825'}}>Filter by Source:</label>
-          <select 
-            id="log-filter"
-            className="admin-select"
-            style={{ backgroundColor: '#480c1b', color: '#F9A825', borderColor: '#F9A825' }}
-            value={filterSource}
-            onChange={(e) => setFilterSource(e.target.value)}
-          >
-            <option value="All">Show All</option>
-            <option value="Staff">Staff Actions</option>
-            <option value="System">System Actions</option>
-          </select>
+        {/* Filter Dropdown */}
+        <div className="relative">
+            <select 
+                value={filterSource}
+                onChange={(e) => setFilterSource(e.target.value)}
+                className="appearance-none px-6 py-3 pr-10 rounded-lg font-bold shadow-lg outline-none cursor-pointer transition-transform hover:scale-105"
+                style={{ backgroundColor: '#F9A825', color: '#3C2A21', border: 'none' }}
+            >
+                <option value="All">All Sources</option>
+                <option value="Staff">Staff Actions</option>
+                <option value="System">System Actions</option>
+            </select>
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-[#3C2A21]">
+                <Filter size={18} />
+            </div>
         </div>
       </div>
 
+      {/* TABLE */}
       <div className="admin-table-container">
         <table className="admin-table">
           <thead>
