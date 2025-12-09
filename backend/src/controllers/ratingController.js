@@ -1,5 +1,50 @@
 import pool from "../config/mysql.js";
 
+// @desc    Get all reviews for Admin Dashboard
+// @route   GET /api/ratings
+// @access  Admin
+export const getAllReviews = async (req, res) => {
+    try {
+        const sql = `
+            SELECT 
+                r.rating_id,
+                r.rating_value,
+                r.review_text,
+                r.created_at,
+                mi.item_name,
+                -- Assuming you have an fb_users table. If not, remove the join and user selection
+                u.first_name AS customer_name 
+            FROM fb_food_ratings r
+            JOIN fb_menu_items mi ON r.item_id = mi.item_id
+            LEFT JOIN tbl_client_users u ON r.client_id = u.client_id
+            ORDER BY r.created_at DESC
+        `;
+        const [reviews] = await pool.query(sql);
+        res.json(reviews);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching reviews", error: error.message });
+    }
+};
+
+// @desc    Delete a review (Moderation)
+// @route   DELETE /api/ratings/:id
+// @access  Admin
+export const deleteReview = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sql = "DELETE FROM fb_food_ratings WHERE rating_id = ?";
+        const [result] = await pool.query(sql, [id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Review not found" });
+        }
+
+        res.json({ message: "Review deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Error deleting review", error: error.message });
+    }
+};
+
 // @desc    Add or Update a review
 // @route   POST /api/ratings
 // @access  Customer
