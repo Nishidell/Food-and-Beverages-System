@@ -190,6 +190,13 @@ function PosPage() {
       case 'z-a': result.sort((a, b) => b.item_name.localeCompare(a.item_name)); break;
       case 'price-low': result.sort((a, b) => parseFloat(a.price) - parseFloat(b.price)); break;
       case 'price-high': result.sort((a, b) => parseFloat(b.price) - parseFloat(a.price)); break;
+      case 'rating-high': result.sort((a, b) => {
+            const ratingA = parseFloat(a.average_rating || 0);
+            const ratingB = parseFloat(b.average_rating || 0);
+            if (ratingB !== ratingA) return ratingB - ratingA;
+            return (b.total_reviews || 0) - (a.total_reviews || 0);
+        });
+        break;
       case 'recent': result.sort((a, b) => b.item_id - a.item_id); break;
       default: break;
     }

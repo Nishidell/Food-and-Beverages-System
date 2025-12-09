@@ -14,6 +14,7 @@ const CategoryTabs = ({ categories, selectedCategory, onSelectCategory, onSortCh
     { id: 'z-a', label: 'Alphabetical (Z-A)' },
     { id: 'price-low', label: 'Price (Low-High)' },
     { id: 'price-high', label: 'Price (High-Low)' },
+    { id: 'rating-high', label: 'Highest Rated' },
     { id: 'recent', label: 'Recently Added' },
   ];
 
