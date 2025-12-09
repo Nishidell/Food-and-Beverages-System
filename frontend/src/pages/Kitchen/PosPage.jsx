@@ -8,9 +8,9 @@ import PosCart from './components/PosCart';
 import toast from 'react-hot-toast';
 import apiClient from '../../utils/apiClient';
 import PosPaymentModal from './components/PosPaymentModal';
-import PosReceiptModal from './components/PosReceiptModal'; // ✅ IMPORT RECEIPT MODAL
+import PosReceiptModal from './components/PosReceiptModal'; 
 import { Search } from 'lucide-react';
-import './KitchenTheme.css'; // ✅ IMPORT THEME
+import './KitchenTheme.css'; 
 
 function PosPage() {
   const [items, setItems] = useState([]);
@@ -23,15 +23,12 @@ function PosPage() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [sortOption, setSortOption] = useState('a-z'); 
   
-  // POS State (Customer Name is handled inside PosCart, passed up via orderMeta)
   const [deliveryLocation, setDeliveryLocation] = useState(''); 
   
-  // Payment & Receipt State
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [pendingOrderData, setPendingOrderData] = useState(null); 
   
-  // ✅ New Receipt State
   const [receiptData, setReceiptData] = useState(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
@@ -45,7 +42,6 @@ function PosPage() {
     marginTop: '32px',
   };
   
-  // --- 1. FETCH DATA (Items, Categories, Tables) ---
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -60,8 +56,6 @@ function PosPage() {
         
         const itemsData = await itemsResponse.json();
         const categoriesData = await categoriesResponse.json();
-        
-        // Handle tables gracefully (if API fails or returns empty)
         const tablesData = tablesResponse.ok ? await tablesResponse.json() : [];
 
         setItems(itemsData);
@@ -77,7 +71,6 @@ function PosPage() {
     fetchData();
   }, [token]);
 
-  // --- 2. CART HANDLERS ---
   const handleSelectCategory = (category) => setSelectedCategory(category);
   
   const handleAddToCart = (clickedItem) => {
@@ -90,7 +83,6 @@ function PosPage() {
             : item
         );
       }
-      // Initialize new items with empty instructions string
       return [...prevItems, { ...clickedItem, quantity: 1, instructions: '' }];
     });
   };
@@ -119,14 +111,12 @@ function PosPage() {
     );
   };
 
-  // --- 3. PAYMENT FLOW ---
   const handleOpenPaymentModal = (orderMeta) => {
     if (cartItems.length === 0) {
       toast.error("Please add items to the cart.");
       return;
     }
     
-    // Require name for Take Out
     if (!orderMeta.customerName && orderMeta.serviceMode === 'Take Out') {
          toast.error("Please enter a customer name.");
          return;
@@ -143,17 +133,11 @@ function PosPage() {
     const orderData = {
       staff_id: user.id, 
       order_type: 'Walk-in',
-      
-      // Data from Cart (via pendingOrderData)
       customer_name: pendingOrderData.customerName || 'Guest',
-      
-      // Logic: If table selected, use that. Else use "Counter (Mode)"
       delivery_location: pendingOrderData.tableNumber 
         ? `Table ${pendingOrderData.tableNumber}` 
         : `Counter (${pendingOrderData.serviceMode})`,
-      
       table_id: pendingOrderData.tableId || null,
-
       payment_method: "Cash",
       items: cartItems.map(item => ({
         item_id: item.item_id,
@@ -175,19 +159,12 @@ function PosPage() {
       if (!response.ok) throw new Error(result.message || 'Failed to submit order.');
 
       toast.dismiss();
-      // Toast success is optional since we show the receipt modal now
-      // toast.success(`Order #${result.order_id} submitted!`);
-      
-      // ✅ 4. SHOW RECEIPT
-      // Combine backend result (financials) with frontend items (names)
       const finalReceipt = {
           ...result.order,
           items: cartItems 
       };
       setReceiptData(finalReceipt);
       setIsReceiptOpen(true);
-      
-      // Reset Cart UI
       setIsPaymentModalOpen(false);
       setCartItems([]);
       setDeliveryLocation(''); 
@@ -203,7 +180,6 @@ function PosPage() {
     }
   };
 
-  // --- SORTING & FILTERING ---
   const getProcessedItems = () => {
     let result = items
       .filter(item => selectedCategory === 0 || item.category_id === selectedCategory)
@@ -222,24 +198,15 @@ function PosPage() {
 
   const finalItems = getProcessedItems();
 
-  // --- RENDER ---
   return (
-    // Force full viewport height, no scroll on body
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#523a2e]">
-      
-      {/* 1. Navbar */}
       <div className="flex-none">
         <InternalNavBar />
       </div>
 
-      {/* 2. Main Layout Area */}
       <div className="flex flex-1 overflow-hidden relative">
-        
-        {/* LEFT: Menu Grid (Scrollable) */}
         <main className="flex-1 overflow-y-auto p-6 pos-main-content">
             <div className="max-w-7xl mx-auto"> 
-                
-                {/* Search Bar */}
                 <div className="top-0 z-10 pb-4 pt-2 bg-inherit">
                     <div className="relative w-full max-w-lg mx-auto">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -274,11 +241,10 @@ function PosPage() {
             </div>
         </main>
 
-        {/* RIGHT: Cart (Fixed Width) */}
         <aside className="w-[400px] flex-none pos-cart-sidebar z-20 shadow-2xl">
           <PosCart
             cartItems={cartItems}
-            availableTables={tables} // Pass tables to cart
+            availableTables={tables} 
             onUpdateQuantity={handleUpdateQuantity}
             onPlaceOrder={handleOpenPaymentModal}
             onRemoveItem={handleRemoveItem}
@@ -289,7 +255,6 @@ function PosPage() {
         </aside>
       </div>
 
-      {/* Payment Modal */}
       <PosPaymentModal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
@@ -297,7 +262,6 @@ function PosPage() {
         onConfirmPayment={handleConfirmCashOrder}
       />
 
-      {/* ✅ Receipt Modal */}
       <PosReceiptModal 
         isOpen={isReceiptOpen}
         onClose={() => setIsReceiptOpen(false)}

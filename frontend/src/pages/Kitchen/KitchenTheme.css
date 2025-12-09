@@ -282,3 +282,36 @@
   background-color: var(--kitchen-accent);
   color: white;
 }
+
+/* --- Category Button Outlines for Kitchen Theme --- */
+
+/* Base style for inactive buttons */
+.kitchen-theme .category-tab-btn {
+    background-color: #ffffff;
+    color: #374151; /* Gray text */
+    border: 1px solid #d1d5db; /* ✅ RESTORED: Light gray border */
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* Subtle shadow */
+    transition: all 0.2s ease;
+}
+
+/* Hover state */
+.kitchen-theme .category-tab-btn:hover {
+    background-color: #f9fafb; /* Slightly off-white */
+    border-color: #9ca3af; /* Darker border on hover */
+    color: #111827; /* Darker text */
+}
+
+/* Active state (The orange selected button) */
+.kitchen-theme .category-tab-btn.active {
+    background-color: #F9A825; /* Your theme orange */
+    color: #3C2A21; /* Dark brown text */
+    border: 1px solid #F9A825; /* Border matches background */
+    box-shadow: 0 4px 6px -1px rgba(249, 168, 37, 0.4); /* Orange shadow */
+    font-weight: 700;
+}
+
+/* Ensure the filter button matches */
+.kitchen-theme .category-tab-btn.filter-trigger {
+    display: flex;
+    align-items: center;
+}
