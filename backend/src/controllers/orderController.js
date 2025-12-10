@@ -677,11 +677,12 @@ const createOrUpdateNotification = async (order_id, client_id, status, connectio
     }
 };
 
-// @desc    Get logged-in user's orders
+// @desc    Get logged-in user's orders with Rating Status
 // @route   GET /api/orders/my-orders
 // @access  Private
 export const getMyOrders = async (req, res) => {
     try {
+        // Validate User
         if (!req.user || !req.user.id) {
             return res.status(401).json({ message: "User not authenticated" });
         }
@@ -700,27 +701,40 @@ export const getMyOrders = async (req, res) => {
             return res.json([]);
         }
 
-        // 2. Fetch Items
+        // 2. Fetch Items & Check Ratings
         const ordersWithItems = await Promise.all(orders.map(async (order) => {
+            // Get order details
             const [items] = await pool.query(`
                 SELECT * FROM fb_order_details WHERE order_id = ?
             `, [order.order_id]);
             
-            const itemsWithNames = await Promise.all(items.map(async (item) => {
-                 const [menu] = await pool.query("SELECT item_name FROM fb_menu_items WHERE item_id = ?", [item.item_id]);
+            // Get Item Name AND Rating Status
+            const itemsWithDetails = await Promise.all(items.map(async (item) => {
+                 // ✅ MODIFIED QUERY: Fetch Name + Rating in one go
+                 // We LEFT JOIN with the ratings table using client_id and item_id
+                 const [info] = await pool.query(`
+                    SELECT mi.item_name, r.rating_value 
+                    FROM fb_menu_items mi
+                    LEFT JOIN fb_food_ratings r 
+                        ON mi.item_id = r.item_id AND r.client_id = ?
+                    WHERE mi.item_id = ?
+                 `, [client_id, item.item_id]);
+
                  return {
                     ...item,
-                    item_name: menu.length > 0 ? menu[0].item_name : 'Unknown Item'
+                    item_name: info.length > 0 ? info[0].item_name : 'Unknown Item',
+                    // ✅ ADDED: If rating_value exists, send it. Otherwise null.
+                    my_rating: (info.length > 0 && info[0].rating_value) ? info[0].rating_value : null
                  };
             }));
 
-            return { ...order, items: itemsWithNames };
+            return { ...order, items: itemsWithDetails };
         }));
 
         res.json(ordersWithItems);
 
     } catch (error) {
-        console.error("Backend Error:", error); // Keep only this one for real errors
+        console.error("Backend Error:", error);
         res.status(500).json({ message: "Server Error" });
     }
 };
