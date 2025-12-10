@@ -4,64 +4,73 @@ import InternalNavBar from './components/InternalNavBar';
 import CategoryTabs from '../Customer/components/CategoryTabs';
 import FoodGrid from '../Customer/components/FoodGrid';
 import ImageModal from '../Customer/components/ImageModal';
-import PosCart from './components/PosCart'; // --- IMPORT OUR NEW CART ---
+import PosCart from './components/PosCart'; 
 import toast from 'react-hot-toast';
 import apiClient from '../../utils/apiClient';
 import PosPaymentModal from './components/PosPaymentModal';
+import PosReceiptModal from './components/PosReceiptModal'; 
 import { Search } from 'lucide-react';
+import './KitchenTheme.css'; 
 
 function PosPage() {
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [tables, setTables] = useState([]); 
   const [error, setError] = useState(null);
   const [cartItems, setCartItems] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
+  const [sortOption, setSortOption] = useState('a-z'); 
   
-  // POS-specific state
-  const [orderType, setOrderType] = useState('Walk-in');
-  const [instructions, setInstructions] = useState('');
-  const [deliveryLocation, setDeliveryLocation] = useState('Counter');
+  const [deliveryLocation, setDeliveryLocation] = useState(''); 
+  
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [totalDue, setTotalDue] = useState(0);
+  const [pendingOrderData, setPendingOrderData] = useState(null); 
+  
+  const [receiptData, setReceiptData] = useState(null);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
   const { user, token } = useAuth();
 
   const posPageGridStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, 320px)',
-  justifyContent: 'center', // This centers the card(s)
-  gap: '24px',
-  marginTop: '32px',
-};
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, 320px)',
+    justifyContent: 'center', 
+    gap: '24px',
+    marginTop: '32px',
+  };
   
-  // Fetch Menu Items and Categories
   useEffect(() => {
-    const fetchItems = async () => {
+    const fetchData = async () => {
       try {
-        const [itemsResponse, categoriesResponse] = await Promise.all([
+        const [itemsResponse, categoriesResponse, tablesResponse] = await Promise.all([
           apiClient('/items'),
-          apiClient('/categories')
+          apiClient('/categories'),
+          apiClient('/tables')
         ]);
+
         if (!itemsResponse.ok) throw new Error('Failed to fetch menu items.');
         if (!categoriesResponse.ok) throw new Error('Failed to fetch categories.');
+        
         const itemsData = await itemsResponse.json();
         const categoriesData = await categoriesResponse.json();
+        const tablesData = tablesResponse.ok ? await tablesResponse.json() : [];
+
         setItems(itemsData);
         setCategories(categoriesData);
+        setTables(tablesData); 
+
       } catch (err) {
         if (err.message !== 'Session expired') {
           setError(err.message);
         }
       }
     };
-    fetchItems();
+    fetchData();
   }, [token]);
 
-  // --- All Cart Handlers ---
   const handleSelectCategory = (category) => setSelectedCategory(category);
   
   const handleAddToCart = (clickedItem) => {
@@ -74,7 +83,7 @@ function PosPage() {
             : item
         );
       }
-      return [...prevItems, { ...clickedItem, quantity: 1 }];
+      return [...prevItems, { ...clickedItem, quantity: 1, instructions: '' }];
     });
   };
 
@@ -94,116 +103,50 @@ function PosPage() {
     }
   };
 
-  // This is the new function for the POS
-  const handleCashOrder = async () => {
+  const handleUpdateItemInstructions = (itemId, newInstructions) => {
+    setCartItems(prevItems =>
+      prevItems.map(item =>
+        item.item_id === itemId ? { ...item, instructions: newInstructions } : item
+      )
+    );
+  };
+
+  const handleOpenPaymentModal = (orderMeta) => {
     if (cartItems.length === 0) {
       toast.error("Please add items to the cart.");
       return;
     }
     
+    if (!orderMeta.customerName && orderMeta.serviceMode === 'Take Out') {
+         toast.error("Please enter a customer name.");
+         return;
+    }
+
+    setPendingOrderData(orderMeta);
+    setIsPaymentModalOpen(true);
+  };
+
+  const handleConfirmCashOrder = async (paymentDetails) => {
     setIsPlacingOrder(true);
     toast.loading('Submitting order...');
     
     const orderData = {
       staff_id: user.id, 
-      order_type: orderType,
-      instructions: instructions,
-      delivery_location: deliveryLocation,
-      payment_method: "Cash", // Hardcoded for POS
+      order_type: 'Walk-in',
+      customer_name: pendingOrderData.customerName || 'Guest',
+      delivery_location: pendingOrderData.tableNumber 
+        ? `Table ${pendingOrderData.tableNumber}` 
+        : `Counter (${pendingOrderData.serviceMode})`,
+      table_id: pendingOrderData.tableId || null,
+      payment_method: "Cash",
       items: cartItems.map(item => ({
         item_id: item.item_id,
         quantity: item.quantity,
         price: item.price,
-        // Include item-specific instructions if you have them
-        // instructions: item.instructions || '' 
-      }))
-    };
-    
-    try {
-      // --- REMOVED PLACEHOLDER, ADDED API CALL ---
-      const response = await apiClient('/orders/pos', {
-        method: 'POST',
-        body: JSON.stringify(orderData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Failed to submit order.');
-      }
-
-      toast.dismiss();
-      toast.success(`Order #${result.order_id} submitted to kitchen!`);
-      
-      // Reset the cart
-      setCartItems([]);
-      setInstructions('');
-      setOrderType('Walk-in');
-      setDeliveryLocation('Counter');
-      
-      // We can open a receipt modal here in the future
-      // setReceiptDetails(result); 
-      // setIsReceiptModalOpen(true);
-
-    } catch (err) {
-      toast.dismiss();
-      if (err.message !== 'Session expired') {
-        toast.error(`Error: ${err.message}`);
-      }
-    } finally {
-      setIsPlacingOrder(false);
-    }
-    // --- END OF UPDATE ---
-  };
-
-const handleOpenPaymentModal = (grandTotal) => {
-    if (cartItems.length === 0) {
-      toast.error("Please add items to the cart.");
-      return;
-    }
-    if (!deliveryLocation) {
-      toast.error("Please enter a customer name or note.");
-      return;
-    }
-
-    // --- NEW LOGIC ---
-    if (orderType === 'Phone Order') {
-        // Skip the modal, submit directly as "Pay Later"
-        handleConfirmCashOrder({
-            amount_tendered: 0,
-            change_amount: 0,
-            isPayLater: true // Flag to tell the submit function
-        });
-    } else {
-        // Normal Walk-in Flow -> Open Modal
-        setTotalDue(grandTotal);
-        setIsPaymentModalOpen(true);
-    }
-  };
-
-  // --- 4. THIS IS THE FINAL API CALL (RENAMED) ---
-  const handleConfirmCashOrder = async (paymentData) => {
-    setIsPlacingOrder(true);
-    toast.loading('Submitting order...');
-    
-    const orderData = {
-      // ... existing fields ...
-      staff_id: user.id, 
-      order_type: orderType,
-      instructions: instructions,
-      delivery_location: deliveryLocation,
-      
-      // --- UPDATED PAYMENT METHOD ---
-      payment_method: paymentData.isPayLater ? "Pay Later" : "Cash", 
-      
-      items: cartItems.map(item => ({
-        item_id: item.item_id,
-        quantity: item.quantity,
-        price: item.price,
+        instructions: item.instructions 
       })),
-      
-      amount_tendered: paymentData.amount_tendered,
-      change_amount: paymentData.change_amount,
+      amount_tendered: paymentDetails.amount_tendered,
+      change_amount: paymentDetails.change_amount,
     };
     
     try {
@@ -212,22 +155,22 @@ const handleOpenPaymentModal = (grandTotal) => {
         body: JSON.stringify(orderData),
       });
       
-      // ... (Rest of the function stays the same: success message, reset state, etc.)
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Failed to submit order.');
 
       toast.dismiss();
-      toast.success(`Order #${result.order_id} submitted to kitchen!`);
-      
+      const finalReceipt = {
+          ...result.order,
+          items: cartItems 
+      };
+      setReceiptData(finalReceipt);
+      setIsReceiptOpen(true);
       setIsPaymentModalOpen(false);
       setCartItems([]);
-      setInstructions('');
-      setOrderType('Walk-in');
-      setDeliveryLocation('Counter');
-      setTotalDue(0);
+      setDeliveryLocation(''); 
+      setPendingOrderData(null);
 
     } catch (err) {
-        // ... error handling ...
         toast.dismiss();
         if (err.message !== 'Session expired') {
             toast.error(`Error: ${err.message}`);
@@ -237,70 +180,99 @@ const handleOpenPaymentModal = (grandTotal) => {
     }
   };
 
-  // ... (rest of the file is the same)
-  const filteredItems = items
-    .filter(item => selectedCategory === 0 || item.category_id === selectedCategory)
-    .filter(item => item.item_name.toLowerCase().includes(searchTerm.toLowerCase()));
+  const getProcessedItems = () => {
+    let result = items
+      .filter(item => selectedCategory === 0 || item.category_id === selectedCategory)
+      .filter(item => item.item_name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    switch (sortOption) {
+      case 'a-z': result.sort((a, b) => a.item_name.localeCompare(b.item_name)); break;
+      case 'z-a': result.sort((a, b) => b.item_name.localeCompare(a.item_name)); break;
+      case 'price-low': result.sort((a, b) => parseFloat(a.price) - parseFloat(b.price)); break;
+      case 'price-high': result.sort((a, b) => parseFloat(b.price) - parseFloat(a.price)); break;
+      case 'rating-high': result.sort((a, b) => {
+            const ratingA = parseFloat(a.average_rating || 0);
+            const ratingB = parseFloat(b.average_rating || 0);
+            if (ratingB !== ratingA) return ratingB - ratingA;
+            return (b.total_reviews || 0) - (a.total_reviews || 0);
+        });
+        break;
+      case 'recent': result.sort((a, b) => b.item_id - a.item_id); break;
+      default: break;
+    }
+    return result;
+  };
+
+  const finalItems = getProcessedItems();
 
   return (
-    <div className="flex flex-col h-screen" style={{ backgroundColor: '#523a2eff' }}>
-      <InternalNavBar />
-      <div className="flex flex-1 overflow-hidden">
-        
-        <main className="flex-1 overflow-y-auto p-8">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#523a2e]">
+      <div className="flex-none">
+        <InternalNavBar />
+      </div>
 
-          <div className="relative w-full max-w-lg mx-auto mb-6">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="text-gray-400" size={20} />
+      <div className="flex flex-1 overflow-hidden relative">
+        <main className="flex-1 overflow-y-auto p-6 pos-main-content">
+            <div className="max-w-7xl mx-auto"> 
+                <div className="top-0 z-10 pb-4 pt-2 bg-inherit">
+                    <div className="relative w-full max-w-lg mx-auto">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Search className="text-gray-400" size={20} />
+                        </div>
+                        <input
+                        type="text"
+                        placeholder="Search for food..."
+                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-full bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#F9A825] shadow-sm"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                </div>
+
+                <CategoryTabs
+                    categories={categories}
+                    selectedCategory={selectedCategory}
+                    onSelectCategory={handleSelectCategory}
+                    sortOption={sortOption}
+                    onSortChange={setSortOption}
+                    theme="kitchen"
+                />
+
+                <FoodGrid
+                    items={finalItems} 
+                    onAddToCart={handleAddToCart}
+                    onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
+                    layoutStyle={posPageGridStyle}
+                    theme="kitchen"
+                />
             </div>
-            <input
-              type="text"
-              placeholder="Search for food..."
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-full bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#F9A825]"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <CategoryTabs
-            categories={categories}
-            selectedCategory={selectedCategory}
-            onSelectCategory={handleSelectCategory}
-            theme="kitchen"
-          />
-          <FoodGrid
-       items={filteredItems}
-       onAddToCart={handleAddToCart}
-       onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
-       layoutStyle={posPageGridStyle}
-       theme="kitchen"
-        />
         </main>
 
- 
-        <aside className="w-96 border-l border-gray-200 overflow-y-auto h-full">
+        <aside className="w-[400px] flex-none pos-cart-sidebar z-20 shadow-2xl">
           <PosCart
             cartItems={cartItems}
+            availableTables={tables} 
             onUpdateQuantity={handleUpdateQuantity}
             onPlaceOrder={handleOpenPaymentModal}
-            orderType={orderType}
-            setOrderType={setOrderType}
-            instructions={instructions}
-            setInstructions={setInstructions}
             onRemoveItem={handleRemoveItem}
-            deliveryLocation={deliveryLocation}
+            onUpdateItemInstructions={handleUpdateItemInstructions}
+            deliveryLocation={deliveryLocation} 
             setDeliveryLocation={setDeliveryLocation}
-            // isPlacingOrder is no longer needed here
           />
         </aside>
       </div>
 
-      {/* --- ADD THE MODAL TO THE PAGE --- */}
       <PosPaymentModal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
-        totalDue={totalDue}
+        totalDue={pendingOrderData?.totalAmount || 0}
         onConfirmPayment={handleConfirmCashOrder}
+      />
+
+      <PosReceiptModal 
+        isOpen={isReceiptOpen}
+        onClose={() => setIsReceiptOpen(false)}
+        receiptData={receiptData}
       />
 
       <ImageModal imageUrl={selectedImage} onClose={() => setSelectedImage(null)} />

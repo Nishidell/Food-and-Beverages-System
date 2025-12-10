@@ -1,143 +1,180 @@
-import React from 'react';
-import { X, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Trash2, ShoppingBag, Utensils } from 'lucide-react';
 
-// This is a simplified version of your CartPanel, designed to be a fixed panel.
 const PosCart = ({
   cartItems = [],
+  availableTables = [],
   onUpdateQuantity,
-  onPlaceOrder, // This is our handleCashOrder function
-  orderType,
-  setOrderType,
-  instructions,
-  setInstructions,
+  onPlaceOrder,
   onRemoveItem,
-  deliveryLocation,
+  onUpdateItemInstructions,
+  deliveryLocation, 
   setDeliveryLocation,
 }) => {
-  // Calculations (FOR DISPLAY ONLY)
+  const [serviceMode, setServiceMode] = useState('Take Out'); 
+  const [selectedTableId, setSelectedTableId] = useState(''); 
+
+  // Calculations
   const SERVICE_RATE = 0.10; 
   const VAT_RATE = 0.12;     
 
   const subtotal = cartItems.reduce(
-    (total, item) => total + parseFloat(item.price) * item.quantity,
+    (total, item) => total + parseFloat(item.price || 0) * item.quantity,
     0
   );
   const serviceAmount = subtotal * SERVICE_RATE;
   const vatAmount = (subtotal + serviceAmount) * VAT_RATE;
   const grandTotal = subtotal + serviceAmount + vatAmount;
 
+  useEffect(() => {
+    if (cartItems.length === 0) {
+      setServiceMode('Take Out');
+      setSelectedTableId('');
+    }
+  }, [cartItems]);
+
+  const handleProceed = () => {
+      if (serviceMode === 'For Here' && !selectedTableId) {
+          alert("Please select a table for Dine-in orders.");
+          return;
+      }
+      const tableObj = availableTables.find(t => t.table_id === parseInt(selectedTableId));
+      const tableNumber = tableObj ? tableObj.table_number : 'Unknown';
+
+      const orderMeta = {
+          totalAmount: grandTotal,
+          customerName: deliveryLocation || 'Guest',
+          serviceMode: serviceMode,
+          tableId: serviceMode === 'For Here' ? selectedTableId : null,
+          tableNumber: serviceMode === 'For Here' ? tableNumber : null
+      };
+      onPlaceOrder(orderMeta);
+  };
+
   return (
-    // This is no longer a modal. It's just a flex column.
-    <div className="p-6 flex flex-col h-full bg-white shadow-lg">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-[#3C2A21]">New Order</h2>
+    <div className="flex flex-col h-full bg-white shadow-lg border-l border-gray-200">
+      
+      {/* 1. COMPACT HEADER */}
+      <div className="px-5 py-4 bg-white border-b border-gray-100 flex justify-between items-center shrink-0">
+        <h2 className="text-xl font-bold text-[#3C2A21]">New Order</h2>
+        <span className="text-xs font-bold text-[#F9A825] uppercase bg-orange-50 px-2 py-1 rounded">Walk-in</span>
       </div>
 
-      {/* Order Type Buttons */}
-      <div className="flex gap-2 mb-4" >
-        <button
-          onClick={() => {
-            setOrderType('Walk-in');
-            setDeliveryLocation('Counter');
-          }}
-          className={`flex-1 py-2 text-sm font-semibold rounded-md transition-colors ${
-          orderType === 'Walk-in' ? 'bg-[#F9A825] text-[#3C2A21]' : 'bg-gray-200 text-gray-700'
-         }`}
-        >
-          Walk-in
-        </button>
-        <button
-          onClick={() => {
-            setOrderType('Phone Order');
-            setDeliveryLocation('');
-          }}
-          className={`flex-1 py-2 text-sm font-semibold rounded-md transition-colors ${
-        orderType === 'Phone Order' ? 'bg-[#F9A825] text-[#3C2A21]' : 'bg-gray-200 text-gray-700'
-      }`}
-        >
-          Phone Order
-        </button>
-      </div>
+      {/* 2. CONTROLS SECTION (Fixed at top, non-scrollable) */}
+      <div className="px-5 py-3 space-y-3 shrink-0 bg-gray-50 border-b border-gray-200">
+        {/* Service Mode Toggle */}
+        <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm">
+            <button
+                onClick={() => setServiceMode('Take Out')}
+                className={`flex-1 py-2 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-2 ${
+                serviceMode === 'Take Out' ? 'bg-[#F9A825] text-[#3C2A21] shadow-sm' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+            >
+                <ShoppingBag size={14}/> Take Out
+            </button>
+            <button
+                onClick={() => setServiceMode('For Here')}
+                className={`flex-1 py-2 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-2 ${
+                serviceMode === 'For Here' ? 'bg-[#F9A825] text-[#3C2A21] shadow-sm' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+            >
+                <Utensils size={14}/> For Here
+            </button>
+        </div>
 
-      {/* Delivery Location Input */}
-      <div className="mb-4 text-[#3C2A21]">
-        <label htmlFor="delivery_location" className="text-sm font-semibold text-gray-700">
-          {orderType === 'Walk-in' ? 'Customer Name' : 'Phone/Notes'}
-        </label>
+        {/* Table Selection (Conditional) */}
+        {serviceMode === 'For Here' && (
+            <select 
+                value={selectedTableId}
+                onChange={(e) => setSelectedTableId(e.target.value)}
+                className="w-full text-sm border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-[#F9A825] bg-white"
+            >
+                <option value="">-- Select Table --</option>
+                {availableTables.map(t => {
+                    const isOccupied = t.status?.toLowerCase() === 'occupied';
+                    return (
+                        <option key={t.table_id} value={t.table_id} disabled={isOccupied} className={isOccupied ? "text-gray-400" : ""}>
+                            Table {t.table_number} {isOccupied ? '(Occupied)' : ''}
+                        </option>
+                    );
+                })}
+            </select>
+        )}
+
+        {/* Name Input */}
         <input
-          id="delivery_location"
-          type="text" 
-          value={deliveryLocation}
-          onChange={(e) => setDeliveryLocation(e.target.value)}
-          className="mt-1 w-full border border-gray-300 rounded-md p-2"
-          placeholder={orderType === 'Walk-in' ? 'e.g., "John D."' : 'e.g., "For pickup at 5PM"'}
-          required
+            type="text" 
+            value={deliveryLocation}
+            onChange={(e) => setDeliveryLocation(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#F9A825]"
+            placeholder='Customer Name (e.g. Nicole)'
         />
       </div>
 
-      {/* Cart Items List */}
-      <div className="flex-1 overflow-y-auto pr-2 mb-4 border-t border-b py-4">
-        {cartItems.length === 0 ? (
-          <p className="text-white text-center py-8">Cart is empty.</p>
-        ) : (
-          <div className="space-y-4">
-            {cartItems.map((item) => (
-              <div key={item.item_id} className="flex justify-between items-center">
-                <div>
-                  <p className="font-semibold">{item.item_name}</p>
-                  <p className="text-sm text-gray-500">₱{parseFloat(item.price).toFixed(2)}</p>
+      {/* 3. SCROLLABLE LIST AREA (This now expands to fill space) */}
+      <div className="flex-1 overflow-y-auto min-h-0 p-4 bg-white"> 
+           {cartItems.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
+                <ShoppingBag size={48} className="mb-2"/>
+                <p>No items yet</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {cartItems.map((item, index) => (
+                <div key={`${item.item_id}-${index}`} className="group bg-white border border-gray-100 rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow">
+                  {/* Item Header */}
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                        <p className="font-bold text-[#3C2A21] leading-tight">{item.item_name}</p>
+                        <p className="text-xs text-[#F9A825] font-bold mt-1">₱{parseFloat(item.price || 0).toFixed(2)}</p>
+                    </div>
+                    {/* Qty Controls */}
+                    <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-1 border border-gray-200">
+                        <button onClick={() => onUpdateQuantity(item.item_id, item.quantity - 1)} className="w-6 h-6 flex items-center justify-center rounded bg-white text-gray-600 hover:text-red-500 shadow-sm">-</button>
+                        <span className="w-4 text-center text-xs font-bold">{item.quantity}</span>
+                        <button onClick={() => onUpdateQuantity(item.item_id, item.quantity + 1)} className="w-6 h-6 flex items-center justify-center rounded bg-white text-gray-600 hover:text-green-600 shadow-sm">+</button>
+                    </div>
+                  </div>
+                  
+                  {/* Instruction Input */}
+                  <div className="flex gap-2 items-start mt-2 pt-2 border-t border-gray-50">
+                    <textarea
+                        placeholder="Add notes..."
+                        value={item.instructions || ''}
+                        onChange={(e) => onUpdateItemInstructions(item.item_id, e.target.value)}
+                        rows="1"
+                        className="flex-1 text-xs p-2 bg-gray-50 border border-gray-200 rounded focus:bg-white focus:ring-1 focus:ring-[#F9A825] outline-none resize-none overflow-hidden"
+                        style={{ minHeight: '34px' }}
+                    ></textarea>
+                    <button onClick={() => onRemoveItem(item.item_id)} className="p-2 text-gray-300 hover:text-red-500 transition-colors">
+                        <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <button onClick={() => onUpdateQuantity(item.item_id, item.quantity - 1)} className="bg-gray-200 w-6 h-6 rounded-md font-bold hover:bg-gray-300">-</button>
-                  <span className="w-4 text-center">{item.quantity}</span>
-                  <button onClick={() => onUpdateQuantity(item.item_id, item.quantity + 1)} className="bg-gray-200 w-6 h-6 rounded-md font-bold hover:bg-gray-300">+</button>
-                  <button onClick={() => onRemoveItem(item.item_id)} className="text-red-500 hover:text-red-700 ml-2"><Trash2 size={18} /></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
       </div>
 
-      {/* Footer Section */}
-      <div>
-        {/* Instructions */}
-        <div className="mt-4">
-          <label htmlFor="instructions" className="text-sm font-semibold text-white">Special Instructions</label>
-          <textarea id="instructions" value={instructions} onChange={(e) => setInstructions(e.target.value)} rows="3" className="mt-1 w-full border border-gray-300 rounded-md p-2" placeholder="e.g. allergies, extra spicy, etc."></textarea>
-        </div>
-
-        {/* Footer with DISPLAY-ONLY calculations */}
-        <div className="border-t pt-4 mt-4 space-y-2">
-          <div className="flex justify-between text-sm text-[#3C2A21]">
-            <span>Subtotal</span>
-            <span>₱{subtotal.toFixed(2)}</span>
+      {/* 4. COMPACT FOOTER (Fixed at bottom) */}
+      <div className="p-4 bg-gray-50 border-t border-gray-200 shrink-0">
+          <div className="space-y-1 mb-3">
+            <div className="flex justify-between text-xs text-gray-500"><span>Subtotal</span><span>₱{subtotal.toFixed(2)}</span></div>
+            <div className="flex justify-between text-xs text-gray-500"><span>Service (10%)</span><span>₱{serviceAmount.toFixed(2)}</span></div>
+            <div className="flex justify-between text-xs text-gray-500"><span>VAT (12%)</span><span>₱{vatAmount.toFixed(2)}</span></div>
+            <div className="flex justify-between text-[#3C2A21] font-bold text-lg pt-1 border-t border-gray-200 mt-1">
+                <span>Total</span>
+                <span>₱{grandTotal.toFixed(2)}</span>
+            </div>
           </div>
-          <div className="flex justify-between text-sm text-[#3C2A21]">
-            <span>Service Charge ({ (SERVICE_RATE * 100).toFixed(0) }%)</span>
-            <span>₱{serviceAmount.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between text-sm text-[#3C2A21]">
-            <span>VAT ({ (VAT_RATE * 100).toFixed(0) }%)</span>
-            <span>₱{vatAmount.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between text-[#3C2A21] font-bold text-lg pt-2 border-t mt-2">
-            <span>Total amount</span>
-            <span>₱{grandTotal.toFixed(2)}</span>
-          </div>
-         <button
-            onClick={() => onPlaceOrder(grandTotal)} 
-            disabled={cartItems.length === 0 || !deliveryLocation}
-            className={`w-full mt-4 font-bold py-3 rounded-lg transition-colors disabled:bg-gray-400 ${
-                orderType === 'Phone Order' 
-                ? 'bg-blue-600 text-white hover:bg-blue-700' // Blue for Phone Orders
-                : 'bg-[#F9A825] text-[#3C2A21] hover:bg-[#c47b04]' // Orange for Walk-in
-            }`}
-        >
-            {orderType === 'Phone Order' ? 'Place Phone Order (Pay Later)' : 'Proceed to Payment'}
-        </button>
-        </div>
+          
+          <button
+            onClick={handleProceed} 
+            disabled={cartItems.length === 0}
+            className="w-full py-3 rounded-xl font-bold text-white shadow-lg bg-[#F9A825] hover:bg-[#e0961f] disabled:bg-gray-300 disabled:shadow-none transition-all active:scale-95"
+          >
+            Pay ₱{grandTotal.toFixed(2)}
+          </button>
       </div>
     </div>
   );

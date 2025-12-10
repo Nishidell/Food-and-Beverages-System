@@ -25,7 +25,13 @@ function MenuPage() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [orderType, setOrderType] = useState('Dine-in');
   const [deliveryLocation, setDeliveryLocation] = useState('');
+  
+  // ✅ NEW: State for Auto-Detected Room
+  const [activeRoom, setActiveRoom] = useState(null);
+  const [isFetchingRoom, setIsFetchingRoom] = useState(false);
+
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [sortOption, setSortOption] = useState('a-z');
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
@@ -42,14 +48,45 @@ function MenuPage() {
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   const handleUpdateItemInstruction = (itemId, newInstruction) => {
-  setCartItems(prevItems =>
-    prevItems.map(item =>
-      item.item_id === itemId ? { ...item, instructions: newInstruction } : item
-    )
-  );
-};
+    setCartItems(prevItems =>
+        prevItems.map(item =>
+        item.item_id === itemId ? { ...item, instructions: newInstruction } : item
+        )
+    );
+  };
 
-  useEffect(() => { setDeliveryLocation(''); }, [orderType]);
+  // ✅ LOGIC: Auto-fetch Room when "Room Dining" is selected
+  useEffect(() => { 
+      setDeliveryLocation(''); 
+      
+      if (orderType === 'Room Dining') {
+          const fetchMyRoom = async () => {
+              setIsFetchingRoom(true);
+              try {
+                  const res = await apiClient('/rooms/my-active-room');
+                  if (res.ok) {
+                      const data = await res.json();
+                      setActiveRoom(data.room); // { room_id, room_num, room_name }
+                      setDeliveryLocation(data.room.room_id); // Auto-set location ID
+                      toast.success(`Welcome! We found your room: ${data.room.room_num}`);
+                  } else {
+                      // If 404 (No active booking), reset
+                      setActiveRoom(null);
+                      toast.error("No active room reservation found.");
+                  }
+              } catch (err) {
+                  console.error("Room fetch error:", err);
+              } finally {
+                  setIsFetchingRoom(false);
+              }
+          };
+          fetchMyRoom();
+      } else {
+          setActiveRoom(null); // Reset if switching back to Dine-in
+      }
+
+  }, [orderType]);
+
   useEffect(() => {
     const fetchItems = async () => {
       try {
@@ -77,18 +114,13 @@ function MenuPage() {
   }, []);
 
   useEffect(() => {
-    // Only start polling if the user is authenticated
-    if (!isAuthenticated) {
-      return;
-    }
+    if (!isAuthenticated) return;
 
-    const POLLING_INTERVAL = 10000; // 10 seconds
+    const POLLING_INTERVAL = 10000; 
 
     const fetchNotifications = async () => {
-      // Don't fetch if the panel is open, because we're interacting with it
-      if (isNotificationPanelOpen) {
+      if (isNotificationPanelOpen)
         return;
-      }
 
       try {
         const res = await apiClient('/notifications');
@@ -97,9 +129,7 @@ function MenuPage() {
           return;
         }
         
-        const data = await res.json(); // This is an object: { notifications: [], unreadCount: 0 }
-
-        // Set the state from the database
+        const data = await res.json(); 
         setNotifications(data.notifications || []);
         setUnreadNotificationCount(data.unreadCount || 0);
 
@@ -110,37 +140,27 @@ function MenuPage() {
       }
     };
 
-    // Run once immediately, then set the interval
     fetchNotifications();
     const intervalId = setInterval(fetchNotifications, POLLING_INTERVAL);
-
-    // Clean up the interval when the component unmounts
     return () => clearInterval(intervalId);
 
   }, [isAuthenticated, isNotificationPanelOpen]); 
 
   const handleSearchChange = (e) => setSearchTerm(e.target.value);
   const toggleCart = () => setIsCartOpen(!isCartOpen);
+  
   const toggleNotificationPanel = () => {
-    // Optimistically open the panel immediately
     const panelWillBeOpen = !isNotificationPanelOpen;
     setIsNotificationPanelOpen(panelWillBeOpen);
 
-    // If the panel is opening, mark all as read
     if (panelWillBeOpen) {
-      // Optimistically set count to 0
       setUnreadNotificationCount(0);
-      
-      // Tell the backend to mark them as read
-      apiClient('/notifications/mark-read', {
-        method: 'PUT'
-      }).catch(err => {
-        // If it fails, log it but don't bother the user
-        console.error("Failed to mark notifications as read:", err);
-      });
+      apiClient('/notifications/mark-read', { method: 'PUT' }).catch(err => console.error(err));
     }
   };
+
   const handleSelectCategory = (category) => setSelectedCategory(category);
+  
   const handleAddToCart = (clickedItem) => {
     setCartItems(prevItems => {
       const isItemInCart = prevItems.find(item => item.item_id === clickedItem.item_id);
@@ -176,61 +196,55 @@ function MenuPage() {
     }
   };
 
-  // --- 1. THIS IS THE FIX ---
-  // We no longer pass the total. We just open the modal.
-  // We still calculate the total here *for display* in the PaymentModal.
   const handleProceedToPayment = (data) => {
     if (!isAuthenticated) {
       toast.error("You must be logged in to place an order.");
       navigate('/login');
       return;
     }
-    if (data?.table_id) {
-      setDeliveryLocation(data.table_id);
-    } else if (data?.room_id) {
-      setDeliveryLocation(data.room_id);
+    
+    // Auto-room Logic: If activeRoom exists, prioritize it
+    if (activeRoom) {
+         setDeliveryLocation(activeRoom.room_id);
+    } else {
+        // Fallback for Dine-in
+        if (data?.table_id) setDeliveryLocation(data.table_id);
+        else if (data?.room_id) setDeliveryLocation(data.room_id);
     }
     
-    // Calculate total for display
     const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const serviceCharge = subtotal * 0.10;
     const vatAmount = (subtotal + serviceCharge) * 0.12;
     const grandTotal = subtotal + serviceCharge + vatAmount;
 
-    setPendingOrderTotal(grandTotal); // Set for display
+    setPendingOrderTotal(grandTotal); 
     setIsPaymentModalOpen(true);
     setIsCartOpen(false);
   };
-  // --- END OF FIX 1 ---
 
-const handleConfirmPayment = async (paymentInfo) => {
+  const handleConfirmPayment = async (paymentInfo) => {
     setIsPaymentModalOpen(false);
     setTimeout(() => {
       setIsPlacingOrder(true);
       toast.loading('Creating checkout...');
     }, 0);
 
-    // --- LOGIC TO SEPARATE TABLE AND ROOM ---
     let tableIdToSend = null;
     let roomIdToSend = null;
 
-    // Assuming 'deliveryLocation' holds the ID selected in the CartPanel
     if (orderType === 'Dine-in') {
         tableIdToSend = deliveryLocation; 
-    } else if (orderType === 'Room Dining' || orderType === 'Room Service') {
-        // Make sure this string matches exactly what is in your CartPanel options
-        roomIdToSend = deliveryLocation;
+    } else if (orderType === 'Room Dining') {
+        roomIdToSend = deliveryLocation; // This is now set automatically from activeRoom
     }
 
-    // ✅ UPDATED: Send table_id and room_id explicitly
     const checkoutData = {
       cart_items: cartItems.map(item => ({
         item_id: item.item_id,
         quantity: item.quantity,
-        instructions: item.instructions || '' // <--- ADD THIS LINE
+        instructions: item.instructions || '' 
       })),
       
-      // Send the specific IDs
       table_id: tableIdToSend, 
       room_id: roomIdToSend,
 
@@ -246,9 +260,7 @@ const handleConfirmPayment = async (paymentInfo) => {
 
       const paymentResponse = await apiClient('/payments/checkout', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(checkoutData)
       });
 
@@ -271,66 +283,66 @@ const handleConfirmPayment = async (paymentInfo) => {
     } catch (err) {
       console.error('Checkout Error:', err);
       toast.dismiss();
-      
       if (err.message !== 'Session expired') {
         toast.error(`Error: ${err.message}`);
       }
-      
       setIsPlacingOrder(false);
     }
-};
+  };
 
   const handleCloseReceipt = () => {
     setIsReceiptModalOpen(false);
     setReceiptDetails(null);
   };
 
-  // --- (NEW) HANDLER TO DELETE ONE NOTIFICATION ---
   const handleDeleteNotification = async (notificationId) => {
     try {
-      const res = await apiClient(`/notifications/${notificationId}`, {
-        method: 'DELETE',
-      });
+      const res = await apiClient(`/notifications/${notificationId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete notification');
-      
-      // Optimistically update UI
-      setNotifications(prev => 
-        prev.filter(n => n.notification_id !== notificationId)
-      );
+      setNotifications(prev => prev.filter(n => n.notification_id !== notificationId));
       toast.success('Notification cleared.');
     } catch (err) {
-      if (err.message !== 'Session expired') {
-        toast.error(err.message);
-      }
+      if (err.message !== 'Session expired') toast.error(err.message);
     }
   };
 
-  // --- (NEW) HANDLER TO CLEAR ALL NOTIFICATIONS ---
   const handleClearAllNotifications = async () => {
-    if (!window.confirm('Are you sure you want to clear all notifications?')) {
-      return;
-    }
-    
+    if (!window.confirm('Are you sure you want to clear all notifications?')) return;
     try {
-      const res = await apiClient('/notifications/clear-all', {
-        method: 'DELETE',
-      });
+      const res = await apiClient('/notifications/clear-all', { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to clear notifications');
-      
-      // Optimistically update UI
       setNotifications([]);
-      setUnreadNotificationCount(0); // Also reset count
+      setUnreadNotificationCount(0); 
       toast.success('All notifications cleared.');
     } catch (err) {
-      if (err.message !== 'Session expired') {
-        toast.error(err.message);
-      }
+      if (err.message !== 'Session expired') toast.error(err.message);
     }
   };
 
-  const filteredItems = items
-    .filter(item => selectedCategory === 0 || item.category_id === selectedCategory)
-    .filter(item => item.item_name.toLowerCase().includes(searchTerm.toLowerCase()));
+  const getProcessedItems = () => {
+    let result = items
+      .filter(item => selectedCategory === 0 || item.category_id === selectedCategory)
+      .filter(item => item.item_name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    switch (sortOption) {
+      case 'a-z': result.sort((a, b) => a.item_name.localeCompare(b.item_name)); break;
+      case 'z-a': result.sort((a, b) => b.item_name.localeCompare(a.item_name)); break;
+      case 'price-low': result.sort((a, b) => parseFloat(a.price) - parseFloat(b.price)); break;
+      case 'price-high': result.sort((a, b) => parseFloat(b.price) - parseFloat(a.price)); break;
+      case 'rating-high': result.sort((a, b) => {
+            const ratingA = parseFloat(a.average_rating || 0);
+            const ratingB = parseFloat(b.average_rating || 0);
+            if (ratingB !== ratingA) return ratingB - ratingA;
+            return (b.total_reviews || 0) - (a.total_reviews || 0);
+        });
+        break;
+      case 'recent': result.sort((a, b) => b.item_id - a.item_id); break;
+      default: break;
+    }
+    return result;
+  };
+
+  const finalItems = getProcessedItems();
 
   return (
     <div className="customer-page-container">
@@ -349,18 +361,20 @@ const handleConfirmPayment = async (paymentInfo) => {
           categories={categories}
           selectedCategory={selectedCategory}
           onSelectCategory={handleSelectCategory}
+          sortOption={sortOption}
+          onSortChange={setSortOption}
         />
         <FoodGrid
-        items={filteredItems}
-        onAddToCart={handleAddToCart}
-        onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
-      />
+          items={finalItems}
+          onAddToCart={handleAddToCart}
+          onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
+        />
       </main>
 
       <CartPanel
         cartItems={cartItems}
         onUpdateQuantity={handleUpdateQuantity}
-        onUpdateItemInstruction={handleUpdateItemInstruction} // <--- NEW
+        onUpdateItemInstruction={handleUpdateItemInstruction}
         onPlaceOrder={handleProceedToPayment}
         isOpen={isCartOpen}
         onClose={toggleCart}
@@ -370,12 +384,15 @@ const handleConfirmPayment = async (paymentInfo) => {
         deliveryLocation={deliveryLocation}
         setDeliveryLocation={setDeliveryLocation}
         isPlacingOrder={isPlacingOrder}
+        // ✅ NEW PROPS for Room
+        activeRoom={activeRoom}
+        isFetchingRoom={isFetchingRoom}
       />
 
       <PaymentModal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
-        totalAmount={pendingOrderTotal} // Pass display total
+        totalAmount={pendingOrderTotal} 
         onConfirmPayment={handleConfirmPayment}
         deliveryLocation={deliveryLocation}
         orderType={orderType}
@@ -388,7 +405,6 @@ const handleConfirmPayment = async (paymentInfo) => {
         orderDetails={receiptDetails}
       />
 
-      {/* --- (NEW) PASS PROPS TO PANEL --- */}
       <NotificationPanel
         isOpen={isNotificationPanelOpen}
         onClose={toggleNotificationPanel}

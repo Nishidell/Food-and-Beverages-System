@@ -12,6 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../utils/apiClient';
 import PromotionsManagement from './components/PromotionsManagement'; 
 import TableManagement from './components/TableManagement';
+import ReviewsManagement from './components/ReviewsManagement';
 
 
 
@@ -260,6 +261,18 @@ function AdminPage() {
             >
               Inventory Logs
             </button>
+            <button
+              onClick={() => setCurrentView('reviews')}
+              style={{
+                padding: '8px 16px',
+                fontSize: '1.125rem',
+                fontWeight: 600,
+                color: currentView === 'reviews' ? accentColor : '#ffffff',
+                borderBottom: currentView === 'reviews' ? `2px solid ${accentColor}` : '2px solid transparent'
+              }}
+            >
+              Food Reviews
+            </button>
           </nav>
 
           <main>
@@ -298,6 +311,8 @@ function AdminPage() {
             {!loading && !error && currentView === 'logs' && <InventoryLogsTable />}
 
             {!loading && !error && currentView === 'tables' && <TableManagement />}
+
+            {!loading && !error && currentView === 'reviews' && <ReviewsManagement />}
           </main>
           
           <AddItemModal
