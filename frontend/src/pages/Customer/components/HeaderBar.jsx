@@ -1,9 +1,12 @@
 import React from 'react';
 import { ShoppingCart, Search, Bell } from 'lucide-react';
 import ProfileDropdown from '../../../components/ProfileDropdown';
-import '../CustomerTheme.css'; // Import the external CSS
+import { useAuth } from '../../../context/AuthContext'; // ✅ Import Auth Hook
+import '../CustomerTheme.css'; 
 
 export default function HeaderBar({ cartCount, onCartToggle, searchTerm, onSearchChange, notificationCount, onNotificationToggle }) {
+  const { user } = useAuth(); // ✅ Get user status
+
   return (
     <header className="header-bar">
 
@@ -29,36 +32,38 @@ export default function HeaderBar({ cartCount, onCartToggle, searchTerm, onSearc
       {/* Right Column: Cart & Profile & Notifications */}
       <div className="header-col-end">
         
-        {/* Notification Button */}
-        <button
-          onClick={onNotificationToggle}
-          className="header-icon-btn"
-        >
-          <Bell size={22} />
-          {notificationCount > 0 && (
-            <span className="icon-badge">
-              {notificationCount}
-            </span>
-          )}
-        </button>
-           
-        {/* Cart Button */}
-        <button
-          onClick={onCartToggle}
-          className="header-icon-btn"
-        >
-          <ShoppingCart size={22} />
-          {cartCount > 0 && (
-            <span className="icon-badge">
-              {cartCount}
-            </span>
-          )}
-        </button>
+        {/* ✅ CONDITIONAL: Only show Notifications & Cart if Logged In */}
+        {user && (
+            <>
+                {/* Notification Button */}
+                <button
+                onClick={onNotificationToggle}
+                className="header-icon-btn"
+                >
+                <Bell size={22} />
+                {notificationCount > 0 && (
+                    <span className="icon-badge">
+                    {notificationCount}
+                    </span>
+                )}
+                </button>
+                    
+                {/* Cart Button */}
+                <button
+                onClick={onCartToggle}
+                className="header-icon-btn"
+                >
+                <ShoppingCart size={22} />
+                {cartCount > 0 && (
+                    <span className="icon-badge">
+                    {cartCount}
+                    </span>
+                )}
+                </button>
+            </>
+        )}
 
-        {/* Profile Dropdown */}
-        {/* Note: To make this perfectly match, you may want to apply the 'header-icon-btn' 
-            class inside ProfileDropdown.jsx as well, but for now it uses inline styles 
-            that match these colors. */}
+        {/* Profile Dropdown (Handles Guest View internally) */}
         <ProfileDropdown />
       </div>
     </header>

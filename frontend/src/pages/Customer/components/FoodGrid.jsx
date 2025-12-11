@@ -1,6 +1,8 @@
 import React from 'react';
 import { Star } from 'lucide-react'; 
 import '../CustomerTheme.css';
+import { useNavigate } from 'react-router-dom'; 
+import { useAuth } from '../../../../src/context/AuthContext';
 
 // Helper to handle image URLs
 const getImageUrl = (imagePath) => {
@@ -42,6 +44,9 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
       discountPercent: item.promo_discount_percentage,
     };
   };
+
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div 
@@ -98,23 +103,28 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
               </p>
 
               <div className="card-footer">
-                <div className="price-container">
-                  {isActive ? (
-                    <>
-                      <p className="price-text">₱{parseFloat(displayPrice).toFixed(2)}</p>
-                      <p className="original-price">₱{parseFloat(originalPrice).toFixed(2)}</p>
-                    </>
-                  ) : (
-                    <p className="price-text">₱{parseFloat(displayPrice).toFixed(2)}</p>
-                  )}
-                </div>
-                
-                {item.is_available ? (
-                  <button onClick={() => onAddToCart(itemForCart)} className="btn-add-cart">Add</button>
-                ) : (
+        {/* ... price container ... */}
+        
+              {item.is_available ? (
+                  <button 
+                      onClick={() => {
+                          if (!user) {
+                              // ✅ GUEST CHECK
+                              if(window.confirm("You need to login to order. Go to login page?")) {
+                                  navigate('/login');
+                              }
+                          } else {
+                              onAddToCart(itemForCart);
+                          }
+                      }} 
+                      className="btn-add-cart"
+                  >
+                      Add
+                  </button>
+              ) : (
                   <button disabled className="btn-unavailable">Unavailable</button>
-                )}
-              </div>
+              )}
+            </div>
             </div>
           </div>
         );
