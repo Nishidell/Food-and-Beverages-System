@@ -1,11 +1,21 @@
 import React from 'react';
 import { ShoppingCart, Search, Bell } from 'lucide-react';
 import ProfileDropdown from '../../../components/ProfileDropdown';
-import { useAuth } from '../../../context/AuthContext'; // ✅ Import Auth Hook
+import { useAuth } from '../../../context/AuthContext';
+import { useCart } from '../../../context/CartContext'; 
 import '../CustomerTheme.css'; 
 
-export default function HeaderBar({ cartCount, onCartToggle, searchTerm, onSearchChange, notificationCount, onNotificationToggle }) {
-  const { user } = useAuth(); // ✅ Get user status
+// ✅ New Prop: showSearch (defaults to true)
+export default function HeaderBar({ 
+  onCartToggle, 
+  searchTerm, 
+  onSearchChange, 
+  notificationCount = 0, 
+  onNotificationToggle,
+  showSearch = true 
+}) {
+  const { user } = useAuth();
+  const { cartCount } = useCart();
 
   return (
     <header className="header-bar">
@@ -15,27 +25,32 @@ export default function HeaderBar({ cartCount, onCartToggle, searchTerm, onSearc
         <img src="/images/logo_var.svg" alt="FoodieHub Logo" className="header-logo"/>
       </div>
 
-      {/* Center Column: Search Bar */}
+      {/* Center Column: Search Bar (Conditionally Rendered) */}
       <div className="header-col-center">
-        <div className="search-icon-wrapper">
-          <Search size={20} />
-        </div>
-        <input
-          type="text"
-          placeholder="Search for food..."
-          className="search-input"
-          value={searchTerm}
-          onChange={onSearchChange}
-        />
+        {showSearch ? (
+            <div className="flex w-full max-w-md items-center bg-white rounded-full px-4 py-2 shadow-sm border border-gray-100">
+                <div className="text-gray-400 mr-2">
+                <Search size={20} />
+                </div>
+                <input
+                type="text"
+                placeholder="Search for food..."
+                className="bg-transparent border-none outline-none text-sm text-[#3C2A21] w-full placeholder-gray-400"
+                value={searchTerm}
+                onChange={onSearchChange}
+                />
+            </div>
+        ) : (
+            // Spacer to keep layout balanced when search is hidden
+            <div className="hidden md:block w-full"></div> 
+        )}
       </div>
 
       {/* Right Column: Cart & Profile & Notifications */}
       <div className="header-col-end">
         
-        {/* ✅ CONDITIONAL: Only show Notifications & Cart if Logged In */}
         {user && (
             <>
-                {/* Notification Button */}
                 <button
                 onClick={onNotificationToggle}
                 className="header-icon-btn"
@@ -48,12 +63,12 @@ export default function HeaderBar({ cartCount, onCartToggle, searchTerm, onSearc
                 )}
                 </button>
                     
-                {/* Cart Button */}
                 <button
                 onClick={onCartToggle}
                 className="header-icon-btn"
                 >
                 <ShoppingCart size={22} />
+                {/* ✅ Use Context cartCount */}
                 {cartCount > 0 && (
                     <span className="icon-badge">
                     {cartCount}
@@ -63,7 +78,6 @@ export default function HeaderBar({ cartCount, onCartToggle, searchTerm, onSearc
             </>
         )}
 
-        {/* Profile Dropdown (Handles Guest View internally) */}
         <ProfileDropdown />
       </div>
     </header>

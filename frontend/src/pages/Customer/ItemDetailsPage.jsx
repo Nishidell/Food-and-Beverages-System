@@ -5,19 +5,29 @@ import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import apiClient from '../../utils/apiClient';
 import toast from 'react-hot-toast';
+
+import HeaderBar from './components/HeaderBar';
+import CartPanel from './components/CartPanel';
+import NotificationPanel from './components/NotificationPanel';
 import './CustomerTheme.css';
 
 const ItemDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { addToCart } = useCart();
 
   const [item, setItem] = useState(null);
-  const [reviews, setReviews] = useState([]);
+  const [reviews, setReviews] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
+
+  // ✅ State for Panels
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   // Helper for images
   const getImageUrl = (imagePath) => {
@@ -33,19 +43,16 @@ const ItemDetailsPage = () => {
     const fetchDetails = async () => {
       try {
         setLoading(true);
-        // 1. Fetch Item Details
         const itemRes = await apiClient(`/items/${id}`);
         if (!itemRes.ok) throw new Error('Item not found');
         const itemData = await itemRes.json();
         setItem(itemData);
 
-        // 2. Fetch Reviews for this item
         const reviewRes = await apiClient(`/ratings/${id}`);
         if (reviewRes.ok) {
             const reviewData = await reviewRes.json();
             setReviews(reviewData.reviews || []);
         }
-
       } catch (error) {
         toast.error(error.message);
         navigate('/');
@@ -56,6 +63,23 @@ const ItemDetailsPage = () => {
     fetchDetails();
   }, [id, navigate]);
 
+  // ✅ Poll Notifications (Reuse logic or keep simple)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const fetchNotifications = async () => {
+        if (isNotificationPanelOpen) return;
+        try {
+            const res = await apiClient('/notifications');
+            if (res.ok) {
+                const data = await res.json();
+                setNotifications(data.notifications || []);
+                setUnreadNotificationCount(data.unreadCount || 0);
+            }
+        } catch (e) {}
+    };
+    fetchNotifications();
+  }, [isAuthenticated, isNotificationPanelOpen]);
+
   const handleAddToCart = () => {
     if (!user) {
         if(window.confirm("You need to login to order. Go to login page?")) {
@@ -63,20 +87,16 @@ const ItemDetailsPage = () => {
         }
         return;
     }
-
     setAdding(true);
-    // Simulate slight delay for effect
     setTimeout(() => {
-        // Calculate promo price if active
         let finalPrice = item.price;
         if (item.is_promo) {
              const discount = parseFloat(item.promo_discount_percentage) / 100;
              finalPrice = parseFloat(item.price) * (1 - discount);
         }
-
         addToCart({
             ...item,
-            price: finalPrice, // Use processed price
+            price: finalPrice, 
             quantity: quantity
         });
         toast.success(`Added ${quantity}x ${item.item_name} to cart`);
@@ -87,16 +107,22 @@ const ItemDetailsPage = () => {
   if (loading) return <div className="min-h-screen bg-[#0B3D2E] flex items-center justify-center text-[#F9A825]">Loading...</div>;
   if (!item) return null;
 
-  // Calculate Price Display
   const isPromo = item.is_promo;
   const originalPrice = parseFloat(item.price);
   const discount = isPromo ? parseFloat(item.promo_discount_percentage) / 100 : 0;
   const displayPrice = isPromo ? originalPrice * (1 - discount) : originalPrice;
 
   return (
-    <div className="min-h-screen bg-[#0B3D2E] pb-20">
+    <div className="customer-page-container">
       
-      {/* 1. Header (Simple Back Button) */}
+      {/* ✅ 1. ADD HEADER BAR */}
+      <HeaderBar 
+        onCartToggle={() => setIsCartOpen(!isCartOpen)}
+        showSearch={false} 
+        notificationCount={unreadNotificationCount}
+        onNotificationToggle={() => setIsNotificationPanelOpen(!isNotificationPanelOpen)}
+      />
+
       <div className="max-w-6xl mx-auto pt-6 px-4 mb-6">
         <button 
             onClick={() => navigate('/')}
@@ -106,9 +132,10 @@ const ItemDetailsPage = () => {
         </button>
       </div>
 
+      {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-8">
         
-        {/* 2. LEFT COLUMN: Image */}
+        {/* Left Column: Image */}
         <div className="bg-white rounded-2xl p-2 shadow-xl h-fit">
             <img 
                 src={getImageUrl(item.image_url)} 
@@ -117,13 +144,10 @@ const ItemDetailsPage = () => {
             />
         </div>
 
-        {/* 3. RIGHT COLUMN: Details (Cream Card) */}
+        {/* Right Column: Details */}
         <div className="bg-[#FFF8E1] rounded-2xl p-8 shadow-xl h-fit border-l-8 border-[#F9A825]">
-            
-            {/* Title */}
             <h1 className="text-4xl font-bold text-[#0B3D2E] mb-2">{item.item_name}</h1>
             
-            {/* Stats Row */}
             <div className="flex items-center gap-4 mb-6 text-sm text-gray-600 border-b border-[#0B3D2E]/10 pb-4">
                 <div className="flex items-center gap-1 text-[#F9A825] font-bold">
                     <span className="text-lg underline decoration-1 underline-offset-4">{item.average_rating}</span>
@@ -145,7 +169,6 @@ const ItemDetailsPage = () => {
                 </div>
             </div>
 
-            {/* Price */}
             <div className="mb-6">
                 {isPromo ? (
                     <div className="flex items-end gap-3">
@@ -160,7 +183,6 @@ const ItemDetailsPage = () => {
                 )}
             </div>
 
-            {/* Description */}
             <div className="mb-8">
                 <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-2">Description</h3>
                 <p className="text-[#0B3D2E] leading-relaxed text-lg">
@@ -168,9 +190,7 @@ const ItemDetailsPage = () => {
                 </p>
             </div>
 
-            {/* Actions Row */}
             <div className="flex flex-col sm:flex-row gap-4">
-                {/* Quantity Selector */}
                 <div className="flex items-center border-2 border-[#0B3D2E]/10 rounded-xl bg-white w-fit">
                     <button 
                         onClick={() => setQuantity(q => Math.max(1, q - 1))}
@@ -187,7 +207,6 @@ const ItemDetailsPage = () => {
                     </button>
                 </div>
 
-                {/* Add Button */}
                 {item.is_available ? (
                     <button 
                         onClick={handleAddToCart}
@@ -206,11 +225,10 @@ const ItemDetailsPage = () => {
         </div>
       </div>
 
-      {/* 4. REVIEWS SECTION (Bottom) */}
+      {/* Reviews Section */}
       <div className="max-w-6xl mx-auto px-4 mt-12">
         <div className="bg-white rounded-2xl p-8 shadow-xl">
             <h2 className="text-2xl font-bold text-[#0B3D2E] mb-6">Product Ratings</h2>
-            
             {reviews.length === 0 ? (
                 <p className="text-gray-500 italic">No reviews yet.</p>
             ) : (
@@ -245,6 +263,15 @@ const ItemDetailsPage = () => {
         </div>
       </div>
 
+      {/* ✅ 2. RENDER PANELS */}
+      <CartPanel isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+      <NotificationPanel 
+        isOpen={isNotificationPanelOpen} 
+        onClose={() => setIsNotificationPanelOpen(false)}
+        notifications={notifications}
+        onDeleteOne={() => {}} // Simple handlers or reconnect full logic
+        onClearAll={() => {}}
+      />
     </div>
   );
 };
