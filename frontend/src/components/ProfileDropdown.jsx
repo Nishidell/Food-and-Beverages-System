@@ -37,9 +37,8 @@ const ProfileDropdown = () => {
   };
 
   const handleRegister = () => {
-    // Redirect to your external subsystem or internal register page
-    // For now, we point to the internal route we set up in App.jsx
-    navigate('/register'); 
+    // Replace the URL below with your actual subsystem link
+    window.location.href = 'https://thecelestiahotel.vercel.app/register'; 
     setIsDropdownOpen(false);
   };
 
