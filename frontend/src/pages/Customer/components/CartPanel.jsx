@@ -1,31 +1,33 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // ✅ For redirecting after order
 import { X, Trash2, Minus, Plus, MessageSquare } from 'lucide-react';
 import apiClient from '../../../utils/apiClient';
 import '../CustomerTheme.css';
 import { useSocket } from '../../../context/SocketContext';
+import { useCart } from '../../../context/CartContext'; // ✅ Use the Context
+import { useAuth } from '../../../context/AuthContext'; // ✅ Use Auth
+import toast from 'react-hot-toast';
 
-const CartPanel = ({
-  cartItems = [],
-  onUpdateQuantity,
-  onPlaceOrder,
-  isOpen,
-  onClose,
-  orderType,
-  setOrderType,
-  onUpdateItemInstruction, 
-  onRemoveItem,
-  deliveryLocation,
-  setDeliveryLocation,
-  isPlacingOrder
-}) => {
+const CartPanel = ({ isOpen, onClose }) => {
+  // ✅ Global Cart Data
+  const { cart, updateQuantity, removeFromCart, updateInstruction, clearCart } = useCart();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Local State for Order Settings
+  const [orderType, setOrderType] = useState('Dine-in');
+  const [deliveryLocation, setDeliveryLocation] = useState('');
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+
+  // Location Data
   const [tables, setTables] = useState([]);
   const [rooms, setRooms] = useState([]);
-  
   const [selectedTableId, setSelectedTableId] = useState('');
   const [selectedRoomId, setSelectedRoomId] = useState('');
 
   const { socket } = useSocket();
 
+  // 1. Fetch Location Data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -33,7 +35,6 @@ const CartPanel = ({
             apiClient('/tables'),
             apiClient('/rooms')
         ]);
-
         if (tableRes.ok) setTables(await tableRes.json());
         if (roomRes.ok) setRooms(await roomRes.json());
       } catch (error) {
@@ -43,13 +44,10 @@ const CartPanel = ({
     fetchData();
   }, []);
 
-  // Listen for Real-Time Table Updates
+  // 2. Real-time Table Updates
   useEffect(() => {
     if (socket) {
         socket.on('table-update', (data) => {
-            console.log("🪑 Real-time Table Update:", data);
-            
-            // Update the tables list instantly
             setTables(prevTables => prevTables.map(table => {
                 if (table.table_id === parseInt(data.table_id)) {
                     return { ...table, status: data.status };
@@ -57,106 +55,127 @@ const CartPanel = ({
                 return table;
             }));
 
-            // Clear selection if the selected table becomes occupied
             if (data.status === 'Occupied' && parseInt(selectedTableId) === parseInt(data.table_id)) {
                  setSelectedTableId(''); 
                  setDeliveryLocation('');
             }
         });
     }
+    return () => socket && socket.off('table-update');
+  }, [socket, selectedTableId]);
 
-    return () => {
-        if (socket) {
-            socket.off('table-update');
-        }
-    };
-  }, [socket, selectedTableId, setDeliveryLocation]);
-
+  // 3. Reset location when switching Order Type
   useEffect(() => {
-    if (orderType === 'Dine-in') {
-        setSelectedRoomId('');
-        setDeliveryLocation('');
-    } else if (orderType === 'Room Dining') {
-        setSelectedTableId('');
-        setDeliveryLocation('');
-    }
-  }, [orderType, setDeliveryLocation]);
+    setSelectedTableId('');
+    setSelectedRoomId('');
+    setDeliveryLocation('');
+  }, [orderType]);
 
-  // ✅ FIX: Properly handle table selection
   const handleTableChange = (e) => {
     const tId = e.target.value;
     setSelectedTableId(tId);
-    
-    // Set deliveryLocation to table_id for backend
-    setDeliveryLocation(tId); 
+    const table = tables.find(t => t.table_id.toString() === tId);
+    setDeliveryLocation(table ? `Table ${table.table_number}` : ''); 
   };
 
-  // ✅ FIX: Properly handle room selection
   const handleRoomChange = (e) => {
     const rId = e.target.value;
     setSelectedRoomId(rId);
-    
-    // Set deliveryLocation to room_id for backend
-    setDeliveryLocation(rId);
+    const room = rooms.find(r => r.room_id.toString() === rId);
+    setDeliveryLocation(room ? `Room ${room.room_num}` : '');
   };
 
-  const SERVICE_RATE = 0.10; 
-  const VAT_RATE = 0.12;     
-  const subtotal = cartItems.reduce((total, item) => total + parseFloat(item.price) * item.quantity, 0);
-  const serviceAmount = subtotal * SERVICE_RATE;
-  const vatAmount = (subtotal + serviceAmount) * VAT_RATE;
+  // ✅ 4. SELF-CONTAINED ORDER SUBMISSION
+  const handlePlaceOrder = async () => {
+    if (!user) {
+        toast.error("Please login to place an order.");
+        return;
+    }
+    
+    setIsPlacingOrder(true);
+    try {
+        // Calculate Totals
+        const subtotal = cart.reduce((total, item) => total + parseFloat(item.price) * item.quantity, 0);
+        const serviceFee = subtotal * 0.10;
+        const vat = (subtotal + serviceFee) * 0.12;
+        const totalAmount = subtotal + serviceFee + vat;
+
+        const payload = {
+            order_type: orderType,
+            delivery_location: deliveryLocation, // "Table 5" or "Room 101"
+            payment_method: 'Cash', // Default for now
+            total_amount: totalAmount,
+            items: cart.map(item => ({
+                item_id: item.item_id,
+                quantity: item.quantity,
+                price: item.price,
+                instructions: item.instructions || ''
+            }))
+        };
+
+        const response = await apiClient('/orders', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error('Failed to place order');
+        
+        const data = await response.json();
+        
+        // Success Actions
+        clearCart();
+        onClose();
+        toast.success('Order placed successfully!');
+        navigate('/my-orders'); // Redirect to history
+        
+    } catch (error) {
+        toast.error(error.message);
+    } finally {
+        setIsPlacingOrder(false);
+    }
+  };
+
+  // Calculations
+  const subtotal = cart.reduce((total, item) => total + parseFloat(item.price) * item.quantity, 0);
+  const serviceAmount = subtotal * 0.10;
+  const vatAmount = (subtotal + serviceAmount) * 0.12;
   const grandTotal = subtotal + serviceAmount + vatAmount;
 
   return (
     <>
-      {/* Overlay */}
-      <div
-        className={`cart-overlay ${isOpen ? '' : 'hidden'}`}
-        onClick={onClose}
-      />
-
-      {/* Slide-over Panel */}
+      <div className={`cart-overlay ${isOpen ? '' : 'hidden'}`} onClick={onClose} />
       <div className={`cart-panel ${isOpen ? 'open' : ''}`}>
         
-        {/* --- Header --- */}
+        {/* Header */}
         <div className="cart-header">
           <h2 className="cart-title">My Order</h2>
-          <button onClick={onClose} className="cart-close-btn">
-            <X size={24} />
-          </button>
+          <button onClick={onClose} className="cart-close-btn"><X size={24} /></button>
         </div>
 
-        {/* --- Scrollable Content --- */}
+        {/* Content */}
         <div className="cart-content">
           
-          {/* Order Type Selector */}
+          {/* Order Type */}
           <div className="order-type-container">
-            <button
-              onClick={() => setOrderType('Dine-in')}
-              className={`order-type-btn ${orderType === 'Dine-in' ? 'active' : 'inactive'}`}
-            >
-              Dine-in
-            </button>
-            <button
-              onClick={() => setOrderType('Room Dining')}
-              className={`order-type-btn ${orderType === 'Room Dining' ? 'active' : 'inactive'}`}
-            >
-              Room Dining
-            </button>
+            {['Dine-in', 'Room Dining'].map(type => (
+                <button
+                    key={type}
+                    onClick={() => setOrderType(type)}
+                    className={`order-type-btn ${orderType === type ? 'active' : 'inactive'}`}
+                >
+                    {type}
+                </button>
+            ))}
           </div>
 
-          {/* Location Dropdown */}
+          {/* Location Select */}
           <div className="location-container">
             <label className="location-label">
               {orderType === 'Dine-in' ? 'Select Table' : 'Select Room'}
             </label>
             <div className="location-select-wrapper">
                 {orderType === 'Dine-in' ? (
-                    <select
-                        value={selectedTableId}
-                        onChange={handleTableChange}
-                        className="location-select"
-                    >
+                    <select value={selectedTableId} onChange={handleTableChange} className="location-select">
                         <option value="">-- Choose a Table --</option>
                         {tables.map(table => (
                             <option 
@@ -170,11 +189,7 @@ const CartPanel = ({
                         ))}
                     </select>
                 ) : (
-                    <select
-                        value={selectedRoomId}
-                        onChange={handleRoomChange}
-                        className="location-select"
-                    >
+                    <select value={selectedRoomId} onChange={handleRoomChange} className="location-select">
                         <option value="">-- Choose a Room --</option>
                         {rooms.map(room => (
                             <option key={room.room_id} value={room.room_id}>
@@ -189,74 +204,44 @@ const CartPanel = ({
             </div>
           </div>
 
-          {/* Items List */}
+          {/* Cart Items */}
           <div className="space-y-4">
-            {cartItems.length === 0 ? (
-              <div className="cart-empty-state">
-                <p>Your cart is empty</p>
-              </div>
+            {cart.length === 0 ? (
+              <div className="cart-empty-state"><p>Your cart is empty</p></div>
             ) : (
-              cartItems.map((item) => {
+              cart.map((item) => {
                 const itemTotal = parseFloat(item.price) * item.quantity;
-
                 return (
                   <div key={item.item_id} className="cart-item">
-                      {/* Top Section: Details + Total */}
                       <div className="cart-item-top">
-                          
-                          {/* Details Column */}
                           <div className="cart-item-details w-full"> 
-                              {/* Name/Price & Item Total Row */}
                               <div className="cart-item-header">
                                   <div>
                                       <h3 className="cart-item-name">{item.item_name}</h3>
-                                      <p className="cart-item-price">
-                                          ₱{parseFloat(item.price).toFixed(2)} <span>/ea</span>
-                                      </p>
+                                      <p className="cart-item-price">₱{parseFloat(item.price).toFixed(2)} <span>/ea</span></p>
                                   </div>
-                                  <div className="cart-item-total">
-                                      ₱{itemTotal.toFixed(2)}
-                                  </div>
+                                  <div className="cart-item-total">₱{itemTotal.toFixed(2)}</div>
                               </div>
                               
-                              {/* Controls Row */}
                               <div className="cart-item-controls">
                                   <div className="qty-control">
-                                      <button 
-                                          onClick={() => onUpdateQuantity(item.item_id, item.quantity - 1)} 
-                                          className="qty-btn"
-                                      >
-                                          <Minus size={14} strokeWidth={3} />
-                                      </button>
+                                      <button onClick={() => updateQuantity(item.item_id, item.quantity - 1)} className="qty-btn"><Minus size={14} strokeWidth={3} /></button>
                                       <span className="qty-display">{item.quantity}</span>
-                                      <button 
-                                          onClick={() => onUpdateQuantity(item.item_id, item.quantity + 1)} 
-                                          className="qty-btn"
-                                      >
-                                          <Plus size={14} strokeWidth={3} />
-                                      </button>
+                                      <button onClick={() => updateQuantity(item.item_id, item.quantity + 1)} className="qty-btn"><Plus size={14} strokeWidth={3} /></button>
                                   </div>
-
-                                  <button 
-                                      onClick={() => onRemoveItem(item.item_id)} 
-                                      className="remove-btn"
-                                  >
-                                      <Trash2 size={18} />
-                                  </button>
+                                  <button onClick={() => removeFromCart(item.item_id)} className="remove-btn"><Trash2 size={18} /></button>
                               </div>
                           </div>
                       </div>
 
-                      {/* Specific Instruction Input */}
                       <div className="instruction-wrapper">
-                          <div className="instruction-icon">
-                              <MessageSquare size={14} />
-                          </div>
+                          <div className="instruction-icon"><MessageSquare size={14} /></div>
                           <input
                               type="text"
                               placeholder="Add notes (e.g. No onions)"
                               value={item.instructions || ''}
-                              onChange={(e) => onUpdateItemInstruction(item.item_id, e.target.value)}
+                              // ✅ Updates via Context
+                              onChange={(e) => updateInstruction(item.item_id, e.target.value)}
                               className="instruction-input"
                           />
                       </div>
@@ -267,34 +252,19 @@ const CartPanel = ({
           </div>
         </div>
 
-        {/* --- Footer (Totals) --- */}
+        {/* Footer */}
         <div className="cart-footer">
              <div className="space-y-2 mb-4">
-                <div className="summary-row">
-                    <span>Subtotal</span>
-                    <span className="font-medium">₱{subtotal.toFixed(2)}</span>
-                </div>
-                <div className="summary-row">
-                    <span>Service Charge (10%)</span>
-                    <span className="font-medium">₱{serviceAmount.toFixed(2)}</span>
-                </div>
-                <div className="summary-row">
-                    <span>VAT (12%)</span>
-                    <span className="font-medium">₱{vatAmount.toFixed(2)}</span>
-                </div>
-                <div className="summary-row total">
-                    <span>Total</span>
-                    <span>₱{grandTotal.toFixed(2)}</span>
-                </div>
+                <div className="summary-row"><span>Subtotal</span><span className="font-medium">₱{subtotal.toFixed(2)}</span></div>
+                <div className="summary-row"><span>Service Charge (10%)</span><span className="font-medium">₱{serviceAmount.toFixed(2)}</span></div>
+                <div className="summary-row"><span>VAT (12%)</span><span className="font-medium">₱{vatAmount.toFixed(2)}</span></div>
+                <div className="summary-row total"><span>Total</span><span>₱{grandTotal.toFixed(2)}</span></div>
              </div>
-              
-              <button
-                onClick={() => onPlaceOrder({ 
-                    table_id: orderType === 'Dine-in' ? selectedTableId : null,
-                    room_id: orderType === 'Room Dining' ? selectedRoomId : null 
-                })}
+             
+             <button
+                onClick={handlePlaceOrder}
                 disabled={
-                    cartItems.length === 0 || 
+                    cart.length === 0 || 
                     (orderType === 'Dine-in' && !selectedTableId) || 
                     (orderType === 'Room Dining' && !selectedRoomId) ||
                     isPlacingOrder

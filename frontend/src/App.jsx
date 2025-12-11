@@ -17,6 +17,7 @@ import PaymentCancel from './pages/Customer/PaymentCancel.jsx';
 import InventoryPage from './pages/Kitchen/InventoryPage.jsx';
 import MyOrdersPage from './pages/Customer/MyOrdersPage';
 import PosPage from './pages/Kitchen/PosPage.jsx';
+import ItemDetailsPage from './pages/Customer/ItemDetailsPage.jsx';
 
 // Import Route Handlers
 import ProtectedRoute from './components/routing/ProtectedRoute';
@@ -56,6 +57,7 @@ function App() {
         {/* === PUBLIC ROUTES (Available to everyone) === */}
         {/* ✅ CHANGED: MenuPage is now public (Guest Mode) */}
         <Route path="/" element={<MenuPage />} />
+        <Route path="/item/:id" element={<ItemDetailsPage />} />
         
         <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/payment-cancel" element={<PaymentCancel />} />

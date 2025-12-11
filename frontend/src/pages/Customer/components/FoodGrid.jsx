@@ -1,8 +1,8 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Star } from 'lucide-react'; 
+import { useAuth } from '../../../context/AuthContext';
 import '../CustomerTheme.css';
-import { useNavigate } from 'react-router-dom'; 
-import { useAuth } from '../../../../src/context/AuthContext';
 
 // Helper to handle image URLs
 const getImageUrl = (imagePath) => {
@@ -16,6 +16,8 @@ const getImageUrl = (imagePath) => {
 };
 
 const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "customer" }) => {
+  const navigate = useNavigate(); // ✅ Hook for navigation
+  const { user } = useAuth();     // ✅ Hook to check if guest
 
   if (!items || items.length === 0) {
     return <p className="no-items-message">No items match your search.</p>;
@@ -45,9 +47,6 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
     };
   };
 
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
   return (
     <div 
         className={`menu-grid-layout ${theme === 'customer' ? 'customer-theme' : 'kitchen-theme'}`} 
@@ -58,18 +57,24 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
         const { isActive, displayPrice, originalPrice, discountPercent } = getPromoPrice(item);
         const itemForCart = { ...item, price: displayPrice };
         
-        // Parse Rating Data
         const rating = parseFloat(item.average_rating || 0);
         const reviewCount = item.total_reviews || 0;
 
         return (
-          <div key={item.item_id} className={`food-card ${!item.is_available ? 'unavailable' : ''}`}>
+          <div 
+            key={item.item_id} 
+            // ✅ Added cursor-pointer and hover effect
+            className={`food-card ${!item.is_available ? 'unavailable' : ''} cursor-pointer hover:shadow-xl transition-shadow`}
+            // ✅ CLICK CARD: Navigate to Details Page
+            onClick={() => navigate(`/item/${item.item_id}`)}
+          >
             <div className="card-image-container">
               <img
                 src={getImageUrl(item.image_url)}
                 alt={item.item_name}
                 className="card-image"
-                onClick={() => onImageClick(getImageUrl(item.image_url))}
+                // Prevent card click from triggering when clicking image (optional, or remove onClick here to let card handle it)
+                // onClick={(e) => { e.stopPropagation(); onImageClick(getImageUrl(item.image_url)); }} 
               />
               
               {isActive && (
@@ -80,10 +85,8 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
             </div>
 
             <div className="card-content">
-              {/* 1. Title moved to its own block (removed flex justify-between) */}
               <h3 className="item-name mb-1">{item.item_name}</h3>
               
-              {/* 2. Rating Display - Moved BELOW title, Clean Style */}
               <div className="min-h-[20px] mb-2">
                 {reviewCount > 0 ? (
                     <div className="flex items-center gap-1">
@@ -92,8 +95,6 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
                         <span className="text-[15px] text-gray-400">({reviewCount})</span>
                     </div>
                 ) : (
-                    // Optional: Empty spacer to keep card heights consistent if needed
-                    // Remove this <div/> if you want the description to jump up when no ratings
                     <div className="h-[18px]"></div> 
                 )}
               </div>
@@ -103,28 +104,39 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
               </p>
 
               <div className="card-footer">
-        {/* ... price container ... */}
-        
-              {item.is_available ? (
+                <div className="price-container">
+                  {isActive ? (
+                    <>
+                      <p className="price-text">₱{parseFloat(displayPrice).toFixed(2)}</p>
+                      <p className="original-price">₱{parseFloat(originalPrice).toFixed(2)}</p>
+                    </>
+                  ) : (
+                    <p className="price-text">₱{parseFloat(displayPrice).toFixed(2)}</p>
+                  )}
+                </div>
+                
+                {item.is_available ? (
                   <button 
-                      onClick={() => {
-                          if (!user) {
-                              // ✅ GUEST CHECK
-                              if(window.confirm("You need to login to order. Go to login page?")) {
-                                  navigate('/login');
-                              }
-                          } else {
-                              onAddToCart(itemForCart);
-                          }
-                      }} 
-                      className="btn-add-cart"
+                    onClick={(e) => {
+                        e.stopPropagation(); // ✅ Prevent clicking button from opening the Details Page
+                        
+                        // ✅ GUEST CHECK: Redirect to login if not authenticated
+                        if (!user) {
+                            if(window.confirm("You need to login to order. Go to login page?")) {
+                                navigate('/login');
+                            }
+                        } else {
+                            onAddToCart(itemForCart);
+                        }
+                    }} 
+                    className="btn-add-cart"
                   >
-                      Add
+                    Add
                   </button>
-              ) : (
+                ) : (
                   <button disabled className="btn-unavailable">Unavailable</button>
-              )}
-            </div>
+                )}
+              </div>
             </div>
           </div>
         );
