@@ -96,6 +96,25 @@ const InventoryPage = () => {
   };
 
   const handleSaveIngredient = async (formData) => {
+
+    const newName = formData.name.trim().toLowerCase();
+    
+    const duplicate = ingredients.find(ing => {
+
+        const existingName = ing.name.trim().toLowerCase();
+        
+        if (selectedIngredient) {
+            return existingName === newName && ing.ingredient_id !== selectedIngredient.ingredient_id;
+        }
+        return existingName === newName;
+    });
+
+
+    if (duplicate) {
+        toast.error(`"${formData.name}" already exists in inventory!`);
+        return; 
+    }
+    
     const isEditMode = Boolean(selectedIngredient);
     const url = isEditMode ? `/inventory/${selectedIngredient.ingredient_id}` : '/inventory';
     const method = isEditMode ? 'PUT' : 'POST';
