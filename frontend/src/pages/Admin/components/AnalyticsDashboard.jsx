@@ -155,10 +155,10 @@ const orderTypeData = (data.orderTypeDistribution || [])
   }));
 
   const topItemsData = data.topSellingItems.map((i) => ({
-    name: i.item_name,
-    sold: i.total_sold,
-    sales: i.total_sales,
-  }));
+  name: i.item_name,
+  sold: Number(i.total_sold), 
+  sales: Number(i.total_sales),
+}));
 
   return (
     <div className="w-full">
@@ -180,7 +180,7 @@ const orderTypeData = (data.orderTypeDistribution || [])
                 >
                   <option value="All">All Orders</option>
                   <option value="Dine-in">Dine-in</option>
-                  <option value="Room Service">Room Service</option>
+                  <option value="Room Dining">Room Dining</option>
                   <option value="Walk-in">Walk-in</option>
                 </select>
                 <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-[#3C2A21]">
@@ -286,7 +286,7 @@ const orderTypeData = (data.orderTypeDistribution || [])
               <XAxis dataKey="name" stroke="#3C2A21" />
               <YAxis stroke="#3C2A21" />
               <Tooltip formatter={(val) => formatCurrency(val)} contentStyle={{ backgroundColor: '#fff2e0', borderColor: '#D1C0B6', color: '#3C2A21' }} />
-              <Bar dataKey="sales" fill="#3C2A21" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="sold" fill="#3C2A21" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

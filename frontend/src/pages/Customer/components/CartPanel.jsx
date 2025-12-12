@@ -130,6 +130,8 @@ const CartPanel = ({ isOpen, onClose }) => {
                 table_id: tableIdToSend, 
                 room_id: roomIdToSend,
 
+                order_type: orderType,
+
                 special_instructions: currentCart
                     .filter(item => item.instructions)
                     .map(item => `${item.item_name}: ${item.instructions}`)
