@@ -9,6 +9,6 @@ router.get('/:itemId', getItemReviews);
 router.post('/', protect, addRating);
 router.get('/user/:itemId', protect, getUserItemRating);
 router.get('/', getAllReviews);
-router.delete('/:id', deleteReview);
+router.delete('/:id', protect, authorizeRoles("F&B Admin"), deleteReview);
 
 export default router;

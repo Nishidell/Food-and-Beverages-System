@@ -37,7 +37,7 @@ const upload = multer({
 });
 
 // Define the upload route: POST /api/upload
-router.post('/', upload.single('image'), (req, res) => {
+router.post('/', protect, authorizeRoles("F&B Admin"), upload.single('image'), (req, res) => {
   // When the file is uploaded successfully, multer adds a 'file' object to the request.
   // We send back the path to the file, which we will save in the database.
   res.send({
