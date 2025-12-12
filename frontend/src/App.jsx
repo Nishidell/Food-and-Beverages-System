@@ -16,9 +16,8 @@ import PaymentSuccess from './pages/Customer/PaymentSuccess.jsx';
 import PaymentCancel from './pages/Customer/PaymentCancel.jsx';
 import InventoryPage from './pages/Kitchen/InventoryPage.jsx';
 import MyOrdersPage from './pages/Customer/MyOrdersPage';
-
-// --- NEW: Import the POS Page ---
 import PosPage from './pages/Kitchen/PosPage.jsx';
+import ItemDetailsPage from './pages/Customer/ItemDetailsPage.jsx';
 
 // Import Route Handlers
 import ProtectedRoute from './components/routing/ProtectedRoute';
@@ -30,19 +29,13 @@ function App() {
       <Toaster 
         position="top-center" 
         toastOptions={{
-          // Default duration for all toasts
           duration: 3000,
-          // Specific durations
-          success: {
-            duration: 2000,
-          },
-          error: {
-            duration: 4000, // <-- 4 seconds for errors
-          },
+          success: { duration: 2000 },
+          error: { duration: 4000 },
         }}
       />
       <Routes>
-        {/* === AUTH ROUTES === */}
+        {/* === AUTH ROUTES (Only for guests) === */}
         <Route
           path="/login"
           element={
@@ -61,15 +54,27 @@ function App() {
         />
         <Route path="/not-authorized" element={<NotAuthorizedPage />} />
 
-        {/* === PROTECTED ROUTES === */}
+        {/* === PUBLIC ROUTES (Available to everyone) === */}
+        {/* ✅ CHANGED: MenuPage is now public (Guest Mode) */}
+        <Route path="/" element={<MenuPage />} />
+        <Route path="/item/:id" element={<ItemDetailsPage />} />
+        
+        <Route path="/payment-success" element={<PaymentSuccess />} />
+        <Route path="/payment-cancel" element={<PaymentCancel />} />
+
+        {/* === PROTECTED ROUTES (Login Required) === */}
+        
+        {/* Customer Protected Pages */}
         <Route
-          path="/"
+          path="/my-orders"
           element={
-            <ProtectedRoute allowedRoles={['customer', 'F&B Admin', 'Kitchen Staffs', 'Cashier', 'Stock Controller']}>
-              <MenuPage />
+            <ProtectedRoute allowedRoles={['customer', 'F&B Admin', 'Kitchen Staffs', 'Cashier']}>
+              <MyOrdersPage />
             </ProtectedRoute>
           }
         />
+
+        {/* Admin Dashboard */}
         <Route
           path="/admin"
           element={
@@ -78,7 +83,8 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* Kitchen Portal: Orders (Kitchen Staff & Admin only) */}
+
+        {/* Kitchen Portal: Orders */}
         <Route
           path="/kitchen"
           element={
@@ -88,7 +94,7 @@ function App() {
           }
         />
         
-        {/* POS: Walk-in (Cashier & Admin only) */}
+        {/* POS: Walk-in */}
         <Route
           path="/kitchen/pos"
           element={
@@ -98,7 +104,7 @@ function App() {
           }
         />
 
-        {/* Tables: (Kitchen Staff & Admin only) */}
+        {/* Tables */}
         <Route
           path="/kitchen/tables"
           element={
@@ -108,7 +114,7 @@ function App() {
           }
         />
 
-        {/* Inventory: (Stock Controller & Admin only) */}
+        {/* Inventory */}
         <Route
           path="/kitchen/inventory"
           element={
@@ -118,7 +124,7 @@ function App() {
           }
         />
         
-        {/* Archive: (Kitchen Staff & Admin only) */}
+        {/* Archive */}
         <Route
           path="/kitchen/archive"
           element={
@@ -127,23 +133,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        
-        {/* My Orders: (Customer only) */}
-          <Route
-          path="/my-orders"
-          element={
-            <ProtectedRoute allowedRoles={['customer', 'F&B Admin', 'Kitchen Staffs', 'Cashier']}>
-              <MyOrdersPage />
-            </ProtectedRoute>
-          }
-        />
 
-        {/* Public PayMongo Redirect Pages (no protection) */}
-        <Route path="/payment-success" element={<PaymentSuccess />} />
-        <Route path="/payment-cancel" element={<PaymentCancel />} />
-
-        {/* Optional 404 */}
-        {/* <Route path="*" element={<NotFoundPage />} /> */}
       </Routes>
     </>
   );

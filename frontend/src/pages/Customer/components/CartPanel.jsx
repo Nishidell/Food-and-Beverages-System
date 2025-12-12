@@ -1,31 +1,30 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; 
 import { X, Trash2, Minus, Plus, MessageSquare } from 'lucide-react';
 import apiClient from '../../../utils/apiClient';
 import '../CustomerTheme.css';
 import { useSocket } from '../../../context/SocketContext';
+import { useCart } from '../../../context/CartContext'; 
+import { useAuth } from '../../../context/AuthContext'; 
+import toast from 'react-hot-toast';
 
-const CartPanel = ({
-  cartItems = [],
-  onUpdateQuantity,
-  onPlaceOrder,
-  isOpen,
-  onClose,
-  orderType,
-  setOrderType,
-  onUpdateItemInstruction, 
-  onRemoveItem,
-  deliveryLocation,
-  setDeliveryLocation,
-  isPlacingOrder
-}) => {
+const CartPanel = ({ isOpen, onClose, activeRoom }) => {
+  const { cart, updateQuantity, removeFromCart, updateInstruction, clearCart } = useCart();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const [orderType, setOrderType] = useState('Dine-in');
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+
+  // Location Data
   const [tables, setTables] = useState([]);
   const [rooms, setRooms] = useState([]);
-  
   const [selectedTableId, setSelectedTableId] = useState('');
   const [selectedRoomId, setSelectedRoomId] = useState('');
 
   const { socket } = useSocket();
 
+  // 1. Fetch Location Data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -33,7 +32,6 @@ const CartPanel = ({
             apiClient('/tables'),
             apiClient('/rooms')
         ]);
-
         if (tableRes.ok) setTables(await tableRes.json());
         if (roomRes.ok) setRooms(await roomRes.json());
       } catch (error) {
@@ -43,118 +41,148 @@ const CartPanel = ({
     fetchData();
   }, []);
 
-  // Listen for Real-Time Table Updates
+  // 2. Auto-Select Room if provided (Auto-Room Feature)
+  useEffect(() => {
+    if (activeRoom && activeRoom.room_id) {
+        setOrderType('Room Dining');
+        setSelectedRoomId(activeRoom.room_id);
+    }
+  }, [activeRoom]);
+
+  // 3. Real-time Table Updates
   useEffect(() => {
     if (socket) {
         socket.on('table-update', (data) => {
-            console.log("🪑 Real-time Table Update:", data);
-            
-            // Update the tables list instantly
             setTables(prevTables => prevTables.map(table => {
                 if (table.table_id === parseInt(data.table_id)) {
                     return { ...table, status: data.status };
                 }
                 return table;
             }));
-
-            // Clear selection if the selected table becomes occupied
             if (data.status === 'Occupied' && parseInt(selectedTableId) === parseInt(data.table_id)) {
                  setSelectedTableId(''); 
-                 setDeliveryLocation('');
             }
         });
     }
+    return () => socket && socket.off('table-update');
+  }, [socket, selectedTableId]);
 
-    return () => {
-        if (socket) {
-            socket.off('table-update');
-        }
-    };
-  }, [socket, selectedTableId, setDeliveryLocation]);
-
-  useEffect(() => {
-    if (orderType === 'Dine-in') {
-        setSelectedRoomId('');
-        setDeliveryLocation('');
-    } else if (orderType === 'Room Dining') {
-        setSelectedTableId('');
-        setDeliveryLocation('');
-    }
-  }, [orderType, setDeliveryLocation]);
-
-  // ✅ FIX: Properly handle table selection
-  const handleTableChange = (e) => {
-    const tId = e.target.value;
-    setSelectedTableId(tId);
-    
-    // Set deliveryLocation to table_id for backend
-    setDeliveryLocation(tId); 
-  };
-
-  // ✅ FIX: Properly handle room selection
-  const handleRoomChange = (e) => {
-    const rId = e.target.value;
-    setSelectedRoomId(rId);
-    
-    // Set deliveryLocation to room_id for backend
-    setDeliveryLocation(rId);
-  };
-
-  const SERVICE_RATE = 0.10; 
-  const VAT_RATE = 0.12;     
-  const subtotal = cartItems.reduce((total, item) => total + parseFloat(item.price) * item.quantity, 0);
-  const serviceAmount = subtotal * SERVICE_RATE;
-  const vatAmount = (subtotal + serviceAmount) * VAT_RATE;
+  // 4. Calculations
+  const subtotal = cart.reduce((total, item) => total + parseFloat(item.price) * item.quantity, 0);
+  const serviceAmount = subtotal * 0.10;
+  const vatAmount = (subtotal + serviceAmount) * 0.12;
   const grandTotal = subtotal + serviceAmount + vatAmount;
+
+  // ✅ 5. PAYMONGO CHECKOUT LOGIC
+  const handlePlaceOrder = async () => {
+    if (!user) {
+        toast.error("Please login to place an order.");
+        navigate('/login');
+        return;
+    }
+    
+    setIsPlacingOrder(true);
+    const toastId = toast.loading('Connecting to PayMongo...');
+
+    try {
+        // Determine Location IDs
+        let tableIdToSend = null;
+        let roomIdToSend = null;
+
+        if (orderType === 'Dine-in') {
+            tableIdToSend = selectedTableId; 
+        } else if (orderType === 'Room Dining') {
+            roomIdToSend = selectedRoomId;
+        }
+
+        // Payload for /payments/checkout
+        const checkoutData = {
+            cart_items: cart.map(item => ({
+                item_id: item.item_id,
+                quantity: item.quantity,
+                instructions: item.instructions || '' 
+            })),
+            
+            table_id: tableIdToSend, 
+            room_id: roomIdToSend,
+
+            // Combine all instructions for the main order note
+            special_instructions: cart
+                .filter(item => item.instructions)
+                .map(item => `${item.item_name}: ${item.instructions}`)
+                .join('; ') || null
+        };
+
+        // ✅ Correct Endpoint: /payments/checkout (Not /orders)
+        const response = await apiClient('/payments/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(checkoutData)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || 'Failed to initialize payment');
+        }
+
+        if (result.checkout_url) {
+            toast.success('Redirecting to payment...', { id: toastId });
+            // Clear cart locally since we are handing off to payment
+            // (Optional: You might want to keep it until success, but this prevents duplicates)
+            clearCart(); 
+            
+            // 🚀 REDIRECT TO PAYMONGO
+            window.location.href = result.checkout_url;
+        } else {
+            throw new Error("No checkout URL received");
+        }
+        
+    } catch (error) {
+        console.error("Checkout Error:", error);
+        toast.error(error.message, { id: toastId });
+    } finally {
+        setIsPlacingOrder(false);
+    }
+  };
 
   return (
     <>
-      {/* Overlay */}
-      <div
-        className={`cart-overlay ${isOpen ? '' : 'hidden'}`}
-        onClick={onClose}
-      />
-
-      {/* Slide-over Panel */}
+      <div className={`cart-overlay ${isOpen ? '' : 'hidden'}`} onClick={onClose} />
       <div className={`cart-panel ${isOpen ? 'open' : ''}`}>
         
-        {/* --- Header --- */}
+        {/* Header */}
         <div className="cart-header">
           <h2 className="cart-title">My Order</h2>
-          <button onClick={onClose} className="cart-close-btn">
-            <X size={24} />
-          </button>
+          <button onClick={onClose} className="cart-close-btn"><X size={24} /></button>
         </div>
 
-        {/* --- Scrollable Content --- */}
+        {/* Content */}
         <div className="cart-content">
           
-          {/* Order Type Selector */}
+          {/* Order Type */}
           <div className="order-type-container">
-            <button
-              onClick={() => setOrderType('Dine-in')}
-              className={`order-type-btn ${orderType === 'Dine-in' ? 'active' : 'inactive'}`}
-            >
-              Dine-in
-            </button>
-            <button
-              onClick={() => setOrderType('Room Dining')}
-              className={`order-type-btn ${orderType === 'Room Dining' ? 'active' : 'inactive'}`}
-            >
-              Room Dining
-            </button>
+            {['Dine-in', 'Room Dining'].map(type => (
+                <button
+                    key={type}
+                    onClick={() => setOrderType(type)}
+                    className={`order-type-btn ${orderType === type ? 'active' : 'inactive'}`}
+                >
+                    {type}
+                </button>
+            ))}
           </div>
 
-          {/* Location Dropdown */}
+          {/* Location Select */}
           <div className="location-container">
             <label className="location-label">
               {orderType === 'Dine-in' ? 'Select Table' : 'Select Room'}
             </label>
             <div className="location-select-wrapper">
                 {orderType === 'Dine-in' ? (
-                    <select
-                        value={selectedTableId}
-                        onChange={handleTableChange}
+                    <select 
+                        value={selectedTableId} 
+                        onChange={(e) => setSelectedTableId(e.target.value)} 
                         className="location-select"
                     >
                         <option value="">-- Choose a Table --</option>
@@ -170,9 +198,9 @@ const CartPanel = ({
                         ))}
                     </select>
                 ) : (
-                    <select
-                        value={selectedRoomId}
-                        onChange={handleRoomChange}
+                    <select 
+                        value={selectedRoomId} 
+                        onChange={(e) => setSelectedRoomId(e.target.value)} 
                         className="location-select"
                     >
                         <option value="">-- Choose a Room --</option>
@@ -189,74 +217,43 @@ const CartPanel = ({
             </div>
           </div>
 
-          {/* Items List */}
+          {/* Cart Items */}
           <div className="space-y-4">
-            {cartItems.length === 0 ? (
-              <div className="cart-empty-state">
-                <p>Your cart is empty</p>
-              </div>
+            {cart.length === 0 ? (
+              <div className="cart-empty-state"><p>Your cart is empty</p></div>
             ) : (
-              cartItems.map((item) => {
+              cart.map((item) => {
                 const itemTotal = parseFloat(item.price) * item.quantity;
-
                 return (
                   <div key={item.item_id} className="cart-item">
-                      {/* Top Section: Details + Total */}
                       <div className="cart-item-top">
-                          
-                          {/* Details Column */}
                           <div className="cart-item-details w-full"> 
-                              {/* Name/Price & Item Total Row */}
                               <div className="cart-item-header">
                                   <div>
                                       <h3 className="cart-item-name">{item.item_name}</h3>
-                                      <p className="cart-item-price">
-                                          ₱{parseFloat(item.price).toFixed(2)} <span>/ea</span>
-                                      </p>
+                                      <p className="cart-item-price">₱{parseFloat(item.price).toFixed(2)} <span>/ea</span></p>
                                   </div>
-                                  <div className="cart-item-total">
-                                      ₱{itemTotal.toFixed(2)}
-                                  </div>
+                                  <div className="cart-item-total">₱{itemTotal.toFixed(2)}</div>
                               </div>
                               
-                              {/* Controls Row */}
                               <div className="cart-item-controls">
                                   <div className="qty-control">
-                                      <button 
-                                          onClick={() => onUpdateQuantity(item.item_id, item.quantity - 1)} 
-                                          className="qty-btn"
-                                      >
-                                          <Minus size={14} strokeWidth={3} />
-                                      </button>
+                                      <button onClick={() => updateQuantity(item.item_id, item.quantity - 1)} className="qty-btn"><Minus size={14} strokeWidth={3} /></button>
                                       <span className="qty-display">{item.quantity}</span>
-                                      <button 
-                                          onClick={() => onUpdateQuantity(item.item_id, item.quantity + 1)} 
-                                          className="qty-btn"
-                                      >
-                                          <Plus size={14} strokeWidth={3} />
-                                      </button>
+                                      <button onClick={() => updateQuantity(item.item_id, item.quantity + 1)} className="qty-btn"><Plus size={14} strokeWidth={3} /></button>
                                   </div>
-
-                                  <button 
-                                      onClick={() => onRemoveItem(item.item_id)} 
-                                      className="remove-btn"
-                                  >
-                                      <Trash2 size={18} />
-                                  </button>
+                                  <button onClick={() => removeFromCart(item.item_id)} className="remove-btn"><Trash2 size={18} /></button>
                               </div>
                           </div>
                       </div>
 
-                      {/* Specific Instruction Input */}
                       <div className="instruction-wrapper">
-                          <div className="instruction-icon">
-                              <MessageSquare size={14} />
-                          </div>
+                          <div className="instruction-icon"><MessageSquare size={14} /></div>
                           <input
                               type="text"
                               placeholder="Add notes (e.g. No onions)"
                               value={item.instructions || ''}
-                              onChange={(e) => onUpdateItemInstruction(item.item_id, e.target.value)}
+                              onChange={(e) => updateInstruction(item.item_id, e.target.value)}
                               className="instruction-input"
                           />
                       </div>
@@ -267,41 +264,26 @@ const CartPanel = ({
           </div>
         </div>
 
-        {/* --- Footer (Totals) --- */}
+        {/* Footer */}
         <div className="cart-footer">
              <div className="space-y-2 mb-4">
-                <div className="summary-row">
-                    <span>Subtotal</span>
-                    <span className="font-medium">₱{subtotal.toFixed(2)}</span>
-                </div>
-                <div className="summary-row">
-                    <span>Service Charge (10%)</span>
-                    <span className="font-medium">₱{serviceAmount.toFixed(2)}</span>
-                </div>
-                <div className="summary-row">
-                    <span>VAT (12%)</span>
-                    <span className="font-medium">₱{vatAmount.toFixed(2)}</span>
-                </div>
-                <div className="summary-row total">
-                    <span>Total</span>
-                    <span>₱{grandTotal.toFixed(2)}</span>
-                </div>
+                <div className="summary-row"><span>Subtotal</span><span className="font-medium">₱{subtotal.toFixed(2)}</span></div>
+                <div className="summary-row"><span>Service Charge (10%)</span><span className="font-medium">₱{serviceAmount.toFixed(2)}</span></div>
+                <div className="summary-row"><span>VAT (12%)</span><span className="font-medium">₱{vatAmount.toFixed(2)}</span></div>
+                <div className="summary-row total"><span>Total</span><span>₱{grandTotal.toFixed(2)}</span></div>
              </div>
-              
-              <button
-                onClick={() => onPlaceOrder({ 
-                    table_id: orderType === 'Dine-in' ? selectedTableId : null,
-                    room_id: orderType === 'Room Dining' ? selectedRoomId : null 
-                })}
+             
+             <button
+                onClick={handlePlaceOrder}
                 disabled={
-                    cartItems.length === 0 || 
+                    cart.length === 0 || 
                     (orderType === 'Dine-in' && !selectedTableId) || 
                     (orderType === 'Room Dining' && !selectedRoomId) ||
                     isPlacingOrder
                 }
                 className="place-order-btn"
               >
-                {isPlacingOrder ? 'Processing...' : 'Place Order'}
+                {isPlacingOrder ? 'Processing...' : 'Proceed to Payment'}
               </button>
         </div>
       </div>

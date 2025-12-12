@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom'; 
-import { User, ShoppingBag, LogOut } from 'lucide-react'; 
+import { User, ShoppingBag, LogOut, LogIn, UserPlus } from 'lucide-react'; // ✅ Added Icons
 import { useAuth } from '../context/AuthContext';
 import '../pages/Customer/CustomerTheme.css';
 
@@ -23,7 +23,6 @@ const ProfileDropdown = () => {
     };
   }, [dropdownRef]);
 
-  // Function to get the display name
   const getDisplayName = () => {
     if (!user) return "Guest";
     if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
@@ -31,7 +30,17 @@ const ProfileDropdown = () => {
     return user.role.charAt(0).toUpperCase() + user.role.slice(1);
   };
   
-  if (!user) return null;
+  // ✅ NEW: Handlers for Guest Actions
+  const handleLogin = () => {
+    navigate('/login');
+    setIsDropdownOpen(false);
+  };
+
+  const handleRegister = () => {
+    // Replace the URL below with your actual subsystem link
+    window.location.href = 'https://thecelestiahotel.vercel.app/register'; 
+    setIsDropdownOpen(false);
+  };
 
   const handleMyOrders = () => {
     setIsDropdownOpen(false);
@@ -65,24 +74,47 @@ const ProfileDropdown = () => {
           
           <div className="border-t border-gray-100"></div>
 
-          {/* ✅ CONDITION: Only show "My Orders" if role is 'customer' */}
-          {user?.role === 'customer' && (
-            <button
-                onClick={handleMyOrders}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-            >
-                <ShoppingBag size={16} />
-                My Orders
-            </button>
-          )}
+          {user ? (
+            /* === LOGGED IN VIEW === */
+            <>
+              {user.role === 'customer' && (
+                <button
+                    onClick={handleMyOrders}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                >
+                    <ShoppingBag size={16} />
+                    My Orders
+                </button>
+              )}
 
-          <button
-            onClick={handleLogout}
-            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"
-          >
-            <LogOut size={16} />
-            Log Out
-          </button>
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"
+              >
+                <LogOut size={16} />
+                Log Out
+              </button>
+            </>
+          ) : (
+            /* === GUEST VIEW === */
+            <>
+               <button
+                onClick={handleLogin}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+              >
+                <LogIn size={16} />
+                Log In
+              </button>
+
+              <button
+                onClick={handleRegister}
+                className="w-full text-left px-4 py-2 text-sm text-[#F9A825] font-bold hover:bg-gray-100 flex items-center gap-2"
+              >
+                <UserPlus size={16} />
+                Sign Up
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>

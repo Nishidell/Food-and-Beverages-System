@@ -75,7 +75,7 @@ const CategoryTabs = ({ categories, selectedCategory, onSelectCategory, onSortCh
             
             {/* Left Side: Scrollable Categories */}
             <div 
-                className="flex-1 flex overflow-x-auto gap-3 pb-2 scrollbar-hide" 
+                className="flex-1 flex overflow-x-auto gap-3 pb-1 scrollbar-hide" 
                 ref={scrollContainerRef}
                 style={{ 
                     display: 'flex', 

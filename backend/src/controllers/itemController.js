@@ -90,7 +90,9 @@ export const getAllItems = async (req, res) => {
     }
 };
 
-// ... (Rest of the file: getItemById, createMenuItem, updateMenuItem, deleteMenuItem, Helpers... KEPT SAME)
+// @desc    Get a single menu item by ID with Ratings & Sold Count
+// @route   GET /api/items/:id
+// @access  Public
 export const getItemById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -103,6 +105,7 @@ export const getItemById = async (req, res) => {
             mi.image_url, 
             mi.description,
             mi.category_id,
+            -- Promo Logic
             CASE 
                 WHEN p.promotion_id IS NOT NULL 
                      AND p.is_active = 1 
@@ -113,9 +116,16 @@ export const getItemById = async (req, res) => {
             p.discount_percentage AS promo_discount_percentage,
             p.end_date AS promo_expiry_date,
             p.name AS promo_name,
-            -- ✅ NEW: Single Item Rating
+            -- Rating Stats
             COALESCE(AVG(r.rating_value), 0) AS average_rating,
-            COUNT(r.rating_id) AS total_reviews
+            COUNT(r.rating_id) AS total_reviews,
+            -- ✅ NEW: Quantity Sold Calculation
+            (
+                SELECT COALESCE(SUM(od.quantity), 0)
+                FROM fb_order_details od
+                JOIN fb_orders o ON od.order_id = o.order_id
+                WHERE od.item_id = mi.item_id AND o.status = 'served'
+            ) as total_sold
         FROM fb_menu_items mi
         LEFT JOIN fb_categories c ON mi.category_id = c.category_id
         LEFT JOIN fb_promotions p ON mi.promotion_id = p.promotion_id
@@ -123,15 +133,18 @@ export const getItemById = async (req, res) => {
         WHERE mi.item_id = ?
         GROUP BY mi.item_id
     `;
+        
         const [items] = await pool.query(sql, [id]);
         if (items.length === 0) {
             return res.status(404).json({ message: "Menu item not found" });
         }
         
         const item = items[0];
-        // Format rating
+        // Format numbers
         item.average_rating = parseFloat(item.average_rating).toFixed(1);
+        item.total_sold = parseInt(item.total_sold);
 
+        // Get Ingredients (Recipe)
         const [recipes] = await pool.query(
         `SELECT mi.menu_item_id, i.ingredient_id, i.name, mi.quantity_consumed, i.unit_of_measurement
          FROM fb_menu_item_ingredients mi
@@ -141,7 +154,7 @@ export const getItemById = async (req, res) => {
         );
         item.ingredients = recipes;
 
-        // --- AVAILABILITY CHECK FOR SINGLE ITEM ---
+        // Check Availability
         item.is_available = true;
         if (recipes.length > 0) {
             for (const recipeItem of recipes) {
@@ -153,7 +166,6 @@ export const getItemById = async (req, res) => {
                 }
             }
         }
-        // --- END OF CHECK ---
 
         res.json(item);
     } catch (error) {
@@ -161,7 +173,7 @@ export const getItemById = async (req, res) => {
     }
 };
 
-// ... (Copy/Paste the rest of your provided file functions: createMenuItem, updateMenuItem, deleteMenuItem, validateStock, adjustStock, logOrderStockChange exactly as they were)
+
 export const createMenuItem = async (req, res) => {
     const { 
         item_name, category_id, price, image_url, description, ingredients 

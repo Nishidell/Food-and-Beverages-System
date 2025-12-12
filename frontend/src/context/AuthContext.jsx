@@ -1,19 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode'; // Corrected import
+import { useNavigate, useLocation } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode'; 
 import toast from 'react-hot-toast';
 import apiClient from '../utils/apiClient'; 
 
 const AuthContext = createContext(null);
 
-// This is the provider component that will "wrap" your entire app
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => localStorage.getItem('authToken'));
   const [user, setUser] = useState(() => {
     const savedToken = localStorage.getItem('authToken');
     if (savedToken) {
       try {
-        return jwtDecode(savedToken); // Decode token on initial load
+        return jwtDecode(savedToken); 
       } catch (error) {
         console.error("Failed to decode token on load", error);
         localStorage.removeItem('authToken');
@@ -25,7 +24,7 @@ export const AuthProvider = ({ children }) => {
 
   const navigate = useNavigate();
 
-  // This effect runs when the token changes to keep localStorage in sync
+  // Sync token changes to localStorage
   useEffect(() => {
     if (token) {
       try {
@@ -55,16 +54,15 @@ export const AuthProvider = ({ children }) => {
           navigate('/admin');
           break;
         case 'Kitchen Staffs':
-          navigate('/kitchen'); // Default to Orders
+          navigate('/kitchen'); 
           break;
         case 'Cashier':
-          navigate('/kitchen/pos'); // Default to POS
+          navigate('/kitchen/pos'); 
           break;
         case 'Stock Controller':
-          navigate('/kitchen/inventory'); // Default to Inventory
+          navigate('/kitchen/inventory'); 
           break;
         default:
-          // Fallback
           console.warn(`Unknown staff position: ${position}`);
           navigate('/kitchen'); 
       }
@@ -77,9 +75,38 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
-    // 3. Fallback
     navigate('/');
   };
+
+  // ✅ NEW: URL Token Listener (Method 1: Auto-Login)
+  // Checks if the user arrived via a link like http://localhost:5173/?token=XYZ...
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+
+    if (urlToken) {
+        try {
+            // 1. Verify the token is valid
+            const decoded = jwtDecode(urlToken);
+
+            // 2. Save it immediately
+            setToken(urlToken);
+            setUser(decoded);
+            localStorage.setItem('authToken', urlToken);
+
+            // 3. Clean the URL (Remove the token so it doesn't look messy)
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            // 4. Notify and Redirect
+            toast.success(`Welcome back, ${decoded.firstName || 'Guest'}!`);
+            handleRedirect(decoded);
+
+        } catch (error) {
+            console.error("Invalid URL token", error);
+            toast.error("Invalid login link.");
+        }
+    }
+  }, []); // Run once on mount
 
   // Login function
   const login = async (email, password) => {
@@ -94,12 +121,14 @@ export const AuthProvider = ({ children }) => {
         throw new Error(data.message || 'Login failed');
       }
 
-      setToken(data.token); // This triggers the useEffect
-      
-      // The useEffect will decode the token, but we need the role NOW
-      // to redirect. So we decode it here just for the redirect.
+      // ✅ FIX: Set ALL state immediately (Don't wait for useEffect)
       const decoded = jwtDecode(data.token);
-      handleRedirect(decoded);
+      
+      setToken(data.token);           // 1. Set Token
+      setUser(decoded);               // 2. Set User Data IMMEDIATELY
+      localStorage.setItem('authToken', data.token); // 3. Save to Storage
+      
+      handleRedirect(decoded);        // 4. Navigate
       
       toast.success('Logged in successfully!');
       return true;
@@ -109,9 +138,8 @@ export const AuthProvider = ({ children }) => {
       return false;
     }
   };
-
-  // Register function (for customers only)
-  // Register function (for customers only)
+  
+  // Register function
   const register = async (firstName, lastName, email, password, phone) => {
     try {
       const response = await apiClient('/auth/register', {
@@ -143,12 +171,10 @@ export const AuthProvider = ({ children }) => {
   // Logout function
   const logout = () => {
     setToken(null);
-    // We will redirect to a login page (which we'll create next)
     navigate('/login');
     toast.success('Logged out.');
   };
 
-  // The value provided to all children components
   const value = {
     token,
     user,
@@ -161,7 +187,6 @@ export const AuthProvider = ({ children }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// This is a helper hook to easily use the context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
