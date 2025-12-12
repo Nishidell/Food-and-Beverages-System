@@ -285,7 +285,12 @@ const orderTypeData = (data.orderTypeDistribution || [])
               <CartesianGrid strokeDasharray="3 3" stroke="#D1C0B6" />
               <XAxis dataKey="name" stroke="#3C2A21" />
               <YAxis stroke="#3C2A21" />
-              <Tooltip formatter={(val) => formatCurrency(val)} contentStyle={{ backgroundColor: '#fff2e0', borderColor: '#D1C0B6', color: '#3C2A21' }} />
+                  <Tooltip 
+          // ✅ FIX: Removes Peso sign and decimals (e.g., "25")
+          formatter={(val) => [Math.floor(Number(val)), "Quantity Sold"]} 
+          cursor={{ fill: '#fceabb' }}
+          contentStyle={{ backgroundColor: '#fff2e0', borderColor: '#D1C0B6', color: '#3C2A21' }} 
+      />
               <Bar dataKey="sold" fill="#3C2A21" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -313,7 +318,7 @@ const orderTypeData = (data.orderTypeDistribution || [])
                     <Cell key={i} fill={THEME_COLORS[i % THEME_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(val) => `₱${val.toLocaleString()}`} contentStyle={{ backgroundColor: '#fff2e0', borderColor: '#D1C0B6', color: '#3C2A21' }} />
+                <Tooltip formatter={(val) => `${val.toLocaleString()}`} contentStyle={{ backgroundColor: '#fff2e0', borderColor: '#D1C0B6', color: '#3C2A21' }} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
