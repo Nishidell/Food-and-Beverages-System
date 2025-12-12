@@ -1,11 +1,16 @@
 import nodemailer from 'nodemailer';
 
-// Configure your email provider (Gmail, Outlook, SMTP, SendGrid, etc.)
+// 1. Configure the transporter
 const transporter = nodemailer.createTransport({
-    service: 'gmail', // or use 'host' and 'port' for custom SMTP
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // Use SSL
     auth: {
-        user: 'hotel.thecelestia@gmail.com',
-        pass: 'Password@101' // Use an App Password, not your real password
+        user: process.env.EMAIL_USER, 
+        pass: process.env.EMAIL_PASS  // This MUST be the 16-char App Password
+    },
+    tls: {
+        rejectUnauthorized: false // Fixes the "ETIMEDOUT" or connection issues on Render
     }
 });
 
@@ -55,7 +60,7 @@ export const sendReceiptEmail = async (clientEmail, clientName, orderData, order
 
     // 3. Send the email
     await transporter.sendMail({
-        from: '"My Restaurant" <your-email@gmail.com>',
+        from: '"The Celestia Hotel" <hotel.thecelestia@gmail.com>', // ✅ FIXED THIS
         to: clientEmail,
         subject: `Receipt for Order #${orderId}`,
         html: emailHtml
