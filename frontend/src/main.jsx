@@ -6,6 +6,7 @@ import "./index.css";
 import { AuthProvider } from "./context/AuthContext.jsx"; 
 import { SocketProvider } from "./context/SocketContext.jsx";
 import { CartProvider } from './context/CartContext';
+import { NotificationProvider } from "./context/NotificationContext.jsx";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
  // <React.StrictMode>
@@ -13,7 +14,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <AuthProvider> 
         <SocketProvider>
           <CartProvider>
+            <NotificationProvider>
         <App />
+            </NotificationProvider>
         </CartProvider>
         </SocketProvider>
       </AuthProvider>
