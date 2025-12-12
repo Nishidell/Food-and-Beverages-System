@@ -93,12 +93,28 @@ export const getDashboardAnalytics = async (req, res) => {
         []
       ),
 
-      // 7. Order Type Distribution
-      safeQuery(
-        `SELECT order_type, COUNT(order_id) AS orders, SUM(total_amount) AS total_value 
-         FROM fb_orders o
-         WHERE status != 'cancelled' ${typeCondition} ${monthCondition}
-         GROUP BY order_type`,
+          // 7. Order Type Distribution (Smart Fix)
+          safeQuery(
+        `SELECT 
+          CASE 
+            -- 1. If it has a Room ID, it IS Room Dining (ignore the label)
+            WHEN o.room_id IS NOT NULL AND o.room_id > 0 THEN 'Room Dining'
+            -- 2. Fallback: If text says "Room", it IS Room Dining
+            WHEN o.delivery_location LIKE 'Room%' THEN 'Room Dining'
+            -- 3. Otherwise, trust the stored label
+            ELSE o.order_type 
+          END AS order_type, 
+          
+          COUNT(o.order_id) AS orders, 
+          SUM(o.total_amount) AS total_value 
+        FROM fb_orders o
+        WHERE o.status != 'cancelled' ${typeCondition} ${monthCondition}
+        GROUP BY 
+          CASE 
+            WHEN o.room_id IS NOT NULL AND o.room_id > 0 THEN 'Room Dining'
+            WHEN o.delivery_location LIKE 'Room%' THEN 'Room Dining'
+            ELSE o.order_type 
+          END`,
         queryParams,
         []
       ),
