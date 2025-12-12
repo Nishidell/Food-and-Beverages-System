@@ -1,4 +1,4 @@
-const nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 
 // Configure your email provider (Gmail, Outlook, SMTP, SendGrid, etc.)
 const transporter = nodemailer.createTransport({
