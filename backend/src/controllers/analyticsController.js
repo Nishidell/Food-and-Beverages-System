@@ -1,13 +1,13 @@
 import pool from "../config/mysql.js";
 
-// Helper function to run a query, for cleaner Promise.all
-const runQuery = async (sql, params = []) => {
+// Helper to run a query safely (The Safety Net)
+const safeQuery = async (sql, params, fallbackValue) => {
   try {
     const [rows] = await pool.query(sql, params);
     return rows;
   } catch (error) {
-    console.error("SQL Error in analyticsController:", error.message);
-    throw error; // Propagate error to Promise.all
+    console.error(`Partial Analytics Error: ${error.message}`);
+    return fallbackValue; // Return safe fallback (e.g., empty array)
   }
 };
 
@@ -26,11 +26,10 @@ export const getDashboardAnalytics = async (req, res) => {
       queryParams = [order_type];
     }
 
-    // --- NEW: Date Filter for "Monthly Reset" logic ---
-    // This condition ensures the auxiliary charts only show THIS MONTH'S data.
-    // Use this variable in the queries below.
+    // Date Filter for "Monthly Reset" logic
     const monthCondition = `AND YEAR(o.order_date) = YEAR(NOW()) AND MONTH(o.order_date) = MONTH(NOW())`;
 
+    // Execute all queries in parallel with safety nets
     const [
       salesToday,
       salesYesterday,
@@ -41,127 +40,96 @@ export const getDashboardAnalytics = async (req, res) => {
       orderTypeDistribution,
       peakHours,
     ] = await Promise.all([
-      // --- Sales Trends (Keep these as they are for comparison) ---
-      // Today
-      runQuery(
-        `SELECT 
-          COUNT(order_id) AS fb_orders, 
-          SUM(total_amount) AS sales, 
-          AVG(total_amount) AS avg_sale 
-        FROM fb_orders 
-        WHERE DATE(order_date) = CURDATE() AND status != 'cancelled' ${typeCondition}`,
-        queryParams
+      // 1. Sales Today (Fallback: Empty Array)
+      safeQuery(
+        `SELECT COUNT(order_id) AS fb_orders, SUM(total_amount) AS sales, AVG(total_amount) AS avg_sale 
+         FROM fb_orders WHERE DATE(order_date) = CURDATE() AND status != 'cancelled' ${typeCondition}`,
+        queryParams,
+        [{ fb_orders: 0, sales: 0, avg_sale: 0 }]
       ),
-      // Yesterday
-      runQuery(
-        `SELECT 
-          COUNT(order_id) AS fb_orders, 
-          SUM(total_amount) AS sales, 
-          AVG(total_amount) AS avg_sale 
-        FROM fb_orders 
-        WHERE DATE(order_date) = CURDATE() - INTERVAL 1 DAY AND status != 'cancelled' ${typeCondition}`,
-        queryParams
+      // 2. Sales Yesterday
+      safeQuery(
+        `SELECT COUNT(order_id) AS fb_orders, SUM(total_amount) AS sales, AVG(total_amount) AS avg_sale 
+         FROM fb_orders WHERE DATE(order_date) = CURDATE() - INTERVAL 1 DAY AND status != 'cancelled' ${typeCondition}`,
+        queryParams,
+        [{ fb_orders: 0, sales: 0, avg_sale: 0 }]
       ),
-      // This Week
-      runQuery(
-        `SELECT 
-          COUNT(order_id) AS fb_orders, 
-          SUM(total_amount) AS sales, 
-          AVG(total_amount) AS avg_sale 
-        FROM fb_orders 
-        WHERE YEARWEEK(order_date, 1) = YEARWEEK(NOW(), 1) AND status != 'cancelled' ${typeCondition}`,
-        queryParams
+      // 3. This Week
+      safeQuery(
+        `SELECT COUNT(order_id) AS fb_orders, SUM(total_amount) AS sales, AVG(total_amount) AS avg_sale 
+         FROM fb_orders WHERE YEARWEEK(order_date, 1) = YEARWEEK(NOW(), 1) AND status != 'cancelled' ${typeCondition}`,
+        queryParams,
+        [{ fb_orders: 0, sales: 0, avg_sale: 0 }]
       ),
-      // This Month
-      runQuery(
-        `SELECT 
-          COUNT(order_id) AS fb_orders, 
-          SUM(total_amount) AS sales, 
-          AVG(total_amount) AS avg_sale 
-        FROM fb_orders 
-        WHERE YEAR(order_date) = YEAR(NOW()) AND MONTH(order_date) = MONTH(NOW()) AND status != 'cancelled' ${typeCondition}`,
-        queryParams
+      // 4. This Month
+      safeQuery(
+        `SELECT COUNT(order_id) AS fb_orders, SUM(total_amount) AS sales, AVG(total_amount) AS avg_sale 
+         FROM fb_orders WHERE YEAR(order_date) = YEAR(NOW()) AND MONTH(order_date) = MONTH(NOW()) AND status != 'cancelled' ${typeCondition}`,
+        queryParams,
+        [{ fb_orders: 0, sales: 0, avg_sale: 0 }]
       ),
 
-      // --- Top Selling Items (UPDATED: Restrict to Current Month) ---
-      // Added 'monthCondition' so this list resets every month
-      runQuery(
-        `SELECT 
-          mi.item_name, 
-          SUM(od.quantity) AS total_sold, 
-          SUM(od.subtotal) AS total_sales 
-        FROM fb_order_details od
-        JOIN fb_menu_items mi ON od.item_id = mi.item_id
-        JOIN fb_orders o ON od.order_id = o.order_id
-        WHERE o.status != 'cancelled' 
-        ${typeCondition} 
-        ${monthCondition}  -- <--- THIS RESETS IT MONTHLY
-        GROUP BY od.item_id, mi.item_name
-        ORDER BY total_sales DESC
-        LIMIT 7`,
-        queryParams
+      // 5. Top Selling Items (Fallback: Empty Array)
+      safeQuery(
+        `SELECT mi.item_name, SUM(od.quantity) AS total_sold, SUM(od.subtotal) AS total_sales 
+         FROM fb_order_details od
+         JOIN fb_menu_items mi ON od.item_id = mi.item_id
+         JOIN fb_orders o ON od.order_id = o.order_id
+         WHERE o.status != 'cancelled' ${typeCondition} ${monthCondition}
+         GROUP BY od.item_id, mi.item_name
+         ORDER BY total_sales DESC LIMIT 7`,
+        queryParams,
+        []
       ),
 
-      // --- Payment Methods (UPDATED: Restrict to Current Month) ---
-      runQuery(
-        `SELECT 
-          p.payment_method, 
-          COUNT(p.payment_id) AS transactions, 
-          SUM(p.amount) AS total_value 
-        FROM fb_payments p
-        JOIN fb_orders o ON p.order_id = o.order_id
-        WHERE p.payment_status = 'paid' 
-        AND o.status != 'cancelled'
-        ${monthCondition} -- <--- THIS RESETS IT MONTHLY
-        GROUP BY p.payment_method`
+      // 6. Payment Methods
+      safeQuery(
+        `SELECT p.payment_method, COUNT(p.payment_id) AS transactions, SUM(p.amount) AS total_value 
+         FROM fb_payments p
+         JOIN fb_orders o ON p.order_id = o.order_id
+         WHERE p.payment_status = 'paid' AND o.status != 'cancelled' ${monthCondition}
+         GROUP BY p.payment_method`,
+        [],
+        []
       ),
 
-      // --- Order Type Distribution (UPDATED: Restrict to Current Month) ---
-      // Note: We used 'o' alias in monthCondition, so we need to alias the table here or adjust variable
-      runQuery(
-        `SELECT 
-          order_type, 
-          COUNT(order_id) AS orders, 
-          SUM(total_amount) AS total_value 
-        FROM fb_orders o
-        WHERE status != 'cancelled' 
-        ${typeCondition} 
-        ${monthCondition} -- <--- THIS RESETS IT MONTHLY
-        GROUP BY order_type`,
-        queryParams
+      // 7. Order Type Distribution
+      safeQuery(
+        `SELECT order_type, COUNT(order_id) AS orders, SUM(total_amount) AS total_value 
+         FROM fb_orders o
+         WHERE status != 'cancelled' ${typeCondition} ${monthCondition}
+         GROUP BY order_type`,
+        queryParams,
+        []
       ),
 
-      // --- Peak Hours (UPDATED: Restrict to Current Month) ---
-      runQuery(
-        `SELECT 
-          HOUR(order_date) AS hour, 
-          COUNT(order_id) AS order_count 
-        FROM fb_orders o
-        WHERE status != 'cancelled' 
-        ${typeCondition} 
-        ${monthCondition} -- <--- THIS RESETS IT MONTHLY
-        GROUP BY hour 
-        ORDER BY order_count DESC 
-        LIMIT 1`,
-        queryParams
+      // 8. Peak Hours
+      safeQuery(
+        `SELECT HOUR(order_date) AS hour, COUNT(order_id) AS order_count 
+         FROM fb_orders o
+         WHERE status != 'cancelled' ${typeCondition} ${monthCondition}
+         GROUP BY hour ORDER BY order_count DESC LIMIT 1`,
+        queryParams,
+        []
       ),
     ]);
     
+    // Respond with data (using ?. checks to be extra safe)
     res.json({
       salesTrends: {
-        today: salesToday[0],
-        yesterday: salesYesterday[0],
-        thisWeek: salesThisWeek[0],
-        thisMonth: salesThisMonth[0],
+        today: salesToday[0] || {},
+        yesterday: salesYesterday[0] || {},
+        thisWeek: salesThisWeek[0] || {},
+        thisMonth: salesThisMonth[0] || {},
       },
-      topSellingItems: topSellingItems,
-      paymentMethods: paymentMethods,
-      orderTypeDistribution: orderTypeDistribution,
+      topSellingItems: topSellingItems || [],
+      paymentMethods: paymentMethods || [],
+      orderTypeDistribution: orderTypeDistribution || [],
       peakHour: peakHours[0] ? `${peakHours[0].hour}:00 - ${peakHours[0].hour + 1}:00` : "N/A",
     });
 
   } catch (error) {
-    console.error("Analytics Error:", error);
+    console.error("Critical Analytics Error:", error);
     res.status(500).json({ message: "Server error fetching analytics", error: error.message });
   }
 };
