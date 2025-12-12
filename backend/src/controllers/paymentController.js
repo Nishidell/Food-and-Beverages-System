@@ -225,7 +225,9 @@ export const paymongoWebhook = async (req, res) => {
     const connection = await pool.getConnection();
 
     try {
-        // 1. Security Check & Parsing
+        // ==========================================
+        // 1. SECURITY & PARSING
+        // ==========================================
         let event;
         try {
             event = validateWebhookSignature(req);
@@ -234,7 +236,6 @@ export const paymongoWebhook = async (req, res) => {
             return res.status(401).json({ message: err.message });
         }
 
-        // 2. Handle Event Type
         const eventType = event.data.attributes.type;
 
         if (eventType === 'payment.failed') {
@@ -246,13 +247,15 @@ export const paymongoWebhook = async (req, res) => {
             return res.status(200).json({ message: "Event ignored" });
         }
 
-        // 3. Process Successful Payment
+        // ==========================================
+        // 2. PROCESS ORDER (DB TRANSACTION)
+        // ==========================================
         await connection.beginTransaction();
 
         const paymentData = event.data.attributes.data;
         const paymongo_payment_id = paymentData.id;
         
-        // A. Idempotency Check
+        // A. Idempotency Check (Prevent Duplicates)
         const [existing] = await connection.query(
             "SELECT 1 FROM fb_payments WHERE paymongo_payment_id = ?", 
             [paymongo_payment_id]
@@ -263,7 +266,7 @@ export const paymongoWebhook = async (req, res) => {
             return res.status(200).json({ message: "Order already processed" });
         }
 
-        // B. Prepare Data using the Helper
+        // B. Prepare Data
         const orderData = parseOrderMetadata(paymentData.attributes.metadata);
 
         // C. Insert Order
@@ -282,7 +285,7 @@ export const paymongoWebhook = async (req, res) => {
 
         const new_order_id = orderResult.insertId;
 
-        // D. Insert Order Details (Bulk)
+        // D. Insert Order Details
         if (orderData.order_items.length > 0) {
             const detailsSql = `
                 INSERT INTO fb_order_details 
@@ -314,7 +317,6 @@ export const paymongoWebhook = async (req, res) => {
             "SELECT first_name, last_name, email FROM tbl_client_users WHERE client_id = ?", 
             [orderData.client_id]
         );
-        // Note: Make sure your SELECT query actually grabs the 'email' column!
         const clientInfo = clientRows[0] || { first_name: 'Guest', last_name: '', email: null };
 
         // G. Update Table / Room Status
@@ -324,40 +326,41 @@ export const paymongoWebhook = async (req, res) => {
             await connection.query("UPDATE tbl_rooms SET status = 'Occupied' WHERE room_id = ?", [orderData.room_id]);
         }
 
-        // ✅ COMMIT TRANSACTION (Data is safe now)
+        // ✅ COMMIT TRANSACTION (Data is safely saved)
         await connection.commit();
 
 
         // ==========================================
-        // 🔥 H. SEND CUSTOM EMAIL
+        // 🚀 3. SEND RESPONSE IMMEDIATELY
         // ==========================================
-        
-        // We do this AFTER commit so we don't send emails for failed DB inserts.
-        // We wrap it in a try/catch so email failure doesn't crash the webhook response.
+        // We respond to PayMongo NOW so they don't wait for emails or socket updates.
+        res.status(200).json({ message: "Order created", order_id: new_order_id });
+
+
+        // ==========================================
+        // 📧 4. SEND EMAIL (BACKGROUND TASK)
+        // ==========================================
         if (clientInfo.email) {
-            try {
-                console.log(`📧 Sending receipt to ${clientInfo.email}...`);
-                
-                await sendReceiptEmail(
-                    clientInfo.email, 
-                    `${clientInfo.first_name} ${clientInfo.last_name}`, 
-                    orderData, 
-                    new_order_id
-                );
-                
-                console.log(`✅ Email sent successfully.`);
-            } catch (emailError) {
-                console.error(`⚠️ Failed to send receipt email:`, emailError);
-                // We do NOT return an error response here, because the order is already successful.
-            }
+            console.log(`📧 Preparing receipt for ${clientInfo.email}...`);
+            
+            // We call this WITHOUT 'await' so it runs in the background.
+            // We catch errors here so they don't crash the server process.
+            sendReceiptEmail(
+                clientInfo.email, 
+                `${clientInfo.first_name} ${clientInfo.last_name}`, 
+                orderData, 
+                new_order_id
+            )
+            .then(() => console.log(`✅ Email successfully sent to ${clientInfo.email}`))
+            .catch(err => console.error(`⚠️ Email failed to send: ${err.message}`));
         } else {
             console.log(`⚠️ No email found for client, skipping receipt.`);
         }
 
+
         // ==========================================
-
-
-        // 4. Real-time Notification
+        // 🔔 5. REAL-TIME NOTIFICATION
+        // ==========================================
         const io = req.app.get('io');
         if (io) {
             io.emit('new-order', {
@@ -371,15 +374,17 @@ export const paymongoWebhook = async (req, res) => {
                 order_date: new Date(),
                 timestamp: new Date()
             });
-            console.log(`✅ Order #${new_order_id} processed & notified.`);
+            console.log(`✅ Order #${new_order_id} broadcasted via Socket.io.`);
         }
-
-        res.status(200).json({ message: "Order created", order_id: new_order_id });
 
     } catch (error) {
         if (connection) await connection.rollback();
         console.error("❌ Webhook Processing Error:", error);
-        res.status(500).json({ error: error.message });
+        
+        // Only send error response if we haven't sent success yet
+        if (!res.headersSent) {
+            res.status(500).json({ error: error.message });
+        }
     } finally {
         if (connection) connection.release();
     }
