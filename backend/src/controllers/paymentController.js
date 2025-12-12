@@ -1,5 +1,4 @@
 import pool from "../config/mysql.js";
-import { sendReceiptEmail } from '../utils/emailService.js';
 import crypto from "crypto";
 
 const SERVICE_RATE = 0.10; // 10%
