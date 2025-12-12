@@ -1,22 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // ✅ For redirecting after order
+import { useNavigate } from 'react-router-dom'; 
 import { X, Trash2, Minus, Plus, MessageSquare } from 'lucide-react';
 import apiClient from '../../../utils/apiClient';
 import '../CustomerTheme.css';
 import { useSocket } from '../../../context/SocketContext';
-import { useCart } from '../../../context/CartContext'; // ✅ Use the Context
-import { useAuth } from '../../../context/AuthContext'; // ✅ Use Auth
+import { useCart } from '../../../context/CartContext'; 
+import { useAuth } from '../../../context/AuthContext'; 
 import toast from 'react-hot-toast';
 
-const CartPanel = ({ isOpen, onClose }) => {
-  // ✅ Global Cart Data
+const CartPanel = ({ isOpen, onClose, activeRoom }) => {
   const { cart, updateQuantity, removeFromCart, updateInstruction, clearCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Local State for Order Settings
   const [orderType, setOrderType] = useState('Dine-in');
-  const [deliveryLocation, setDeliveryLocation] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   // Location Data
@@ -44,7 +41,15 @@ const CartPanel = ({ isOpen, onClose }) => {
     fetchData();
   }, []);
 
-  // 2. Real-time Table Updates
+  // 2. Auto-Select Room if provided (Auto-Room Feature)
+  useEffect(() => {
+    if (activeRoom && activeRoom.room_id) {
+        setOrderType('Room Dining');
+        setSelectedRoomId(activeRoom.room_id);
+    }
+  }, [activeRoom]);
+
+  // 3. Real-time Table Updates
   useEffect(() => {
     if (socket) {
         socket.on('table-update', (data) => {
@@ -54,92 +59,92 @@ const CartPanel = ({ isOpen, onClose }) => {
                 }
                 return table;
             }));
-
             if (data.status === 'Occupied' && parseInt(selectedTableId) === parseInt(data.table_id)) {
                  setSelectedTableId(''); 
-                 setDeliveryLocation('');
             }
         });
     }
     return () => socket && socket.off('table-update');
   }, [socket, selectedTableId]);
 
-  // 3. Reset location when switching Order Type
-  useEffect(() => {
-    setSelectedTableId('');
-    setSelectedRoomId('');
-    setDeliveryLocation('');
-  }, [orderType]);
-
-  const handleTableChange = (e) => {
-    const tId = e.target.value;
-    setSelectedTableId(tId);
-    const table = tables.find(t => t.table_id.toString() === tId);
-    setDeliveryLocation(table ? `Table ${table.table_number}` : ''); 
-  };
-
-  const handleRoomChange = (e) => {
-    const rId = e.target.value;
-    setSelectedRoomId(rId);
-    const room = rooms.find(r => r.room_id.toString() === rId);
-    setDeliveryLocation(room ? `Room ${room.room_num}` : '');
-  };
-
-  // ✅ 4. SELF-CONTAINED ORDER SUBMISSION
-  const handlePlaceOrder = async () => {
-    if (!user) {
-        toast.error("Please login to place an order.");
-        return;
-    }
-    
-    setIsPlacingOrder(true);
-    try {
-        // Calculate Totals
-        const subtotal = cart.reduce((total, item) => total + parseFloat(item.price) * item.quantity, 0);
-        const serviceFee = subtotal * 0.10;
-        const vat = (subtotal + serviceFee) * 0.12;
-        const totalAmount = subtotal + serviceFee + vat;
-
-        const payload = {
-            order_type: orderType,
-            delivery_location: deliveryLocation, // "Table 5" or "Room 101"
-            payment_method: 'Cash', // Default for now
-            total_amount: totalAmount,
-            items: cart.map(item => ({
-                item_id: item.item_id,
-                quantity: item.quantity,
-                price: item.price,
-                instructions: item.instructions || ''
-            }))
-        };
-
-        const response = await apiClient('/orders', {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) throw new Error('Failed to place order');
-        
-        const data = await response.json();
-        
-        // Success Actions
-        clearCart();
-        onClose();
-        toast.success('Order placed successfully!');
-        navigate('/my-orders'); // Redirect to history
-        
-    } catch (error) {
-        toast.error(error.message);
-    } finally {
-        setIsPlacingOrder(false);
-    }
-  };
-
-  // Calculations
+  // 4. Calculations
   const subtotal = cart.reduce((total, item) => total + parseFloat(item.price) * item.quantity, 0);
   const serviceAmount = subtotal * 0.10;
   const vatAmount = (subtotal + serviceAmount) * 0.12;
   const grandTotal = subtotal + serviceAmount + vatAmount;
+
+  // ✅ 5. PAYMONGO CHECKOUT LOGIC
+  const handlePlaceOrder = async () => {
+    if (!user) {
+        toast.error("Please login to place an order.");
+        navigate('/login');
+        return;
+    }
+    
+    setIsPlacingOrder(true);
+    const toastId = toast.loading('Connecting to PayMongo...');
+
+    try {
+        // Determine Location IDs
+        let tableIdToSend = null;
+        let roomIdToSend = null;
+
+        if (orderType === 'Dine-in') {
+            tableIdToSend = selectedTableId; 
+        } else if (orderType === 'Room Dining') {
+            roomIdToSend = selectedRoomId;
+        }
+
+        // Payload for /payments/checkout
+        const checkoutData = {
+            cart_items: cart.map(item => ({
+                item_id: item.item_id,
+                quantity: item.quantity,
+                instructions: item.instructions || '' 
+            })),
+            
+            table_id: tableIdToSend, 
+            room_id: roomIdToSend,
+
+            // Combine all instructions for the main order note
+            special_instructions: cart
+                .filter(item => item.instructions)
+                .map(item => `${item.item_name}: ${item.instructions}`)
+                .join('; ') || null
+        };
+
+        // ✅ Correct Endpoint: /payments/checkout (Not /orders)
+        const response = await apiClient('/payments/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(checkoutData)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || 'Failed to initialize payment');
+        }
+
+        if (result.checkout_url) {
+            toast.success('Redirecting to payment...', { id: toastId });
+            // Clear cart locally since we are handing off to payment
+            // (Optional: You might want to keep it until success, but this prevents duplicates)
+            clearCart(); 
+            
+            // 🚀 REDIRECT TO PAYMONGO
+            window.location.href = result.checkout_url;
+        } else {
+            throw new Error("No checkout URL received");
+        }
+        
+    } catch (error) {
+        console.error("Checkout Error:", error);
+        toast.error(error.message, { id: toastId });
+    } finally {
+        setIsPlacingOrder(false);
+    }
+  };
 
   return (
     <>
@@ -175,7 +180,11 @@ const CartPanel = ({ isOpen, onClose }) => {
             </label>
             <div className="location-select-wrapper">
                 {orderType === 'Dine-in' ? (
-                    <select value={selectedTableId} onChange={handleTableChange} className="location-select">
+                    <select 
+                        value={selectedTableId} 
+                        onChange={(e) => setSelectedTableId(e.target.value)} 
+                        className="location-select"
+                    >
                         <option value="">-- Choose a Table --</option>
                         {tables.map(table => (
                             <option 
@@ -189,7 +198,11 @@ const CartPanel = ({ isOpen, onClose }) => {
                         ))}
                     </select>
                 ) : (
-                    <select value={selectedRoomId} onChange={handleRoomChange} className="location-select">
+                    <select 
+                        value={selectedRoomId} 
+                        onChange={(e) => setSelectedRoomId(e.target.value)} 
+                        className="location-select"
+                    >
                         <option value="">-- Choose a Room --</option>
                         {rooms.map(room => (
                             <option key={room.room_id} value={room.room_id}>
@@ -240,7 +253,6 @@ const CartPanel = ({ isOpen, onClose }) => {
                               type="text"
                               placeholder="Add notes (e.g. No onions)"
                               value={item.instructions || ''}
-                              // ✅ Updates via Context
                               onChange={(e) => updateInstruction(item.item_id, e.target.value)}
                               className="instruction-input"
                           />
@@ -271,7 +283,7 @@ const CartPanel = ({ isOpen, onClose }) => {
                 }
                 className="place-order-btn"
               >
-                {isPlacingOrder ? 'Processing...' : 'Place Order'}
+                {isPlacingOrder ? 'Processing...' : 'Proceed to Payment'}
               </button>
         </div>
       </div>

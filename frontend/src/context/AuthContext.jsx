@@ -121,9 +121,14 @@ export const AuthProvider = ({ children }) => {
         throw new Error(data.message || 'Login failed');
       }
 
-      setToken(data.token); 
+      // ✅ FIX: Set ALL state immediately (Don't wait for useEffect)
       const decoded = jwtDecode(data.token);
-      handleRedirect(decoded);
+      
+      setToken(data.token);           // 1. Set Token
+      setUser(decoded);               // 2. Set User Data IMMEDIATELY
+      localStorage.setItem('authToken', data.token); // 3. Save to Storage
+      
+      handleRedirect(decoded);        // 4. Navigate
       
       toast.success('Logged in successfully!');
       return true;
@@ -133,7 +138,7 @@ export const AuthProvider = ({ children }) => {
       return false;
     }
   };
-
+  
   // Register function
   const register = async (firstName, lastName, email, password, phone) => {
     try {
