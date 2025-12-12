@@ -3,7 +3,8 @@ import { ShoppingCart, Search, Bell } from 'lucide-react';
 import ProfileDropdown from '../../../components/ProfileDropdown';
 import { useAuth } from '../../../context/AuthContext';
 import { useCart } from '../../../context/CartContext'; 
-import { useNotifications } from '../../../context/NotificationContext'; // ✅ Import
+import { useNotifications } from '../../../context/NotificationContext';
+import { Link } from 'react-router-dom';
 import '../CustomerTheme.css'; 
 
 export default function HeaderBar({ 
@@ -22,7 +23,13 @@ export default function HeaderBar({
     <header className="header-bar">
       {/* ... Logo & Search (No Changes) ... */}
       <div className="header-col-start">
-        <img src="/images/logo_var.svg" alt="FoodieHub Logo" className="header-logo"/>
+        <Link to="/" className="flex items-center">
+            <img 
+                src="/images/logo_var.svg" 
+                alt="Celestia Hotel Logo" 
+                className="header-logo cursor-pointer hover:opacity-90 transition-opacity"
+            />
+        </Link>
       </div>
 
       <div className="header-col-center">
