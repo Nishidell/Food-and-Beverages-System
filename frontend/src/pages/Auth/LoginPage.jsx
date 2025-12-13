@@ -70,7 +70,7 @@ const LoginPage = () => {
          <div className="relative z-10 w-full h-full flex flex-col justify-end items-center p-12 lg:p-20 text-white text-center">
              <div className="mb-6">
           <img 
-              src="/images/logo_var.svg" 
+              src="/images/hotel_logo.png" 
               alt="Celestia Dining" 
               className="h-32 w-auto object-contain drop-shadow-lg" 
           />
