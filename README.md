@@ -182,23 +182,17 @@ Fill in the `deployment` details exactly as below to match the `package.json` co
 
  ![Image Alt](https://github.com/AdamCutie/Food-and-Beverages-System/blob/abe507eff7421484b5de48c84d218c43412bf335/image/command.png)
  
-1. Name: food-and-beverages-system
+```env
+SERVICE_NAME=food-and-beverages-system
+REGION=Singapore
+BRANCH=master
+ROOT_DIRECTORY=(optional)
+RUNTIME=Node
+BUILD_COMMAND=npm run build
+START_COMMAND=npm run start
+INSTANCE_TYPE=Free
 
-2. Region: Select your closest region (e.g., Singapore).
-
-3. Branch: master
-
-4. Root Directory: (Leave blank)
-
-5. Runtime: Node
-
-6. Build Command: npm run build
-
-7. tart Command: npm run start
-
-8. Instance Type: Free
-
-
+```
 
 ### Step 5: Environment Variables
 You must manually add your environment variables in the Environment tab on Render. The app will not connect to the `database` without these.
