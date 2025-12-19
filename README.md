@@ -121,7 +121,7 @@ npm start
 
 # 🚀 Production Deployment Guide
 Follow these steps to deploy the application to production using Render.
-
+ 
 ### Step 1: Push Code to GitHub
 Open your `terminal` in the project folder and run the following commands to push your code:
 
@@ -157,52 +157,127 @@ git push -u origin master
 
 ### Step 2: Create a Render Account
 1. Go to Render.com.
-
+ ![Image Alt](https://github.com/AdamCutie/Food-and-Beverages-System/blob/2e2b99120938e640b0a69121a78222cf544fbce9/image/render.png)
 2. Sign up using your GitHub account (recommended for easy integration).
-
+ ![Image Alt](https://github.com/AdamCutie/Food-and-Beverages-System/blob/abe507eff7421484b5de48c84d218c43412bf335/image/create.png)
 ### Step 3: Create a New Web Service
 1. On the Render Dashboard, click New + and select Web Service.
-
+ ![Image Alt](https://github.com/AdamCutie/Food-and-Beverages-System/blob/abe507eff7421484b5de48c84d218c43412bf335/image/add.png)
 2. Select the Food-and-Beverages-System repository from the list.
-
+ ![Image Alt](https://github.com/AdamCutie/Food-and-Beverages-System/blob/a4fce56a4673ecb2b23e9863915e424078486075/image/select.png)
 ### Step 4: Configure the Service
 Fill in the `deployment` details exactly as below to match the `package.json` configuration:
 
-```env
-Name: food-and-beverages-system
+ ![Image Alt](https://github.com/AdamCutie/Food-and-Beverages-System/blob/abe507eff7421484b5de48c84d218c43412bf335/image/command.png)
+ 
+1. Name: food-and-beverages-system
 
-Region: Select your closest region (e.g., Singapore).
+2. Region: Select your closest region (e.g., Singapore).
 
-Branch: master
+3. Branch: master
 
-Root Directory: (Leave blank)
+4. Root Directory: (Leave blank)
 
-Runtime: Node
+5. Runtime: Node
 
-Build Command: npm run build
+6. Build Command: npm run build
 
-Start Command: npm run start
+7. tart Command: npm run start
 
-Instance Type: Free
+8. Instance Type: Free
 
-```
+
 
 ### Step 5: Environment Variables
 You must manually add your environment variables in the Environment tab on Render. The app will not connect to the `database` without these.
 
 Scroll down to Environment Variables.
 
+![Image Alt](https://github.com/AdamCutie/Food-and-Beverages-System/blob/abe507eff7421484b5de48c84d218c43412bf335/image/.env.png)
+
 Add the following keys (copy values from your local `.env`):
 ```env
-DB_HOST=localhost
+DB_HOST
+Value
+value
+• • • • • • • • • • • •
 
-DB_USER=root
 
-DB_PASS=your_password_here
+Key
+DB_NAME
+Value
+value
+• • • • • • • • • • • •
 
-DB_NAME=food_beverage_db
 
-PORT=21917(Optional)
+Key
+DB_PASSWORD
+Value
+value
+• • • • • • • • • • • •
+
+
+Key
+DB_USER
+Value
+value
+• • • • • • • • • • • •
+
+
+Key
+DEV_MODE
+Value
+value
+• • • • • • • • • • • •
+
+
+Key
+FRONTEND_URL
+Value
+value
+• • • • • • • • • • • •
+
+
+Key
+JWT_SECRET
+Value
+value
+• • • • • • • • • • • •
+
+
+Key
+PAYMONGO_PUBLIC_KEY
+Value
+value
+• • • • • • • • • • • •
+
+
+Key
+PAYMONGO_SECRET_KEY
+Value
+value
+• • • • • • • • • • • •
+
+
+Key
+PAYMONGO_WEBHOOK_SECRET
+Value
+value
+• • • • • • • • • • • •
+
+
+Key
+PORT
+Value
+value
+• • • • • • • • • • • •
+
+
+Key
+VITE_API_URL
+Value
+value
+• • • • • • • • • • • •
 
 ```
 
@@ -212,6 +287,7 @@ PORT=21917(Optional)
 2. Render will start building your app. You can view the progress in the "Logs" tab.
 
 3. Once the logs say `"Your service is live"`, your application is accessible via the provided Render URL.
+![Image Alt](https://github.com/AdamCutie/Food-and-Beverages-System/blob/abe507eff7421484b5de48c84d218c43412bf335/image/deploy.png)
 
 ---
 
