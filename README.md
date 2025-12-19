@@ -201,18 +201,22 @@ Scroll down to Environment Variables.
 
 Add the following keys (copy values from your local `.env`):
 ```env
-DB_HOST=• • • • • • • • • • • •
-DB_NAME=• • • • • • • • • • • •
-DB_PASSWORD=• • • • • • • • • • • •
-DB_USER=• • • • • • • • • • • •
-DEV_MODE=• • • • • • • • • • • •
-FRONTEND_URL=• • • • • • • • • • • •
-JWT_SECRET=• • • • • • • • • • • •
-PAYMONGO_PUBLIC_KEY=• • • • • • • • • • • •
-PAYMONGO_SECRET_KEY=• • • • • • • • • • • •
-PAYMONGO_WEBHOOK_SECRET=• • • • • • • • • • • •
-PORT=• • • • • • • • • • • •
-VITE_API_URL=• • • • • • • • • • • •
+# --- Database Configuration (MySQL) ---
+DB_HOST= The hostname or IP address (e.g., localhost or Render Host URL)
+DB_NAME= The specific name of your database schema
+DB_USER= Your MySQL username (e.g., root)
+DB_PASSWORD= Your MySQL password
+# --- Server Settings ---
+PORT= The port the backend runs on (e.g., 5000 or 10000)
+DEV_MODE= Set to 'development' or 'production'
+JWT_SECRET= A random string used to encrypt user sessions (tokens)
+# --- Frontend Connection ---
+FRONTEND_URL= The URL where your React app lives (e.g., http://localhost:5173)
+VITE_API_URL= The URL where the Backend API lives (e.g., http://localhost:5000)
+# --- Payment Gateway (PayMongo) ---
+PAYMONGO_PUBLIC_KEY= Public key from PayMongo Dashboard (starts with pk_)
+PAYMONGO_SECRET_KEY= Secret key from PayMongo Dashboard (starts with sk_)
+PAYMONGO_WEBHOOK_SECRET= Secret used to verify webhook signatures
 
 ```
 
