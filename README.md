@@ -161,14 +161,22 @@ git push -u origin master
 
 ### Step 2: Create a Render Account
 1. Go to Render.com.
+   
  ![Image Alt](https://github.com/AdamCutie/Food-and-Beverages-System/blob/2e2b99120938e640b0a69121a78222cf544fbce9/image/render.png)
-2. Sign up using your GitHub account (recommended for easy integration).
+ 
+3. Sign up using your GitHub account (recommended for easy integration).
+   
  ![Image Alt](https://github.com/AdamCutie/Food-and-Beverages-System/blob/abe507eff7421484b5de48c84d218c43412bf335/image/create.png)
+ 
 ### Step 3: Create a New Web Service
 1. On the Render Dashboard, click New + and select Web Service.
+   
  ![Image Alt](https://github.com/AdamCutie/Food-and-Beverages-System/blob/abe507eff7421484b5de48c84d218c43412bf335/image/add.png)
-2. Select the Food-and-Beverages-System repository from the list.
+ 
+3. Select the Food-and-Beverages-System repository from the list.
+   
  ![Image Alt](https://github.com/AdamCutie/Food-and-Beverages-System/blob/a4fce56a4673ecb2b23e9863915e424078486075/image/select.png)
+ 
 ### Step 4: Configure the Service
 Fill in the `deployment` details exactly as below to match the `package.json` configuration:
 
@@ -226,6 +234,7 @@ PAYMONGO_WEBHOOK_SECRET= Secret used to verify webhook signatures
 2. Render will start building your app. You can view the progress in the "Logs" tab.
 
 3. Once the logs say `"Your service is live"`, your application is accessible via the provided Render URL.
+   
 ![Image Alt](https://github.com/AdamCutie/Food-and-Beverages-System/blob/abe507eff7421484b5de48c84d218c43412bf335/image/deploy.png)
 
 ---
