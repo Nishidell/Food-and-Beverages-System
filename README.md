@@ -2,8 +2,12 @@
 
 A comprehensive web application designed to manage the Food & Beverage operations of a hotel. This system handles Ordering (Dine-in, Room Service, Walk-in), Point of Sale (POS), Inventory Management (with "Low Stock" alerts), Kitchen Management, and Analytics.
 
+
+https://github.com/user-attachments/assets/14952ae7-fac8-4f0d-8fc5-4bef9fcce733
+
+
 ---
-https://github.com/user-attachments/assets/53782056-20a2-41a3-a976-757883f0bdbd
+
 ##  Tech Stack
 
 * **Frontend:** React.js, Tailwind CSS, Recharts (for Analytics)
