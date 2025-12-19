@@ -145,7 +145,7 @@ git commit -m "Ready for production"
 
 4. Link to your GitHub repository
 ```bash
-git remote add origin [https://github.com/Nishidell/Food-and-Beverages-System.git](https://github.com/your-github-name/Food-and-Beverages-System.git)
+git remote add origin https://github.com/your-github-name/Food-and-Beverages-System.git
 
 ```
 
@@ -168,7 +168,7 @@ git push -u origin master
 ### Step 4: Configure the Service
 Fill in the `deployment` details exactly as below to match the `package.json` configuration:
 
-```
+```env
 Name: food-and-beverages-system
 
 Region: Select your closest region (e.g., Singapore).
@@ -193,7 +193,7 @@ You must manually add your environment variables in the Environment tab on Rende
 Scroll down to Environment Variables.
 
 Add the following keys (copy values from your local `.env`):
-```
+```env
 DB_HOST=localhost
 
 DB_USER=root
@@ -209,7 +209,7 @@ PORT=21917(Optional)
 ### Step 6: Deploy
 1. Click Create Web Service.
 
-2. Render will start building your app. You can view the progress in the `"Logs"` tab.
+2. Render will start building your app. You can view the progress in the "Logs" tab.
 
 3. Once the logs say `"Your service is live"`, your application is accessible via the provided Render URL.
 
