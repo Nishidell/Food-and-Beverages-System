@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import apiClient from "../../../utils/apiClient";
 import toast from "react-hot-toast";
-import { Filter, Download, FileSpreadsheet, Printer } from "lucide-react"; // ✅ Added Printer Icon
+import { Filter, Download, FileSpreadsheet, Printer, Calendar } from "lucide-react"; // ✅ Added Printer Icon
 import * as XLSX from "xlsx";
 import {
   ResponsiveContainer,
@@ -36,12 +36,71 @@ const AnalyticsDashboard = () => {
   const [filterType, setFilterType] = useState("All");
   const { token } = useAuth();
 
+   // --- HELPERS ---
+    const getTodayStr = () => new Date().toLocaleDateString('en-CA');
+    const getStartOfWeek = (date) => {
+      const d = new Date(date);
+      const day = d.getDay(); 
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
+      return new Date(d.setDate(diff)).toLocaleDateString('en-CA');
+    };
+    const getStartOfMonth = (date) => {
+      const d = new Date(date);
+      return new Date(d.getFullYear(), d.getMonth(), 1).toLocaleDateString('en-CA');
+    };
+    const fixDate = (dateInput) => {
+        if (!dateInput) return new Date();
+        const dateStr = typeof dateInput === 'string' ? dateInput : new Date(dateInput).toISOString();
+        if (dateStr.includes(' ') && !dateStr.includes('T')) return new Date(dateStr.replace(' ', 'T') + 'Z');
+        if (dateStr.includes('T') && !dateStr.endsWith('Z') && !dateStr.includes('+')) return new Date(dateStr + 'Z');
+        return new Date(dateStr);
+    };
+    const getLocalDatePart = (dateObj) => new Date(dateObj).toLocaleDateString('en-CA');
+  
+    const [quickFilter, setQuickFilter] = useState('Today');
+    const [startDate, setStartDate] = useState(getTodayStr());
+    const [endDate, setEndDate] = useState(getTodayStr());
+  
+    const handleQuickFilterChange = (e) => {
+      const filter = e.target.value;
+      setQuickFilter(filter);
+      const today = new Date();
+      const endStr = getTodayStr();
+      let startStr = endStr;
+  
+      if (filter === 'Today') { startStr = endStr; }
+      else if (filter === 'Yesterday') {
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          startStr = yesterday.toLocaleDateString('en-CA');
+          setStartDate(startStr); setEndDate(startStr); return;
+      } else if (filter === 'This Week') { startStr = getStartOfWeek(today); }
+      else if (filter === 'This Month') { startStr = getStartOfMonth(today); }
+      else if (filter === 'Custom') { return; }
+  
+      if (filter !== 'Custom') { setStartDate(startStr); setEndDate(endStr); }
+    };
+
   useEffect(() => {
     const fetchAnalytics = async () => {
       setLoading(true);
       try {
-        const queryParam = filterType === "All" ? "" : `?order_type=${filterType}`;
-        const response = await apiClient(`/analytics${queryParam}`);
+        // 1. Build the base query params (Order Type)
+        const params = new URLSearchParams();
+        if (filterType !== "All") {
+          params.append("order_type", filterType);
+        }
+
+        // 2. Add Date Filters (This was missing!)
+        // If it's NOT "All Time" (or whatever default), send the dates
+        if (startDate && endDate) {
+            params.append("startDate", startDate);
+            params.append("endDate", endDate);
+        }
+        
+        // 3. Construct the final URL
+        const queryString = params.toString() ? `?${params.toString()}` : "";
+        const response = await apiClient(`/analytics${queryString}`);
         
         if (!response.ok) throw new Error("Failed to fetch analytics data.");
         const result = await response.json();
@@ -55,8 +114,10 @@ const AnalyticsDashboard = () => {
         setLoading(false);
       }
     };
+
     if (token) fetchAnalytics();
-  }, [token, filterType]);
+    
+  }, [token, filterType, startDate, endDate]);
 
   const createSheet = (dataToExport, reportTitle) => {
     if (!dataToExport || dataToExport.length === 0) return XLSX.utils.json_to_sheet([]);
@@ -129,7 +190,9 @@ const orderData = data.orderTypeDistribution
     toast.success(`${fileName}.xlsx downloaded!`);
   };
 
-  if (loading) return <div className="p-8 text-center text-white text-lg">Loading analytics...</div>;
+  if (loading && !data) {
+      return <div className="p-8 text-center text-white text-lg animate-pulse">Loading analytics...</div>;
+  }
   if (error) return <div className="p-8 text-center text-red-500">Error: {error}</div>;
   if (!data) return <div className="p-8 text-center text-white">No data available.</div>;
 
@@ -190,6 +253,34 @@ const CustomXAxisTick = ({ x, y, payload }) => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
+          {/* Date Filter Dropdown */}
+            <div className="relative">
+                <select 
+                    value={quickFilter} 
+                    onChange={handleQuickFilterChange} 
+                    className="admin-select-primary appearance-none pr-10" 
+                    style={{ minWidth: '150px' }}
+                >
+                    <option value="Today">Today</option>
+                    <option value="Yesterday">Yesterday</option>
+                    <option value="This Week">This Week</option>
+                    <option value="This Month">This Month</option>
+                    <option value="Custom">Custom</option>
+                </select>
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-[#3C2A21]">
+                    <Calendar size={18} />
+                </div>
+            </div>
+
+            {/* Custom Range Inputs (Show only if Custom) */}
+            {quickFilter === 'Custom' && (
+                <div className="flex items-center gap-2 animate-fadeIn bg-[#fff2e0] p-1 rounded-lg border border-[#6e1a1a]">
+                    <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} max={endDate} className="admin-input-date h-10"/>
+                    <span className="text-gray-700 font-bold">-</span>
+                    <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate} className="admin-input-date h-10"/>
+                </div>
+            )}
+
             <div className="relative">
                 <select
                   value={filterType}
