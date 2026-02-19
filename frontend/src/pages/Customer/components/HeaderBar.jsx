@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingCart, Search, Bell } from 'lucide-react';
+import { ShoppingCart, Search, Bell, X } from 'lucide-react';
 import ProfileDropdown from '../../../components/ProfileDropdown';
 import { useAuth } from '../../../context/AuthContext';
 import { useCart } from '../../../context/CartContext'; 
@@ -11,17 +11,20 @@ export default function HeaderBar({
   onCartToggle, 
   searchTerm, 
   onSearchChange, 
-  // notificationCount, <-- DELETE THIS PROP
   onNotificationToggle,
   showSearch = true 
 }) {
   const { user } = useAuth();
   const { cartCount } = useCart(); 
-  const { unreadCount } = useNotifications(); // ✅ Use Hook
+  const { unreadCount } = useNotifications();
+
+  const handleClearSearch = () => {
+    // We send a "fake" event so the parent updates state to empty string
+    onSearchChange({ target: { value: '' } });
+  };
 
   return (
     <header className="header-bar">
-      {/* ... Logo & Search (No Changes) ... */}
       <div className="header-col-start">
         <Link to="/" className="flex items-center">
             <img 
@@ -34,9 +37,31 @@ export default function HeaderBar({
 
       <div className="header-col-center">
         {showSearch ? (
-            <div className="flex w-full max-w-md items-center bg-white rounded-full px-4 py-2 shadow-sm border border-gray-100">
-                <div className="text-gray-400 mr-2"><Search size={20} /></div>
-                <input type="text" placeholder="Search for food..." className="bg-transparent border-none outline-none text-sm text-[#3C2A21] w-full placeholder-gray-400" value={searchTerm} onChange={onSearchChange} />
+            <div className="flex w-full max-w-md items-center bg-[#022c22] rounded-full px-4 py-2 shadow-sm border border-yellow-600 transition-colors">
+                
+                {/* Search Icon (Gold) */}
+                <div className="text-yellow-500 mr-2">
+                  <Search size={20} />
+                </div>
+                
+                {/* Input Field (Gold Text on Green) */}
+                <input 
+                  type="text" 
+                  placeholder="Search for food..." 
+                  className="bg-transparent border-none outline-none text-sm text-yellow-100 w-full placeholder-yellow-500/50" 
+                  value={searchTerm} 
+                  onChange={onSearchChange} 
+                />
+
+                {/* Clear (X) Button - Only shows if text exists */}
+                {searchTerm && (
+                  <button 
+                    onClick={handleClearSearch} 
+                    className="text-yellow-500 hover:text-white transition-colors ml-2"
+                  >
+                    <X size={18} />
+                  </button>
+                )}
             </div>
         ) : (
             <div className="hidden md:block w-full"></div> 

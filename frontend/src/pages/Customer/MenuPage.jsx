@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
-import { useNotifications } from '../../context/NotificationContext'; // ✅ Import Context
+import { useNotifications } from '../../context/NotificationContext'; 
 import HeaderBar from './components/HeaderBar';
 import PromoBanner from './components/PromoBanner';
 import CategoryTabs from './components/CategoryTabs';
@@ -12,12 +12,14 @@ import ImageModal from './components/ImageModal';
 import NotificationPanel from './components/NotificationPanel';
 import toast from 'react-hot-toast';
 import apiClient from '../../utils/apiClient';
+import MenuSkeleton from '../Customer/components/MenuSkeleton';
 import './CustomerTheme.css';
 
 function MenuPage() {
   // --- Data State ---
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true); // ✅ 1. ADD LOADING STATE
   
   // --- UI State ---
   const [selectedCategory, setSelectedCategory] = useState(0);
@@ -29,8 +31,6 @@ function MenuPage() {
 
   // --- Hooks ---
   const { addToCart, cartCount } = useCart();
-  
-  // ✅ OPTIMIZATION: Use Global Notification Context (No local polling!)
   const { 
     notifications, 
     unreadCount, 
@@ -39,9 +39,10 @@ function MenuPage() {
     clearAllNotifications 
   } = useNotifications();
 
-  // 1. Fetch Menu Data (Parallel - Keep this, it is good!)
+  // 1. Fetch Menu Data
   useEffect(() => {
     const fetchItems = async () => {
+      setLoading(true); // ✅ Start loading
       try {
         const [itemsResponse, categoriesResponse] = await Promise.all([
           apiClient('/items'),
@@ -55,10 +56,11 @@ function MenuPage() {
         setCategories(await categoriesResponse.json());
       } catch (err) {
         console.error("Error fetching data:", err);
-        // Only toast if it's not a strict rate limit (handled globally now)
         if (err.message !== "Rate limit reached") {
              toast.error('Failed to load menu.');
         }
+      } finally {
+        setLoading(false); // ✅ 2. STOP LOADING (Success or Fail)
       }
     };
     fetchItems();
@@ -73,12 +75,11 @@ function MenuPage() {
     const willOpen = !isNotificationPanelOpen;
     setIsNotificationPanelOpen(willOpen);
     if (willOpen) {
-      markAllAsRead(); // ✅ Use Context function
+      markAllAsRead(); 
     }
   };
 
-  // ✅ OPTIMIZATION: Memoize Filtering & Sorting
-  // This prevents the menu from re-sorting every time the notification panel opens.
+  // Memoized Filtering
   const finalItems = useMemo(() => {
     let result = items
       .filter(item => selectedCategory === 0 || item.category_id === selectedCategory)
@@ -100,7 +101,7 @@ function MenuPage() {
       default: break;
     }
     return result;
-  }, [items, selectedCategory, searchTerm, sortOption]); // Dependencies
+  }, [items, selectedCategory, searchTerm, sortOption]);
 
   return (
     <div className="customer-page-container">
@@ -110,7 +111,7 @@ function MenuPage() {
         onCartToggle={toggleCart}
         searchTerm={searchTerm}
         onSearchChange={handleSearchChange}
-        notificationCount={unreadCount} // ✅ Use Context Value
+        notificationCount={unreadCount} 
         onNotificationToggle={toggleNotificationPanel}
       />
 
@@ -125,15 +126,25 @@ function MenuPage() {
           onSortChange={setSortOption}
         />
         
-        {/* 3. Food Grid */}
-        <FoodGrid
-          items={finalItems} // ✅ Use Memoized Items
-          onAddToCart={(item) => {
-              addToCart(item);
-              toast.success('Added to cart!');
-          }}
-          onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
-        />
+        {/* 3. Food Grid OR Skeleton Loading */}
+        {/* ✅ 3. CONDITIONAL RENDERING HERE */}
+        {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8">
+                {[...Array(8)].map((_, index) => (
+                    <MenuSkeleton key={index} />
+                ))}
+            </div>
+        ) : (
+            <FoodGrid
+              items={finalItems} 
+              onAddToCart={(item) => {
+                  addToCart(item);
+                  toast.success('Added to cart!');
+              }}
+              onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
+            />
+        )}
+
       </main>
 
       {/* 4. Panels & Modals */}
@@ -145,7 +156,7 @@ function MenuPage() {
       <NotificationPanel
         isOpen={isNotificationPanelOpen}
         onClose={toggleNotificationPanel}
-        notifications={notifications} // ✅ Pass Context Data
+        notifications={notifications} 
         onDeleteOne={deleteNotification}
         onClearAll={clearAllNotifications}
       />

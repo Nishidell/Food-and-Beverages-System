@@ -12,20 +12,20 @@ const safeQuery = async (sql, params, fallbackValue) => {
 
 export const getDashboardAnalytics = async (req, res) => {
   try {
-    const { order_type } = req.query;
+    // 1. Get Dates from Query
+    const { order_type, startDate, endDate } = req.query;
 
     let typeCondition = "";
-    let queryParams = [];
+    let queryParams = []; // Params for Type Filter
     let debugMessage = "No Filter Applied";
 
-    // Normalize input (trim spaces)
+    // --- A. HANDLE ORDER TYPE FILTER ---
     const filter = order_type ? order_type.trim() : 'All';
 
     if (filter !== 'All') {
-        // ✅ SMART FILTER: Check for "Room Dining", "Room Service", or lowercase versions
+        // Smart Filter for Room Service
         if (['Room Dining', 'Room Service', 'room dining', 'room service'].includes(filter)) {
             debugMessage = "✅ MATCHED: Smart Room Filter";
-            // Uses 'o.' prefix for aliased queries
             typeCondition = "AND (o.order_type IN ('Room Dining', 'Room Service') OR o.delivery_location LIKE 'Room%' OR o.room_id > 0)";
         } 
         else if (filter === 'Dine-in') {
@@ -39,7 +39,21 @@ export const getDashboardAnalytics = async (req, res) => {
         }
     }
 
-    const monthCondition = `AND YEAR(o.order_date) = YEAR(NOW()) AND MONTH(o.order_date) = MONTH(NOW())`;
+    // --- B. HANDLE DATE FILTER (New Logic) ---
+    let dateCondition = "";
+    let dateParams = [];
+
+    if (startDate && endDate) {
+        // If frontend sends dates, use them (Covers Today, Yesterday, Week, Custom)
+        dateCondition = "AND DATE(o.order_date) BETWEEN ? AND ?";
+        dateParams = [startDate, endDate];
+    } else {
+        // Default Fallback: Show "This Month" if no date selected
+        dateCondition = "AND YEAR(o.order_date) = YEAR(NOW()) AND MONTH(o.order_date) = MONTH(NOW())";
+    }
+
+    // Combine params for queries that use BOTH filters
+    const allParams = [...queryParams, ...dateParams];
 
     // Execute queries
     const [
@@ -52,63 +66,57 @@ export const getDashboardAnalytics = async (req, res) => {
       orderTypeDistribution,
       peakHours,
     ] = await Promise.all([
-      // 1. Sales Today
+      // 1-4: SALES TRENDS CARDS (Keep these STATIC so they always show the summary)
       safeQuery(
         `SELECT COUNT(o.order_id) AS fb_orders, SUM(o.total_amount) AS sales 
          FROM fb_orders o 
          WHERE DATE(o.order_date) = CURDATE() AND o.status != 'cancelled' ${typeCondition}`,
         queryParams, [{ fb_orders: 0, sales: 0 }]
       ),
-      // 2. Sales Yesterday
       safeQuery(
         `SELECT COUNT(o.order_id) AS fb_orders, SUM(o.total_amount) AS sales
          FROM fb_orders o 
          WHERE DATE(o.order_date) = CURDATE() - INTERVAL 1 DAY AND o.status != 'cancelled' ${typeCondition}`,
         queryParams, [{ fb_orders: 0, sales: 0 }]
       ),
-      // 3. This Week
       safeQuery(
         `SELECT COUNT(o.order_id) AS fb_orders, SUM(o.total_amount) AS sales
          FROM fb_orders o 
          WHERE YEARWEEK(o.order_date, 1) = YEARWEEK(NOW(), 1) AND o.status != 'cancelled' ${typeCondition}`,
         queryParams, [{ fb_orders: 0, sales: 0 }]
       ),
-      // 4. This Month
       safeQuery(
         `SELECT COUNT(o.order_id) AS fb_orders, SUM(o.total_amount) AS sales
          FROM fb_orders o 
          WHERE YEAR(o.order_date) = YEAR(NOW()) AND MONTH(o.order_date) = MONTH(NOW()) AND o.status != 'cancelled' ${typeCondition}`,
         queryParams, [{ fb_orders: 0, sales: 0 }]
       ),
-      // 5. Top Items
+
+      // 5. Top Items (✅ NOW DYNAMIC: Uses dateCondition instead of hardcoded month)
       safeQuery(
         `SELECT mi.item_name, SUM(od.quantity) AS total_sold, SUM(od.subtotal) AS total_sales 
          FROM fb_order_details od
          JOIN fb_menu_items mi ON od.item_id = mi.item_id
          JOIN fb_orders o ON od.order_id = o.order_id
-         WHERE o.status != 'cancelled' ${typeCondition} ${monthCondition}
+         WHERE o.status != 'cancelled' ${typeCondition} ${dateCondition}
          GROUP BY od.item_id, mi.item_name
-         
-         -- 🚨 CHANGE THIS LINE:
-         -- OLD: ORDER BY total_sales DESC LIMIT 7
          ORDER BY total_sold DESC LIMIT 7`, 
-        queryParams,
+        allParams, // Use combined params
         []
       ),
 
-      // 6. Payment Methods (✅ NOW LISTENS TO THE FILTER)
+      // 6. Payment Methods (✅ NOW DYNAMIC)
       safeQuery(
         `SELECT p.payment_method, COUNT(p.payment_id) AS transactions, SUM(p.amount) AS total_value 
          FROM fb_payments p
          JOIN fb_orders o ON p.order_id = o.order_id
-         -- ✅ Added \${typeCondition} here so it filters by Room/Dine-in/etc.
-         WHERE p.payment_status = 'paid' AND o.status != 'cancelled' ${typeCondition} ${monthCondition}
+         WHERE p.payment_status = 'paid' AND o.status != 'cancelled' ${typeCondition} ${dateCondition}
          GROUP BY p.payment_method`,
-        queryParams, // ✅ PASS queryParams here (it was [] before)
+        allParams,
         []
       ),
       
-      // 7. Order Type Distribution
+      // 7. Order Type Distribution (✅ NOW DYNAMIC)
       safeQuery(
         `SELECT 
            CASE 
@@ -119,30 +127,31 @@ export const getDashboardAnalytics = async (req, res) => {
            COUNT(o.order_id) AS orders, 
            SUM(o.total_amount) AS total_value 
          FROM fb_orders o
-         WHERE o.status != 'cancelled' ${typeCondition} ${monthCondition}
+         WHERE o.status != 'cancelled' ${typeCondition} ${dateCondition}
          GROUP BY 
            CASE 
              WHEN o.room_id IS NOT NULL AND o.room_id > 0 THEN 'Room Dining'
              WHEN o.delivery_location LIKE 'Room%' THEN 'Room Dining'
              ELSE o.order_type 
            END`,
-        queryParams, []
+        allParams, []
       ),
-      // 8. Peak Hours
+
+      // 8. Peak Hours (✅ NOW DYNAMIC)
       safeQuery(
         `SELECT HOUR(o.order_date) AS hour, COUNT(o.order_id) AS order_count 
          FROM fb_orders o
-         WHERE o.status != 'cancelled' ${typeCondition} ${monthCondition}
+         WHERE o.status != 'cancelled' ${typeCondition} ${dateCondition}
          GROUP BY hour ORDER BY order_count DESC LIMIT 1`,
-        queryParams, []
+        allParams, []
       ),
     ]);
     
     res.json({
       debug: {
           received_filter: filter,
-          logic_used: debugMessage,
-          generated_sql_condition: typeCondition
+          dates: { startDate, endDate },
+          generated_sql_condition: typeCondition + " " + dateCondition
       },
       salesTrends: {
         today: salesToday[0] || {},
