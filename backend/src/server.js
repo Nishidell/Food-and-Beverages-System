@@ -48,7 +48,7 @@ const io = new Server(httpServer, {    // ✅ Now works
     origin: [
       'http://localhost:5173',
       'http://localhost:21917',
-      'https://food-and-beverages-system.onrender.com',
+      //'https://food-and-beverages-system.onrender.com', // Old prod URL (keep for testing)
       'https://thecelestiahotel-dining.onrender.com',
     ],
     credentials: true
