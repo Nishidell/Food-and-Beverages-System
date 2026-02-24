@@ -2,10 +2,10 @@
 
 /* --- Root Variables & Base Setup --- */
 .customer-page-container {
-  --customer-bg-color: #0B3D2E;    /* Deep Green Background */
-  --card-bg-color: #fff2e0;        /* Cream Card Background */
+  --customer-bg-color: #0B3D2E; 
+  --card-bg-color: #fff2e0;       
   --text-primary: #0B3D2E;
-  --text-secondary: #F9A825;       /* Accent Orange */
+  --text-secondary: #F9A825;     
   --btn-primary: #0B3D2E;
   --btn-hover: #082f23;
   --btn-text: #F9A825;
@@ -14,7 +14,7 @@
   background-color: var(--customer-bg-color);
   min-height: 100vh;
   width: 100%;
-  overflow-x: hidden; /* Prevent horizontal scroll on mobile */
+  /*overflow-x: hidden; /* Prevent horizontal scroll on mobile */
 }
 
 /* --- Layouts --- */

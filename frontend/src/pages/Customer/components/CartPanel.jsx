@@ -169,8 +169,8 @@ const CartPanel = ({ isOpen, onClose }) => {
 
   return (
     <>
-      <div className={`cart-overlay ${isOpen ? '' : 'hidden'}`} onClick={onClose} />
-      <div className={`cart-panel ${isOpen ? 'open' : ''}`}>
+      <div className={`cart-overlay z-[60] ${isOpen ? '' : 'hidden'}`} onClick={onClose} />
+      <div className={`cart-panel z-[70] ${isOpen ? 'open' : ''}`}>
         
         <div className="cart-header">
           <h2 className="cart-title">My Order</h2>

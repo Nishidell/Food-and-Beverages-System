@@ -24,7 +24,7 @@ export default function HeaderBar({
   };
 
   return (
-    <header className="header-bar">
+    <header className="header-bar sticky top-0 z-50">
       <div className="header-col-start">
         <Link to="/" className="flex items-center">
             <img 
