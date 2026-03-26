@@ -17,28 +17,28 @@ const router = express.Router();
 router.get(
     "/logs", 
     protect, 
-    authorizeRoles("F&B Admin", "Stock Controller"), 
+    authorizeRoles("Operations Manager", "Stock Controller"), 
     getInventoryLogs
 );
 
 // --- 2. Ingredients Management ---
 router.route("/")
     // View: All Staff need to see ingredients for Menu/POS to work
-    .get(protect, authorizeRoles("F&B Admin", "Stock Controller"), getAllIngredients)
-    // Create: Only F&B Admin and Stock Controller
-    .post(protect, authorizeRoles("F&B Admin", "Stock Controller"), createIngredient);
+    .get(protect, authorizeRoles("Operations Manager", "Stock Controller"), getAllIngredients)
+    // Create: Only Operations Manager and Stock Controller
+    .post(protect, authorizeRoles("Operations Manager", "Stock Controller"), createIngredient);
 
 router.route("/:id")
-    .get(protect, authorizeRoles("F&B Admin", "Stock Controller"), getIngredientById)
-    .put(protect, authorizeRoles("F&B Admin", "Stock Controller"), updateIngredientDetails)
-    .delete(protect, authorizeRoles("F&B Admin"), deleteIngredient);
+    .get(protect, authorizeRoles("Operations Manager", "Stock Controller"), getIngredientById)
+    .put(protect, authorizeRoles("Operations Manager", "Stock Controller"), updateIngredientDetails)
+    .delete(protect, authorizeRoles("Operations Manager"), deleteIngredient);
 
 // --- 3. Stock Adjustment ---
-// Allowed: F&B Admin and Stock Controller (Kitchen Staffs added if they need to report waste)
+// Allowed: Operations Manager and Stock Controller (Kitchen Staffs added if they need to report waste)
 router.put(
     "/:id/stock", 
     protect, 
-    authorizeRoles("F&B Admin", "Stock Controller", "Kitchen Staffs"), 
+    authorizeRoles("Operations Manager", "Stock Controller", "Kitchen Staffs"), 
     adjustIngredientStock
 );
 

@@ -12,8 +12,8 @@ import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// All routes require F&B Admin permission
-router.use(protect, authorizeRoles("F&B Admin"));
+// All routes require Operations Manager permission
+router.use(protect, authorizeRoles("Operations Manager"));
 
 router.post("/", createPromotion);           // Create "Christmas Special"
 router.get("/", getAllPromotions);           // List all promos

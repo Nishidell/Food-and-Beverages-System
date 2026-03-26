@@ -14,36 +14,36 @@ import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 // --- 1. Kitchen Display Routes ---
-// Allowed: F&B Admin, Kitchen Staffs, Waiter, Cashier
+// Allowed: Operations Manager, Kitchen Staffs, Waiter, Cashier
 router.get(
     '/kitchen', 
     protect, 
-    authorizeRoles("F&B Admin", "Kitchen Staffs", "Waiter", "Cashier"), 
+    authorizeRoles("Operations Manager", "Kitchen Staffs", "Waiter", "Cashier"), 
     getKitchenOrders
 ); 
 
 router.get(
     '/served', 
     protect, 
-    authorizeRoles("F&B Admin", "Kitchen Staffs", "Waiter", "Cashier"), 
+    authorizeRoles("Operations Manager", "Kitchen Staffs", "Waiter", "Cashier"), 
     getServedOrders
 );
 
 // --- 2. POS Order Creation ---
-// Allowed: F&B Admin, Waiter, Cashier
+// Allowed: Operations Manager, Waiter, Cashier
 router.post(
     "/pos", 
     protect, 
-    authorizeRoles("F&B Admin", "Waiter", "Cashier"), 
+    authorizeRoles("Operations Manager", "Waiter", "Cashier"), 
     createPosOrder
 );
 
 // --- 3. Order Status Updates (Kitchen/POS) ---
-// Allowed: F&B Admin, Kitchen Staffs, Waiter, Cashier
+// Allowed: Operations Manager, Kitchen Staffs, Waiter, Cashier
 router.put(
     "/:id/status", 
     protect, 
-    authorizeRoles("F&B Admin", "Kitchen Staffs", "Waiter", "Cashier"), 
+    authorizeRoles("Operations Manager", "Kitchen Staffs", "Waiter", "Cashier"), 
     updateOrderStatus
 );
 

@@ -14,11 +14,11 @@ const router = express.Router();
 router.get("/", getAllTables);
 
 // Protected (Staff): Update Status (Occupied/Available)
-router.put("/:id/status", protect, authorizeRoles("F&B Admin", "Kitchen Staffs", "Waiter", "Cashier"), updateTableStatus);
+router.put("/:id/status", protect, authorizeRoles("Operations Manager", "Kitchen Staffs", "Waiter", "Cashier"), updateTableStatus);
 
 // Protected (Admin): CRUD Operations
-router.post("/", protect, authorizeRoles("F&B Admin"), createTable);
-router.put("/:id", protect, authorizeRoles("F&B Admin"), updateTable);
-router.delete("/:id", protect, authorizeRoles("F&B Admin"), deleteTable);
+router.post("/", protect, authorizeRoles("Operations Manager"), createTable);
+router.put("/:id", protect, authorizeRoles("Operations Manager"), updateTable);
+router.delete("/:id", protect, authorizeRoles("Operations Manager"), deleteTable);
 
 export default router;

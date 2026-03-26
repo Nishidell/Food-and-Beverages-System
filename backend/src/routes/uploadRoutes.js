@@ -39,7 +39,7 @@ const upload = multer({
 
 // Define the upload route: POST /api/upload
 // ✅ Now 'protect' and 'authorizeRoles' are defined because we imported them above
-router.post('/', protect, authorizeRoles("F&B Admin"), upload.single('image'), (req, res) => {
+router.post('/', protect, authorizeRoles("Operations Manager"), upload.single('image'), (req, res) => {
   if (!req.file) {
       return res.status(400).send({ message: "No file uploaded" });
   }

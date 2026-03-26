@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }) => {
     // 1. Check Position (For Staff)
     if (position) {
       switch (position) {
-        case 'F&B Admin':
+        case 'Operations Manager':
           navigate('/admin');
           break;
         case 'Kitchen Staffs':

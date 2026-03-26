@@ -71,7 +71,7 @@ const InternalNavBar = () => {
       <div style={{ display: 'flex', gap: '0.5rem' }}>
           
           {/* 1. Kitchen View (Orders) */}
-          {hasAccess(['F&B Admin', 'Kitchen Staffs']) && (
+          {hasAccess(['Operations Manager', 'Kitchen Staffs']) && (
             <NavLink 
                 to="/kitchen" 
                 end 
@@ -82,7 +82,7 @@ const InternalNavBar = () => {
           )}
 
           {/* 2. POS (Walk-in) */}
-          {hasAccess(['F&B Admin', 'Cashier']) && (
+          {hasAccess(['Operations Manager', 'Cashier']) && (
              <NavLink 
                 to="/kitchen/pos" 
                 style={({ isActive }) => (isActive ? activeNavLinkStyle : navLinkStyle)}
@@ -92,7 +92,7 @@ const InternalNavBar = () => {
           )}
 
           {/* 3. Tables */}
-          {hasAccess(['F&B Admin', 'Kitchen Staffs']) && (
+          {hasAccess(['Operations Manager', 'Kitchen Staffs']) && (
              <NavLink 
                 to="/kitchen/tables" 
                 style={({ isActive }) => (isActive ? activeNavLinkStyle : navLinkStyle)}
@@ -102,7 +102,7 @@ const InternalNavBar = () => {
           )}
 
           {/* 4. Inventory */}
-          {hasAccess(['F&B Admin', 'Stock Controller']) && (
+          {hasAccess(['Operations Manager', 'Stock Controller']) && (
              <NavLink 
                 to="/kitchen/inventory" 
                 style={({ isActive }) => (isActive ? activeNavLinkStyle : navLinkStyle)}
@@ -112,7 +112,7 @@ const InternalNavBar = () => {
           )}
 
           {/* 5. Archive */}
-          {hasAccess(['F&B Admin', 'Kitchen Staffs']) && (
+          {hasAccess(['Operations Manager', 'Kitchen Staffs']) && (
              <NavLink 
                 to="/kitchen/archive" 
                 style={({ isActive }) => (isActive ? activeNavLinkStyle : navLinkStyle)}
@@ -126,7 +126,7 @@ const InternalNavBar = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
         
         {/* Conditionally render Admin Dashboard link */}
-        {user && user.position === 'F&B Admin' && ( 
+        {user && user.position === 'Operations Manager' && ( 
           <Link
             to="/admin"
             style={isHovered ? { ...baseAdminLinkStyle, ...hoverAdminLinkStyle } : baseAdminLinkStyle}

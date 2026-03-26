@@ -26,17 +26,17 @@ export const SocketProvider = ({ children }) => {
         console.log('✅ Connected to WebSocket:', newSocket.id);
 
         // 1. Join "Kitchen" room (For Kitchen Staff & Admins)
-        if (user.position === 'Kitchen Staffs' || user.position === 'F&B Admin') {
+        if (user.position === 'Kitchen Staffs' || user.position === 'Operations Manager') {
           newSocket.emit('join-role', 'kitchen');
         }
 
         // 2. Join "POS" room (For Cashiers & Admins)
-        if (user.position === 'Cashier' || user.position === 'F&B Admin') {
+        if (user.position === 'Cashier' || user.position === 'Operations Manager') {
           newSocket.emit('join-role', 'pos');
         }
 
         // 3. Join "Admin" room (For Dashboard stats)
-        if (user.position === 'F&B Admin') {
+        if (user.position === 'Operations Manager') {
             newSocket.emit('join-role', 'admin');
         }
 
