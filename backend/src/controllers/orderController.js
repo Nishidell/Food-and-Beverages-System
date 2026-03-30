@@ -237,16 +237,36 @@ export const createOrder = async (req, res) => {
             finalLocation = delivery_location;
         }
 
-        // --- 1. Create Order ---
-        const orderSql = "INSERT INTO fb_orders (client_id, order_type, delivery_location, table_id, room_id, status) VALUES (?, ?, ?, ?, ?, 'pending')";
-        const [orderResult] = await connection.query(orderSql, [client_id, order_type, finalLocation, finalTableId, finalRoomId]);
-        const order_id = orderResult.insertId;
+        // --- 1. Check for Active Order OR Create New ---
+        let order_id;
+        let previousTotals = { items: 0, service: 0, vat: 0, total: 0 };
 
-        if (finalTableId) {
-            await connection.query(
-                "UPDATE fb_tables SET status = 'Occupied' WHERE table_id = ?", 
-                [finalTableId]
-            );
+        // Check if the user already has an unpaid order
+        const [existingOrders] = await connection.query(
+            "SELECT * FROM fb_orders WHERE client_id = ? AND payment_status = 'unpaid' LIMIT 1",
+            [client_id]
+        );
+
+        if (existingOrders.length > 0) {
+            // MAGIC: We found an active table! Reuse the order_id.
+            order_id = existingOrders[0].order_id;
+            
+            // Save their current bill totals so we can add the new dessert to it later
+            previousTotals = {
+                items: parseFloat(existingOrders[0].items_total || 0),
+                service: parseFloat(existingOrders[0].service_charge_amount || 0),
+                vat: parseFloat(existingOrders[0].vat_amount || 0),
+                total: parseFloat(existingOrders[0].total_amount || 0)
+            };
+        } else {
+            // No active order found. Create a brand new one.
+            const orderSql = "INSERT INTO fb_orders (client_id, order_type, delivery_location, table_id, room_id, status, payment_status) VALUES (?, ?, ?, ?, ?, 'pending', 'unpaid')";
+            const [orderResult] = await connection.query(orderSql, [client_id, order_type, finalLocation, finalTableId, finalRoomId]);
+            order_id = orderResult.insertId;
+
+            if (finalTableId) {
+                await connection.query("UPDATE fb_tables SET status = 'Occupied' WHERE table_id = ?", [finalTableId]);
+            }
         }
         
         // --- 2. Insert Items & Calculate Totals ---
@@ -294,20 +314,22 @@ export const createOrder = async (req, res) => {
         const calculatedVatAmount = (calculatedItemsTotal + calculatedServiceCharge) * VAT_RATE; 
         const calculatedTotalAmount = calculatedItemsTotal + calculatedServiceCharge + calculatedVatAmount;
 
+        // Add the new item costs to whatever was already on the bill
+        const finalItemsTotal = previousTotals.items + calculatedItemsTotal;
+        const finalServiceCharge = previousTotals.service + calculatedServiceCharge;
+        const finalVatAmount = previousTotals.vat + calculatedVatAmount;
+        const finalTotalAmount = previousTotals.total + calculatedTotalAmount;
+
         const updateSql = `
             UPDATE fb_orders 
-            SET 
-                items_total = ?, 
-                service_charge_amount = ?, 
-                vat_amount = ?, 
-                total_amount = ? 
+            SET items_total = ?, service_charge_amount = ?, vat_amount = ?, total_amount = ? 
             WHERE order_id = ?
         `;
         await connection.query(updateSql, [
-            calculatedItemsTotal,
-            calculatedServiceCharge,
-            calculatedVatAmount,
-            calculatedTotalAmount,
+            finalItemsTotal,
+            finalServiceCharge,
+            finalVatAmount,
+            finalTotalAmount,
             order_id
         ]);
 
@@ -600,15 +622,10 @@ export const getKitchenOrders = async (req, res) => {
                 o.order_id, 
                 o.order_date, 
                 o.order_type, 
-                
-                -- ✅ ROBUST FIX: 
-                -- If we found a linked Room Number (regardless of order type), use it.
-                -- Otherwise, rely on the saved text.
                 CASE 
                     WHEN tr.room_num IS NOT NULL THEN CONCAT('Room ', tr.room_num)
                     ELSE o.delivery_location 
                 END AS delivery_location,
-
                 o.status, 
                 o.total_amount,
                 COALESCE(c.first_name, o.guest_name) AS first_name,
@@ -616,14 +633,14 @@ export const getKitchenOrders = async (req, res) => {
                 d.order_detail_id,       
                 m.item_name,             
                 d.quantity, 
-                d.instructions
+                d.instructions,
+                d.item_status
             FROM fb_orders o
             LEFT JOIN tbl_client_users c ON o.client_id = c.client_id
-            LEFT JOIN fb_order_details d ON o.order_id = d.order_id
+            JOIN fb_order_details d ON o.order_id = d.order_id 
             LEFT JOIN fb_menu_items m ON d.item_id = m.item_id
-            -- ✅ JOIN tbl_rooms to translate "13" -> "101"
             LEFT JOIN tbl_rooms tr ON o.room_id = tr.room_id
-            WHERE o.status IN ('pending', 'preparing', 'ready')
+            WHERE d.item_status IN ('pending', 'preparing', 'ready')
             ORDER BY o.order_date ASC
         `;
         
@@ -652,7 +669,8 @@ export const getKitchenOrders = async (req, res) => {
                     order_detail_id: row.order_detail_id,
                     item_name: row.item_name || 'Unknown Item',
                     quantity: row.quantity,
-                    instructions: row.instructions
+                    instructions: row.instructions,
+                    item_status: row.item_status 
                 });
             }
         });

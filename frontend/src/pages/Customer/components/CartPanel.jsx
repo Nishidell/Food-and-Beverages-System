@@ -13,12 +13,7 @@ const CartPanel = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [orderType, setOrderType] = useState('Dine-in');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-
-  // Location Data
-  const [tables, setTables] = useState([]);
-  const [selectedTableId, setSelectedTableId] = useState('');
   
   // Internal State for Room Check
   const [activeRoom, setActiveRoom] = useState(null);
@@ -26,28 +21,15 @@ const CartPanel = ({ isOpen, onClose }) => {
 
   const { socket } = useSocket();
 
-  // ✅ REF TRICK: Keeps 'currentCart' always fresh for the Payment function
+  //  REF TRICK: Keeps 'currentCart' always fresh for the Payment function
   const cartRef = useRef(cart);
   useEffect(() => {
       cartRef.current = cart;
   }, [cart]);
 
-  // 1. Fetch Location Data (Tables Only)
-  useEffect(() => {
-    const fetchTables = async () => {
-      try {
-        const tableRes = await apiClient('/tables');
-        if (tableRes.ok) setTables(await tableRes.json());
-      } catch (error) {
-        console.error("Failed to load tables", error);
-      }
-    };
-    fetchTables();
-  }, []);
-
   // 2. Fetch Active Room when "Room Dining" is selected
   useEffect(() => {
-    if (orderType === 'Room Dining') {
+    {
         const checkRoom = async () => {
             setIsFetchingRoom(true);
             try {
@@ -67,25 +49,7 @@ const CartPanel = ({ isOpen, onClose }) => {
         };
         checkRoom();
     }
-  }, [orderType]);
-
-  // 3. Real-time Table Updates
-  useEffect(() => {
-    if (socket) {
-        socket.on('table-update', (data) => {
-            setTables(prevTables => prevTables.map(table => {
-                if (table.table_id === parseInt(data.table_id)) {
-                    return { ...table, status: data.status };
-                }
-                return table;
-            }));
-            if (data.status === 'Occupied' && parseInt(selectedTableId) === parseInt(data.table_id)) {
-                 setSelectedTableId(''); 
-            }
-        });
-    }
-    return () => socket && socket.off('table-update');
-  }, [socket, selectedTableId]);
+  }, []);
 
   // 4. Calculations
   const subtotal = cart.reduce((total, item) => total + parseFloat(item.price) * item.quantity, 0);
@@ -103,21 +67,12 @@ const CartPanel = ({ isOpen, onClose }) => {
     
     setIsPlacingOrder(true);
     
-    // ✅ TIMEOUT: Gives the input field 0.1s to save the note before we send it
+    //  TIMEOUT: Gives the input field 0.1s to save the note before we send it
     setTimeout(async () => {
         const toastId = toast.loading('Connecting to PayMongo...');
 
         try {
-            let tableIdToSend = null;
-            let roomIdToSend = null;
-
-            if (orderType === 'Dine-in') {
-                tableIdToSend = selectedTableId; 
-            } else if (orderType === 'Room Dining') {
-                roomIdToSend = activeRoom?.room_id;
-            }
-
-            // ✅ USE REF: Grabs the live data (with the note we just saved)
+            //  USE REF: Grabs the live data (with the note we just saved)
             const currentCart = cartRef.current;
 
             const checkoutData = {
@@ -126,19 +81,16 @@ const CartPanel = ({ isOpen, onClose }) => {
                     quantity: item.quantity,
                     instructions: item.instructions || '' 
                 })),
-                
-                table_id: tableIdToSend, 
-                room_id: roomIdToSend,
-
-                order_type: orderType,
-
+                room_id: activeRoom?.room_id, 
+                order_type: 'Room Dining',
                 special_instructions: currentCart
                     .filter(item => item.instructions)
                     .map(item => `${item.item_name}: ${item.instructions}`)
                     .join('; ') || null
             };
 
-            const response = await apiClient('/payments/checkout', {
+            // CHANGED: Hit the orders API directly instead of payments
+            const response = await apiClient('/orders', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(checkoutData)
@@ -147,16 +99,13 @@ const CartPanel = ({ isOpen, onClose }) => {
             const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.message || 'Failed to initialize payment');
+                throw new Error(result.message || 'Failed to place order');
             }
 
-            if (result.checkout_url) {
-                toast.success('Redirecting to payment...', { id: toastId });
-                clearCart(); 
-                window.location.href = result.checkout_url;
-            } else {
-                throw new Error("No checkout URL received");
-            }
+            // SUCCESS LOGIC: No more redirect! Just clear cart and show success.
+            toast.success('Order sent to the kitchen! Charging to your room.', { id: toastId });
+            clearCart(); 
+            onClose(); // Closes the cart panel
             
         } catch (error) {
             console.error("Checkout Error:", error);
@@ -164,7 +113,7 @@ const CartPanel = ({ isOpen, onClose }) => {
         } finally {
             setIsPlacingOrder(false);
         }
-    }, 100); 
+    }, 100);
   };
 
   return (
@@ -178,37 +127,10 @@ const CartPanel = ({ isOpen, onClose }) => {
         </div>
 
         <div className="cart-content">
-          <div className="order-type-container">
-            {['Dine-in', 'Room Dining'].map(type => (
-                <button
-                    key={type}
-                    onClick={() => setOrderType(type)}
-                    className={`order-type-btn ${orderType === type ? 'active' : 'inactive'}`}
-                >
-                    {type}
-                </button>
-            ))}
-          </div>
 
           <div className="location-container">
-            <label className="location-label">
-              {orderType === 'Dine-in' ? 'Select Table' : 'Delivery Location'}
-            </label>
             <div className="location-select-wrapper">
-                {orderType === 'Dine-in' ? (
-                    <select 
-                        value={selectedTableId} 
-                        onChange={(e) => setSelectedTableId(e.target.value)} 
-                        className="location-select"
-                    >
-                        <option value="">-- Choose a Table --</option>
-                        {tables.map(table => (
-                            <option key={table.table_id} value={table.table_id} disabled={table.status !== 'Available'} className={table.status !== 'Available' ? 'text-gray-400 bg-gray-100' : ''}>
-                                Table {table.table_number} ({table.capacity} pax) {table.status !== 'Available' ? '- Occupied' : ''}
-                            </option>
-                        ))}
-                    </select>
-                ) : (
+                 {(
                     <div className={`p-3 rounded-lg border flex items-center gap-3 w-full transition-colors ${
                         isFetchingRoom ? 'bg-gray-50 border-gray-200' :
                         activeRoom ? 'bg-green-50 border-green-200 text-green-800' : 
@@ -238,11 +160,7 @@ const CartPanel = ({ isOpen, onClose }) => {
                         )}
                     </div>
                 )}
-                {orderType === 'Dine-in' && (
-                    <div className="location-arrow">
-                        <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-                    </div>
-                )}
+
             </div>
           </div>
 
@@ -273,7 +191,7 @@ const CartPanel = ({ isOpen, onClose }) => {
                       </div>
                       <div className="instruction-wrapper">
                           <div className="instruction-icon"><MessageSquare size={14} /></div>
-                          {/* ✅ FAST INPUT: Solves the typing lag */}
+                          {/* FAST INPUT: Solves the typing lag */}
                           <InstructionInput 
                               itemId={item.item_id} 
                               initialValue={item.instructions} 
@@ -298,8 +216,7 @@ const CartPanel = ({ isOpen, onClose }) => {
                 onClick={handlePlaceOrder}
                 disabled={
                     cart.length === 0 || 
-                    (orderType === 'Dine-in' && !selectedTableId) || 
-                    (orderType === 'Room Dining' && !activeRoom) || 
+                    !activeRoom ||
                     isPlacingOrder
                 }
                 className="place-order-btn"
