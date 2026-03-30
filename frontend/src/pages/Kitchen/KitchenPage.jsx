@@ -45,13 +45,29 @@ function KitchenPage() {
   // --- ITEM-LEVEL CHECKBOX STATE ---
   const [checkedItems, setCheckedItems] = useState([]);
 
-  const toggleItemCheck = (detailId) => {
+  const toggleItemCheck = async (detailId) => {
       if (!detailId) return;
+
+      // 1. Figure out if we are checking or unchecking
+      const willBeChecked = !checkedItems.includes(detailId);
+
+      // 2. Instantly update the UI so it feels fast for the chef
       setCheckedItems(prev => 
-          prev.includes(detailId) 
-              ? prev.filter(id => id !== detailId) // Uncheck it
-              : [...prev, detailId] // Check it
+          willBeChecked 
+              ? [...prev, detailId] 
+              : prev.filter(id => id !== detailId)
       );
+
+      // 3. Silently save it to the Clever Cloud database in the background!
+      try {
+          await apiClient(`/orders/item/${detailId}/toggle`, {
+              method: 'PUT',
+              body: JSON.stringify({ isChecked: willBeChecked })
+          });
+      } catch (error) {
+          console.error("Failed to save checkbox state to database:", error);
+          // Optional: You could show a toast.error here if the internet drops
+      }
   };
 
   const getLocalDatePart = (dateObj) => new Date(dateObj).toLocaleDateString('en-CA');
@@ -83,6 +99,17 @@ const fetchInitialData = async () => {
       // We can use the response directly. No more looping.
       const ordersList = await kitchenResponse.json();
       setKitchenOrders(ordersList);
+
+      const alreadyChecked = [];
+      ordersList.forEach(order => {
+          order.items?.forEach(item => {
+              // If the database remembers this item is 'ready', put it in the checked array
+              if (item.item_status === 'ready') {
+                  alreadyChecked.push(item.order_detail_id);
+              }
+          });
+      });
+      setCheckedItems(alreadyChecked);
 
       // 3. Set Served Count
       const servedList = await servedResponse.json();

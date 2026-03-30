@@ -580,7 +580,7 @@ export const updateOrderStatus = async (req, res) => {
             "UPDATE fb_orders SET status = ?, employee_id = ? WHERE order_id = ?", 
             [newStatus, employee_id, id]
         );
-        
+
         await connection.query(
             "UPDATE fb_order_details SET item_status = ? WHERE order_id = ? AND (item_status != 'served' OR item_status IS NULL)",
             [newStatus, id]
@@ -889,5 +889,31 @@ export const getMyOrders = async (req, res) => {
     } catch (error) {
         console.error("Backend Error:", error);
         res.status(500).json({ message: "Server Error" });
+    }
+};
+
+// @desc    Toggle individual item status (Checkbox memory)
+// @route   PUT /api/orders/item/:detailId/toggle
+// @access  Private (Staff)
+export const toggleItemCheckbox = async (req, res) => {
+    const { detailId } = req.params;
+    const { isChecked } = req.body; 
+    const connection = await pool.getConnection();
+
+    try {
+        // If the box is checked, mark the item as 'ready'. If unchecked, revert to 'pending'
+        const newStatus = isChecked ? 'ready' : 'pending';
+        
+        await connection.query(
+            "UPDATE fb_order_details SET item_status = ? WHERE order_detail_id = ?",
+            [newStatus, detailId]
+        );
+
+        res.json({ success: true, message: `Item ${detailId} marked as ${newStatus}` });
+    } catch (error) {
+        console.error("Error toggling item checkbox:", error);
+        res.status(500).json({ message: "Failed to update item status", error: error.message });
+    } finally {
+        connection.release();
     }
 };

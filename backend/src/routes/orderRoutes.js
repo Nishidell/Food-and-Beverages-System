@@ -7,7 +7,8 @@ import {
     getKitchenOrders,
     getServedOrders,
     createPosOrder,
-    getMyOrders
+    getMyOrders,
+    toggleItemCheckbox
 } from "../controllers/orderController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
@@ -45,6 +46,15 @@ router.put(
     protect, 
     authorizeRoles("Operations Manager", "Kitchen Staffs", "Waiter", "Cashier"), 
     updateOrderStatus
+);
+
+// --- 3.5 Item-Level Status Update (Checkboxes) ---
+// Allowed: Operations Manager, Kitchen Staffs, Waiter, Cashier
+router.put(
+    "/item/:detailId/toggle", 
+    protect, 
+    authorizeRoles("Operations Manager", "Kitchen Staffs", "Waiter", "Cashier"), 
+    toggleItemCheckbox
 );
 
 // --- 4. Admin/Customer Routes ---
