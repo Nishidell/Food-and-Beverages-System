@@ -580,6 +580,11 @@ export const updateOrderStatus = async (req, res) => {
             "UPDATE fb_orders SET status = ?, employee_id = ? WHERE order_id = ?", 
             [newStatus, employee_id, id]
         );
+        
+        await connection.query(
+            "UPDATE fb_order_details SET item_status = ? WHERE order_id = ? AND (item_status != 'served' OR item_status IS NULL)",
+            [newStatus, id]
+        );
 
         if (result.affectedRows === 0) {
             throw new Error("Order not found or status unchanged");

@@ -42,6 +42,18 @@ function KitchenPage() {
       return new Date(dateStr);
   };
 
+  // --- ITEM-LEVEL CHECKBOX STATE ---
+  const [checkedItems, setCheckedItems] = useState([]);
+
+  const toggleItemCheck = (detailId) => {
+      if (!detailId) return;
+      setCheckedItems(prev => 
+          prev.includes(detailId) 
+              ? prev.filter(id => id !== detailId) // Uncheck it
+              : [...prev, detailId] // Check it
+      );
+  };
+
   const getLocalDatePart = (dateObj) => new Date(dateObj).toLocaleDateString('en-CA');
 
   const fetchOrderDetails = async (orderId) => {
@@ -207,7 +219,9 @@ const fetchInitialData = async () => {
     const typeMatch = filterType === 'All Types' || order.order_type?.toLowerCase() === filterType.toLowerCase();
     const orderDateObj = fixDate(order.order_date);
     const orderDatePart = getLocalDatePart(orderDateObj);
-    const dateMatch = orderDatePart >= startDate && orderDatePart <= endDate;
+
+    const isActiveTicket = order.status?.toLowerCase() === 'pending' || order.status?.toLowerCase() === 'preparing';
+    const dateMatch = (orderDatePart >= startDate && orderDatePart <= endDate) || isActiveTicket;
     return statusMatch && typeMatch && dateMatch;
   });
 
@@ -335,6 +349,7 @@ const fetchInitialData = async () => {
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {sortedOrders.map(order => {
+                    const allItemsChecked = order.items?.length > 0 && order.items.every(item => checkedItems.includes(item.order_detail_id));
                     return (
                         <div key={order.order_id} className="kitchen-card">
                             <div className="kitchen-card-header relative">
@@ -346,42 +361,70 @@ const fetchInitialData = async () => {
                                 <p className="text-sm text-gray-500">{formatOrderTime(order.order_date)}</p>
                             </div>
                             
-                            <div className="kitchen-card-body">
-                                <p><span className="info-label">Type:</span> {order.order_type}</p>
-                                <p><span className="info-label">Loc:</span> {order.delivery_location}</p>
-                                <p><span classname="info-label">Name: </span>{order.first_name}</p>
-                                <div className="mt-2 border-t pt-2">
-                                    <p className="font-bold text-sm mb-1">Items:</p>
-                                    {order.items?.map((item, idx) => (
-                                        <div key={item.order_detail_id || idx} className="mb-2">
-                                            <div className="item-text font-medium">
-                                                {item.quantity} x {item.item_name}
-                                            </div>
-                                            {item.instructions && (
-                                                <div className="text-xs text-red-600 italic ml-4 bg-red-50 px-1 rounded inline-block border border-red-100">
-                                                    Note: {item.instructions}
+                            {order.items?.map((item, idx) => {
+                                        const isChecked = checkedItems.includes(item.order_detail_id);
+                                        return (
+                                            <div key={item.order_detail_id || idx} 
+                                                 className={`mb-2 flex items-start gap-3 p-2 rounded-md border transition-all duration-200 ${isChecked ? 'bg-gray-100 border-gray-200' : 'hover:bg-amber-50 border-transparent hover:border-amber-200'}`}
+                                            >
+                                                {/* ✅ THE CHECKBOX */}
+                                                <input 
+                                                    type="checkbox" 
+                                                    className="mt-1 w-5 h-5 accent-green-600 cursor-pointer flex-shrink-0"
+                                                    checked={isChecked}
+                                                    onChange={() => toggleItemCheck(item.order_detail_id)}
+                                                />
+                                                
+                                                {/* ✅ THE FOOD ITEM (Strikes through when checked) */}
+                                                <div className={`flex-1 transition-all duration-200 ${isChecked ? 'line-through text-gray-400 opacity-60' : 'text-gray-900'}`}>
+                                                    <div className="item-text font-bold text-base tracking-wide">
+                                                        <span className="text-amber-600">{item.quantity} x </span> 
+                                                        {item.item_name}
+                                                    </div>
+                                                    
+                                                    {item.instructions && (
+                                                        <div className={`text-xs italic mt-1 px-2 py-0.5 rounded inline-block border ${isChecked ? 'text-gray-400 bg-gray-50 border-gray-200' : 'text-red-700 bg-red-50 border-red-200'}`}>
+                                                            Note: {item.instructions}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                                            </div>
+                                        );
+                                    })}
 
                             <div className="kitchen-card-footer">
                                 {order.status?.toLowerCase() === 'pending' && (
                                     <div className="flex gap-2">
-                                        <button onClick={() => handleUpdateStatus(order.order_id, 'Preparing')} className="kitchen-btn btn-green flex-1">Accept</button>
+                                        <button 
+                                            onClick={() => handleUpdateStatus(order.order_id, 'Preparing')} 
+                                            disabled={!allItemsChecked}
+                                            className={`kitchen-btn flex-1 ${allItemsChecked ? 'btn-green' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                                        >
+                                            Accept
+                                        </button>
                                         <button onClick={() => handlePromptCancel(order.order_id)} className="kitchen-btn btn-red"><Trash2 size={18}/></button>
                                     </div>
                                 )}
                                 {order.status?.toLowerCase() === 'preparing' && (
                                     <div className="flex gap-2">
-                                        <button onClick={() => handleUpdateStatus(order.order_id, 'Ready')} className="kitchen-btn btn-blue flex-1">Ready</button>
+                                        <button 
+                                            onClick={() => handleUpdateStatus(order.order_id, 'Ready')} 
+                                            disabled={!allItemsChecked}
+                                            className={`kitchen-btn flex-1 ${allItemsChecked ? 'btn-blue' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                                        >
+                                            Ready
+                                        </button>
                                         <button onClick={() => handlePromptCancel(order.order_id)} className="kitchen-btn btn-red"><Trash2 size={18}/></button>
                                     </div>
                                 )}
                                 {order.status?.toLowerCase() === 'ready' && (
-                                    <button onClick={() => handleUpdateStatus(order.order_id, 'Served')} className="kitchen-btn btn-amber w-full">Served</button>
+                                    <button 
+                                        onClick={() => handleUpdateStatus(order.order_id, 'Served')} 
+                                        disabled={!allItemsChecked}
+                                        className={`kitchen-btn w-full ${allItemsChecked ? 'btn-amber' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                                    >
+                                        Served
+                                    </button>
                                 )}
                             </div>
                         </div>
