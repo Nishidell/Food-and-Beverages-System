@@ -322,7 +322,7 @@ export const createOrder = async (req, res) => {
 
         const updateSql = `
             UPDATE fb_orders 
-            SET items_total = ?, service_charge_amount = ?, vat_amount = ?, total_amount = ? 
+            SET items_total = ?, service_charge_amount = ?, vat_amount = ?, total_amount = ?, status = 'pending'
             WHERE order_id = ?
         `;
         await connection.query(updateSql, [

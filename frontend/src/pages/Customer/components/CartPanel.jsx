@@ -76,14 +76,16 @@ const CartPanel = ({ isOpen, onClose }) => {
             const currentCart = cartRef.current;
 
             const checkoutData = {
-                cart_items: currentCart.map(item => ({
+                items: currentCart.map(item => ({
                     item_id: item.item_id,
                     quantity: item.quantity,
                     instructions: item.instructions || '' 
                 })),
+                
                 room_id: activeRoom?.room_id, 
                 order_type: 'Room Dining',
-                special_instructions: currentCart
+
+                instructions: currentCart
                     .filter(item => item.instructions)
                     .map(item => `${item.item_name}: ${item.instructions}`)
                     .join('; ') || null
