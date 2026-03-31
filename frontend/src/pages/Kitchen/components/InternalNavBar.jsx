@@ -81,7 +81,17 @@ const InternalNavBar = () => {
             </NavLink>
           )}
 
-          {/* 2. Cashier Dashboard (Replaced Walk-in) */}
+          {/* 2. Waiter POS */}
+          {hasAccess(['Operations Manager', 'Waiter']) && (
+             <NavLink 
+                 to="/kitchen/waiter" 
+                style={({ isActive }) => (isActive ? activeNavLinkStyle : navLinkStyle)}
+             >
+               Waiter
+             </NavLink>
+          )}
+
+          {/* 3. Cashier Dashboard (Replaced Walk-in) */}
           {hasAccess(['Operations Manager', 'Cashier']) && (
              <NavLink 
                  to="/kitchen/cashier" 
@@ -91,7 +101,7 @@ const InternalNavBar = () => {
              </NavLink>
           )}
           
-          {/* 3. Tables */}
+          {/* 4. Tables */}
           {hasAccess(['Operations Manager', 'Kitchen Staffs']) && (
              <NavLink 
                 to="/kitchen/tables" 
@@ -101,7 +111,7 @@ const InternalNavBar = () => {
              </NavLink>
           )}
 
-          {/* 4. Inventory */}
+          {/* 5. Inventory */}
           {hasAccess(['Operations Manager', 'Stock Controller']) && (
              <NavLink 
                 to="/kitchen/inventory" 
@@ -111,7 +121,7 @@ const InternalNavBar = () => {
              </NavLink>
           )}
 
-          {/* 5. Archive */}
+          {/* 6. Archive */}
           {hasAccess(['Operations Manager', 'Kitchen Staffs']) && (
              <NavLink 
                 to="/kitchen/archive" 

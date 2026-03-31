@@ -7,6 +7,7 @@ import Snowfall from 'react-snowfall';
 import MenuPage from './pages/Customer/MenuPage';
 import AdminPage from './pages/Admin/AdminPage';
 import KitchenPage from './pages/Kitchen/KitchenPage';
+import WaiterPOS from './pages/Kitchen/WaiterPOS';
 import ArchivePage from './pages/Kitchen/ArchivePage';
 import TableManager from './pages/Kitchen/TableManager';
 import LoginPage from './pages/Auth/LoginPage';
@@ -122,6 +123,16 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['Operations Manager', 'Kitchen Staffs']}>
                 <KitchenPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Kitchen Portal: Waiter POS */}
+          <Route
+            path="/kitchen/waiter"
+            element={
+              <ProtectedRoute allowedRoles={['Operations Manager', 'Waiter']}>
+                <WaiterPOS />
               </ProtectedRoute>
             }
           />
