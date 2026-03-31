@@ -8,7 +8,8 @@ import {
     getServedOrders,
     createPosOrder,
     getMyOrders,
-    toggleItemCheckbox
+    toggleItemCheckbox,
+    getUnpaidTabs
 } from "../controllers/orderController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
@@ -57,7 +58,16 @@ router.put(
     toggleItemCheckbox
 );
 
-// --- 4. Admin/Customer Routes ---
+// --- 4. Cashier & Billing Routes ---
+// Allowed: Operations Manager, Cashier
+router.get(
+    "/unpaid", 
+    protect, 
+    authorizeRoles("Operations Manager", "Cashier", "Admin"), 
+    getUnpaidTabs
+);
+
+// --- 4.5 Admin/Customer Routes ---
 router.post("/", protect, createOrder); // Customer creates own order (checked by role=customer internally or logic)
 router.get("/my-orders", protect, getMyOrders);
 router.get("/", getOrders); // Usually Admin only, or filtering in controller

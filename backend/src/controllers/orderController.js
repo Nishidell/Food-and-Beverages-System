@@ -917,3 +917,52 @@ export const toggleItemCheckbox = async (req, res) => {
         connection.release();
     }
 };
+
+// @desc    Get active unpaid tabs for the Cashier/POS
+// @route   GET /api/orders/unpaid
+// @access  Private (Staff/Cashier)
+export const getUnpaidTabs = async (req, res) => {
+    try {
+        // ✅ The "Today Only" Filter is built right into the SQL: DATE(o.order_date) = CURDATE()
+        const sql = `
+            SELECT 
+                o.order_id, 
+                o.order_date, 
+                o.order_type, 
+                o.total_amount,
+                o.items_total,
+                o.service_charge_amount,
+                o.vat_amount,
+                COALESCE(c.first_name, o.guest_name) AS first_name,
+                COALESCE(c.last_name, '') AS last_name,
+                tr.room_num,
+                ft.table_number
+            FROM fb_orders o
+            LEFT JOIN tbl_client_users c ON o.client_id = c.client_id
+            LEFT JOIN tbl_rooms tr ON o.room_id = tr.room_id
+            LEFT JOIN fb_tables ft ON o.table_id = ft.table_id
+            WHERE o.payment_status = 'unpaid' 
+              AND DATE(o.order_date) = CURDATE()
+            ORDER BY o.order_date ASC
+        `;
+        
+        const [rows] = await pool.query(sql);
+
+        // Format the location so the frontend doesn't have to do the math
+        const formattedTabs = rows.map(tab => {
+            let location = tab.order_type; // Fallback (e.g., "Take-out")
+            if (tab.room_num) location = `Room ${tab.room_num}`;
+            if (tab.table_number) location = `Table ${tab.table_number}`;
+
+            return {
+                ...tab,
+                formatted_location: location
+            };
+        });
+
+        res.json(formattedTabs);
+    } catch (error) {
+        console.error("Error fetching unpaid tabs:", error);
+        res.status(500).json({ message: "Error fetching unpaid tabs", error: error.message });
+    }
+};

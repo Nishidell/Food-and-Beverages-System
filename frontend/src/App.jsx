@@ -17,7 +17,7 @@ import PaymentSuccess from './pages/Customer/PaymentSuccess.jsx';
 import PaymentCancel from './pages/Customer/PaymentCancel.jsx';
 import InventoryPage from './pages/Kitchen/InventoryPage.jsx';
 import MyOrdersPage from './pages/Customer/MyOrdersPage';
-import PosPage from './pages/Kitchen/PosPage.jsx';
+import CashierPage from './pages/Kitchen/CashierDashboard.jsx'; 
 import ItemDetailsPage from './pages/Customer/ItemDetailsPage.jsx';
 
 // Import Route Handlers
@@ -126,12 +126,12 @@ function App() {
             }
           />
           
-          {/* POS: Walk-in */}
+          {/* POS: Cashier */}
           <Route
-            path="/kitchen/pos"
+            path="/kitchen/cashier"
             element={
               <ProtectedRoute allowedRoles={['Operations Manager', 'Cashier']}>
-                <PosPage />
+                <CashierPage />
               </ProtectedRoute>
             }
           />

@@ -81,16 +81,16 @@ const InternalNavBar = () => {
             </NavLink>
           )}
 
-          {/* 2. POS (Walk-in) */}
+          {/* 2. Cashier Dashboard (Replaced Walk-in) */}
           {hasAccess(['Operations Manager', 'Cashier']) && (
              <NavLink 
-                to="/kitchen/pos" 
+                 to="/kitchen/cashier" 
                 style={({ isActive }) => (isActive ? activeNavLinkStyle : navLinkStyle)}
              >
-               Walk-In
+               Cashier
              </NavLink>
           )}
-
+          
           {/* 3. Tables */}
           {hasAccess(['Operations Manager', 'Kitchen Staffs']) && (
              <NavLink 
