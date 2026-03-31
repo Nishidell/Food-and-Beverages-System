@@ -9,7 +9,8 @@ import {
     createPosOrder,
     getMyOrders,
     toggleItemCheckbox,
-    getUnpaidTabs
+    getUnpaidTabs,
+    settleBill
 } from "../controllers/orderController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
@@ -65,6 +66,13 @@ router.get(
     protect, 
     authorizeRoles("Operations Manager", "Cashier", "Admin"), 
     getUnpaidTabs
+);
+
+router.post(
+    "/:id/settle", 
+    protect, 
+    authorizeRoles("Operations Manager", "Cashier", "Admin"), 
+    settleBill
 );
 
 // --- 4.5 Admin/Customer Routes ---

@@ -966,3 +966,47 @@ export const getUnpaidTabs = async (req, res) => {
         res.status(500).json({ message: "Error fetching unpaid tabs", error: error.message });
     }
 };
+
+// @desc    Settle a bill and close the tab
+// @route   POST /api/orders/:id/settle
+// @access  Private (Staff/Cashier)
+export const settleBill = async (req, res) => {
+    const { id } = req.params;
+    const { payment_method, amount } = req.body;
+    const connection = await pool.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        // 1. Mark the main order as paid
+        const [updateResult] = await connection.query(
+            "UPDATE fb_orders SET payment_status = 'paid' WHERE order_id = ?",
+            [id]
+        );
+
+        if (updateResult.affectedRows === 0) {
+            throw new Error("Order not found or already paid.");
+        }
+
+        // 2. Log the payment for your accounting/reports
+        await connection.query(
+            "INSERT INTO fb_payments (order_id, payment_method, amount, payment_status) VALUES (?, ?, ?, 'paid')",
+            [id, payment_method, amount]
+        );
+
+        // 3. Optional Bonus: If they were at a dine-in table, free up the table!
+        await connection.query(
+            `UPDATE fb_tables SET status = 'Available' WHERE table_id = (SELECT table_id FROM fb_orders WHERE order_id = ?)`,
+            [id]
+        );
+
+        await connection.commit();
+        res.json({ success: true, message: "Bill settled successfully." });
+    } catch (error) {
+        await connection.rollback();
+        console.error("Error settling bill:", error);
+        res.status(500).json({ message: "Failed to settle bill", error: error.message });
+    } finally {
+        connection.release();
+    }
+};

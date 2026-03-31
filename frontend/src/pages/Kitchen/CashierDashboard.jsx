@@ -37,6 +37,45 @@ function CashierDashboard() {
         }
     };
 
+
+    const [showSettleModal, setShowSettleModal] = useState(false);
+
+    const handlePrintBill = () => {
+        window.print();
+        toast.success(`Guest summary for ${selectedTab?.formatted_location} printed!`);
+        setShowSettleModal(false);
+    };
+
+    const handleSettleBill = async () => {
+        try {
+            const response = await apiClient(`/orders/${selectedTab.order_id}/settle`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    payment_method: paymentMethod,
+                    amount: selectedTab.total_amount
+                })
+            });
+
+            if (response.ok) {
+                toast.success(`Bill for Order #${selectedTab.order_id} settled!`);
+                
+                // 1. Remove the paid tab from the left list so the screen stays clean
+                setUnpaidTabs(prev => prev.filter(tab => tab.order_id !== selectedTab.order_id));
+                
+                // 2. Clear the right panel to prepare for the next customer
+                setSelectedTab(null);
+                setOrderDetails(null);
+                setPaymentMethod('');
+            } else {
+                const errorData = await response.json();
+                toast.error(`Error: ${errorData.message}`);
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Network error while settling bill.");
+        }
+    };
+
     // Fetch the unpaid tabs when the page loads
     useEffect(() => {
         const fetchUnpaidTabs = async () => {
@@ -163,14 +202,65 @@ function CashierDashboard() {
                                         </div>
                                     </div>
 
-                                    {/* The Final Action Button */}
+                                    {/* The Print Bill Button (Now Instant) */}
+                                    <button
+                                        onClick={handlePrintBill} // <--- Direct action
+                                        className="w-full py-3 mb-3 rounded font-bold text-lg border-2 border-amber-600 text-amber-700 hover:bg-amber-50 transition-all flex items-center justify-center gap-2"
+                                    >
+                                         Print Bill for Guest
+                                    </button>
+
+                                    {/* The Final Action Button (Now triggers Modal) */}
                                     <button
                                         disabled={!paymentMethod}
-                                        onClick={() => console.log("Ready to settle bill!")}
+                                        onClick={() => setShowSettleModal(true)} // <--- Triggers modal
                                         className={`w-full py-4 rounded font-bold text-xl transition-all ${paymentMethod ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg transform hover:-translate-y-1' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
                                     >
                                         Settle Bill & Close Tab
                                     </button>
+                                    {/* SETTLEMENT CONFIRMATION MODAL */}
+                                        {showSettleModal && (
+                                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn" style={{backgroundColor: 'rgba(0,0,0,0.6)'}}>
+                                                <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-2xl relative border-t-4 border-green-500">
+                                                    
+                                                    <button 
+                                                        onClick={() => setShowSettleModal(false)}
+                                                        className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 font-bold"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                    
+                                                    <div className="flex flex-col items-center text-center mb-6">
+                                                        <div className="bg-green-100 p-4 rounded-full mb-3 text-3xl">
+                                                            💰
+                                                        </div>
+                                                        <h3 className="text-xl font-bold text-gray-800">Settle Bill?</h3>
+                                                        <p className="text-sm text-gray-500 mt-2">
+                                                            You are about to close the tab for <span className="font-bold text-gray-800">{selectedTab?.formatted_location}</span>.
+                                                        </p>
+                                                        <div className="mt-3 bg-gray-50 p-2 rounded w-full border border-gray-200">
+                                                            <p className="text-xs text-gray-500 uppercase tracking-wider">Payment Method</p>
+                                                            <p className="font-bold text-amber-600">{paymentMethod}</p>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="flex gap-3">
+                                                        <button 
+                                                            onClick={() => setShowSettleModal(false)}
+                                                            className="flex-1 py-2 rounded-lg font-bold border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                        <button 
+                                                            onClick={handleSettleBill}
+                                                            className="flex-1 py-2 rounded-lg font-bold bg-green-600 text-white hover:bg-green-700 shadow-md transition-colors"
+                                                        >
+                                                            Yes, Settle Tab
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                 </div>
                             )}
                         </div>
