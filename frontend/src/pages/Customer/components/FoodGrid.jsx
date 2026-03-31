@@ -15,9 +15,9 @@ const getImageUrl = (imagePath) => {
   return `${BASE_URL}${imagePath}`;
 };
 
-const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "customer" }) => {
-  const navigate = useNavigate(); // ✅ Hook for navigation
-  const { user } = useAuth();     // ✅ Hook to check if guest
+const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "customer", isPOS = false }) => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   if (!items || items.length === 0) {
     return <p className="no-items-message">No items match your search.</p>;
@@ -53,75 +53,86 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
         style={layoutStyle}
     >
       {items.map((item) => {
-        
         const { isActive, displayPrice, originalPrice, discountPercent } = getPromoPrice(item);
         const itemForCart = { ...item, price: displayPrice };
-        
         const rating = parseFloat(item.average_rating || 0);
         const reviewCount = item.total_reviews || 0;
+
+        if (isPOS) {
+            return (
+                <div 
+                    key={item.item_id}
+                    onClick={() => { if (item.is_available) onAddToCart(itemForCart); }}
+                    className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition-all active:scale-95 flex flex-col h-32 shadow-sm 
+                        ${!item.is_available ? 'opacity-50 grayscale border-gray-300' : 'border-gray-200 hover:border-amber-500 hover:shadow-md bg-white'}`}
+                >
+                    {/* Top Half: The Image */}
+                    <div className="h-24 w-full bg-gray-100 overflow-hidden flex justify-center items-center border-b border-gray-100">
+                    <img 
+                        src={getImageUrl(item.image_url)} 
+                        alt={item.item_name} 
+                        className="w-full h-full object-cover"
+                    />
+                   </div>
+                    
+                    {/* Bottom Half: Name & Price */}
+                    <div className="p-2 flex-1 flex flex-col justify-center items-center">
+                        <span className="font-bold text-xs text-gray-800 text-center leading-tight line-clamp-1 w-full truncate">
+                            {item.item_name}
+                        </span>
+                        <span className="text-xs font-bold text-amber-700 mt-0.5">
+                            ₱{parseFloat(displayPrice).toFixed(2)}
+                        </span>
+                    </div>
+
+                    {/* Sold Out Overlay */}
+                    {!item.is_available && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-white/40">
+                            <span className="bg-red-600 text-white text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded">Sold Out</span>
+                        </div>
+                    )}
+                </div>
+            );
+        }
 
         return (
           <div 
             key={item.item_id} 
-            // ✅ Added cursor-pointer and hover effect
             className={`food-card ${!item.is_available ? 'unavailable' : ''} cursor-pointer hover:shadow-xl transition-shadow`}
-            // ✅ CLICK CARD: Navigate to Details Page
-            onClick={() => navigate(`/item/${item.item_id}`)}
+            // ✅ 2. POS CHECK: If in POS mode, clicking the card adds to cart. If customer mode, navigate to details.
+            onClick={() => {
+                if (isPOS) {
+                    if (item.is_available) onAddToCart(itemForCart);
+                } else {
+                    navigate(`/item/${item.item_id}`);
+                }
+            }}
           >
-            <div className="card-image-container">
-              <img
-                src={getImageUrl(item.image_url)}
-                alt={item.item_name}
-                className="card-image"
-                // Prevent card click from triggering when clicking image (optional, or remove onClick here to let card handle it)
-                // onClick={(e) => { e.stopPropagation(); onImageClick(getImageUrl(item.image_url)); }} 
-              />
-              
-              {isActive && (
-                <span className="promo-badge">
-                  {discountPercent}% OFF
-                </span>
-              )}
-            </div>
-
+           
+           <div className="card-image-container" onClick={() => onImageClick(getImageUrl(item.image_url))}>
+            <img 
+                src={getImageUrl(item.image_url)} 
+                alt={item.item_name} 
+                className="card-image" 
+            />
+           </div>
+            
             <div className="card-content">
               <h3 className="item-name mb-1">{item.item_name}</h3>
-              
-              <div className="min-h-[20px] mb-2">
-                {reviewCount > 0 ? (
-                    <div className="flex items-center gap-1">
-                        <Star size={20} fill="#F9A825" color="#F9A825" />
-                        <span className="text-xl font-bold text-[#3C2A21]">{rating.toFixed(1)}</span>
-                        <span className="text-[15px] text-gray-400">({reviewCount})</span>
-                    </div>
-                ) : (
-                    <div className="h-[18px]"></div> 
-                )}
-              </div>
-
-              <p className="item-description">
-                {item.description || 'No description available.'}
-              </p>
-
-              <div className="card-footer">
-                <div className="price-container">
-                  {isActive ? (
-                    <>
-                      <p className="price-text">₱{parseFloat(displayPrice).toFixed(2)}</p>
-                      <p className="original-price">₱{parseFloat(originalPrice).toFixed(2)}</p>
-                    </>
-                  ) : (
-                    <p className="price-text">₱{parseFloat(displayPrice).toFixed(2)}</p>
-                  )}
-                </div>
+              <div className="card-footer mt-auto">
+              <div className="price-container">
+              <span className="price-text">₱{parseFloat(displayPrice).toFixed(2)}</span>
+             </div>
                 
                 {item.is_available ? (
                   <button 
                     onClick={(e) => {
-                        e.stopPropagation(); // ✅ Prevent clicking button from opening the Details Page
+                        e.stopPropagation(); 
                         
-                        // ✅ GUEST CHECK: Redirect to login if not authenticated
-                        if (!user) {
+                        // ✅ 3. POS CHECK: Bypass auth check if Waiter
+                        if (isPOS) {
+                            onAddToCart(itemForCart);
+                        } else if (!user) {
                             if(window.confirm("You need to login to order. Go to login page?")) {
                                 navigate('/login');
                             }

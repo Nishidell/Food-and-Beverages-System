@@ -10,7 +10,8 @@ import {
     getMyOrders,
     toggleItemCheckbox,
     getUnpaidTabs,
-    settleBill
+    settleBill,
+    addItemsToOrder
 } from "../controllers/orderController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
@@ -39,6 +40,15 @@ router.post(
     protect, 
     authorizeRoles("Operations Manager", "Waiter", "Cashier"), 
     createPosOrder
+);
+
+// --- 2.5 Add Items to Existing Tab ---
+// Allowed: Operations Manager, Waiter, Cashier
+router.post(
+    "/:id/items", 
+    protect, 
+    authorizeRoles("Operations Manager", "Waiter", "Cashier"), 
+    addItemsToOrder
 );
 
 // --- 3. Order Status Updates (Kitchen/POS) ---

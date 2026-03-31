@@ -1010,3 +1010,105 @@ export const settleBill = async (req, res) => {
         connection.release();
     }
 };
+
+// @desc    Add items to an existing order (Tab)
+// @route   POST /api/orders/:id/items
+// @access  Private (Staff)
+export const addItemsToOrder = async (req, res) => {
+    const { id } = req.params;
+    const { items } = req.body;
+    const connection = await pool.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        // 1. Validate and deduct stock for the NEW items
+        await validateStock(items, connection);
+        await adjustStock(items, 'deduct', connection);
+        await logOrderStockChange(id, items, 'ORDER_DEDUCT', connection);
+
+        // 2. Fetch the current totals of the existing tab
+        const [existingOrders] = await connection.query(
+            "SELECT items_total, service_charge_amount, vat_amount, total_amount FROM fb_orders WHERE order_id = ?",
+            [id]
+        );
+
+        if (existingOrders.length === 0) {
+            throw new Error("Order not found");
+        }
+
+        const currentOrder = existingOrders[0];
+        let calculatedItemsTotal = 0;
+
+        // 3. Loop through new items, calculate promos/prices, and insert them
+        for (const item of items) {
+            const [rows] = await connection.query(
+                `SELECT mi.price, p.discount_percentage, p.start_date, p.end_date, p.is_active 
+                 FROM fb_menu_items mi
+                 LEFT JOIN fb_promotions p ON mi.promotion_id = p.promotion_id
+                 WHERE mi.item_id = ?`,
+                [item.item_id]
+            );
+
+            if (rows.length === 0) continue;
+
+            const dbItem = rows[0];
+            let actualPrice = parseFloat(dbItem.price);
+
+            // Apply promo logic if active
+            if (dbItem.discount_percentage && dbItem.is_active) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const startDate = new Date(dbItem.start_date);
+                const endDate = new Date(dbItem.end_date);
+                if (today >= startDate && today <= endDate) {
+                    const discount = parseFloat(dbItem.discount_percentage) / 100;
+                    actualPrice = actualPrice * (1 - discount);
+                }
+            }
+
+            const subtotal = actualPrice * item.quantity;
+            calculatedItemsTotal += subtotal;
+
+            // Insert new details. Notice we set item_status to 'pending' so the kitchen sees it!
+            const detailSql = "INSERT INTO fb_order_details (order_id, item_id, quantity, price_on_purchase, subtotal, item_status) VALUES (?, ?, ?, ?, ?, 'pending')";
+            await connection.query(detailSql, [id, item.item_id, item.quantity, actualPrice, subtotal]);
+        }
+
+        // 4. Calculate the additional taxes/fees for ONLY the new items
+        const newServiceCharge = calculatedItemsTotal * SERVICE_RATE;
+        const newVatAmount = (calculatedItemsTotal + newServiceCharge) * VAT_RATE;
+        const newTotalAmount = calculatedItemsTotal + newServiceCharge + newVatAmount;
+
+        // 5. Add the new fees to the old totals
+        const finalItemsTotal = parseFloat(currentOrder.items_total) + calculatedItemsTotal;
+        const finalServiceCharge = parseFloat(currentOrder.service_charge_amount) + newServiceCharge;
+        const finalVatAmount = parseFloat(currentOrder.vat_amount) + newVatAmount;
+        const finalTotalAmount = parseFloat(currentOrder.total_amount) + newTotalAmount;
+
+        // 6. Update the main order receipt
+        await connection.query(
+            `UPDATE fb_orders 
+             SET items_total = ?, service_charge_amount = ?, vat_amount = ?, total_amount = ? 
+             WHERE order_id = ?`,
+            [finalItemsTotal, finalServiceCharge, finalVatAmount, finalTotalAmount, id]
+        );
+
+        await connection.commit();
+
+        // 7. Ping the Kitchen Display System so they know new food was added!
+        emitOrderUpdate(req, 'new-order', { order_id: id });
+
+        res.status(200).json({ success: true, message: "Items successfully sent to kitchen!" });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error("ADD ITEMS ERROR:", error);
+        if (error.message.startsWith("Not enough stock")) {
+            return res.status(400).json({ message: error.message });
+        }
+        res.status(500).json({ message: "Failed to add items", error: error.message });
+    } finally {
+        connection.release();
+    }
+};
