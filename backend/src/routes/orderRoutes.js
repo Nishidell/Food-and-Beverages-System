@@ -11,7 +11,8 @@ import {
     toggleItemCheckbox,
     getUnpaidTabs,
     settleBill,
-    addItemsToOrder
+    addItemsToOrder,
+    voidOrderItem
 } from "../controllers/orderController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
@@ -67,6 +68,13 @@ router.put(
     protect, 
     authorizeRoles("Operations Manager", "Kitchen Staffs", "Waiter", "Cashier"), 
     toggleItemCheckbox
+);
+
+router.put(
+    "/item/:detailId/void", 
+    protect, 
+    authorizeRoles("Operations Manager", "Waiter", "Cashier"), 
+    voidOrderItem
 );
 
 // --- 4. Cashier & Billing Routes ---

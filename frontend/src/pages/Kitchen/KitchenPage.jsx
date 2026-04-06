@@ -285,6 +285,37 @@ const fetchInitialData = async () => {
     } catch (err) { return 'N/A'; }
   };
 
+  const handleVoidItem = async (detailId) => {
+    // 1. Double-check so waiters don't accidentally click it
+    if (!window.confirm("Are you sure you want to void this item? This will return the stock to inventory.")) {
+        return;
+    }
+
+    try {
+        // 2. Call our new backend route
+        const response = await apiClient(`/orders/item/${detailId}/void`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        if (response.ok) {
+            toast.success("Item voided successfully!");
+            
+            // 3. IMPORTANT: Call whatever function you use to refresh the screen!
+            // Example: fetchActiveTabs() or loadOrderDetails()
+            
+        } else {
+            const data = await response.json();
+            toast.error(data.message || "Failed to void item.");
+        }
+    } catch (error) {
+        console.error("Void Error:", error);
+        toast.error("Network error. Could not void item.");
+    }
+};
+
   return (
     <>
     <InternalNavBar />
@@ -415,6 +446,18 @@ const fetchInitialData = async () => {
                                                         </div>
                                                     )}
                                                 </div>
+
+                                                {/* Only show the Void button if the item isn't already cancelled or served */}
+                                            {item.item_status !== 'cancelled' && item.item_status !== 'served' && (
+                                                <button 
+                                                    onClick={() => handleVoidItem(item.order_detail_id)}
+                                                    className="ml-2 text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
+                                                    title="Void this item"
+                                                >
+                                                    {/* You can use the lucide-react 'X' icon here, or just a text 'X' */}
+                                                    <span className="font-bold text-sm">✕</span>
+                                                </button>
+                                            )}
                                             </div>
                                         );
                                     })}

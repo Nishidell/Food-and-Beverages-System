@@ -942,6 +942,7 @@ export const getUnpaidTabs = async (req, res) => {
             LEFT JOIN tbl_rooms tr ON o.room_id = tr.room_id
             LEFT JOIN fb_tables ft ON o.table_id = ft.table_id
             WHERE o.payment_status = 'unpaid' 
+            AND o.status != 'cancelled'
               AND DATE(o.order_date) = CURDATE()
             ORDER BY o.order_date ASC
         `;
@@ -1108,6 +1109,84 @@ export const addItemsToOrder = async (req, res) => {
             return res.status(400).json({ message: error.message });
         }
         res.status(500).json({ message: "Failed to add items", error: error.message });
+    } finally {
+        connection.release();
+    }
+};
+
+// @desc    Void a specific item from an active order
+// @route   PUT /api/orders/item/:detailId/void
+// @access  Private (Staff)
+export const voidOrderItem = async (req, res) => {
+    const { detailId } = req.params;
+    const connection = await pool.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        // 1. Get the item details and the main order ID
+        const [itemRows] = await connection.query(
+            "SELECT order_id, item_id, quantity, subtotal, item_status FROM fb_order_details WHERE order_detail_id = ?",
+            [detailId]
+        );
+
+        if (itemRows.length === 0) {
+            throw new Error("Item not found in this order.");
+        }
+
+        const item = itemRows[0];
+        const order_id = item.order_id;
+
+        // Prevent voiding items that are already served or cancelled
+        if (item.item_status === 'served' || item.item_status === 'cancelled') {
+            throw new Error(`Cannot void item because it is already ${item.item_status}.`);
+        }
+
+        // 2. Mark the specific item as cancelled
+        await connection.query(
+            "UPDATE fb_order_details SET item_status = 'cancelled' WHERE order_detail_id = ?",
+            [detailId]
+        );
+
+        // 3. Restore the stock to inventory!
+        await adjustStock([item], 'restore', connection);
+        await logOrderStockChange(order_id, [item], 'VOID_RESTORE', connection);
+
+        // 4. Fetch the current main order totals
+        const [orderRows] = await connection.query(
+            "SELECT items_total FROM fb_orders WHERE order_id = ?", 
+            [order_id]
+        );
+        
+        // 5. Subtract the voided item's subtotal from the main receipt
+        const currentItemsTotal = parseFloat(orderRows[0].items_total);
+        // Ensure it doesn't drop below 0
+        const newItemsTotal = Math.max(0, currentItemsTotal - parseFloat(item.subtotal)); 
+
+        // Recalculate taxes and fees based on your constants
+        const newServiceCharge = newItemsTotal * SERVICE_RATE; 
+        const newVatAmount = (newItemsTotal + newServiceCharge) * VAT_RATE; 
+        const newTotalAmount = newItemsTotal + newServiceCharge + newVatAmount;
+
+        // 6. Update the main order receipt
+        await connection.query(
+            `UPDATE fb_orders 
+             SET items_total = ?, service_charge_amount = ?, vat_amount = ?, total_amount = ? 
+             WHERE order_id = ?`,
+            [newItemsTotal, newServiceCharge, newVatAmount, newTotalAmount, order_id]
+        );
+
+        await connection.commit();
+
+        // 7. Tell the Kitchen Display System to remove it from their screen!
+        emitOrderUpdate(req, 'order-status-updated', { order_id });
+
+        res.json({ success: true, message: "Item voided and totals updated successfully." });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error("VOID ITEM ERROR:", error);
+        res.status(500).json({ message: "Failed to void item", error: error.message });
     } finally {
         connection.release();
     }
