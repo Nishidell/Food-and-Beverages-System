@@ -140,7 +140,6 @@ const InventoryPage = () => {
     } catch (err) { toast.error(err.message); }
   };
 
-  // ✅ NEW: Confirm Delete Logic
   const handleDeleteIngredient = async () => {
     if (!selectedIngredient) return;
     try {
@@ -187,6 +186,14 @@ const InventoryPage = () => {
 
   const filteredList = getProcessedIngredients();
 
+  // Calculate total inventory value (using the full ingredients list, not just filtered)
+  const totalInventoryValue = ingredients.reduce((sum, item) => {
+      const stock = parseFloat(item.stock_level) || 0;
+
+      const cost = parseFloat(item.unit_cost) || 0; 
+      return sum + (stock * cost);
+  }, 0);
+
   return (
     <>
       <InternalNavBar />
@@ -196,9 +203,14 @@ const InventoryPage = () => {
             {/* 1. HEADER ROW */}
             <div className="kitchen-header-row">
                 <div>
-                    <h1 className="kitchen-title mb-1">Inventory Management</h1>
+                <h1 className="kitchen-title mb-1">Inventory Management</h1>
+                <div className="flex items-center gap-6">
                     <p className="text-sm text-gray-300">Total Ingredients: {ingredients.length}</p>
+                    <p className="text-sm font-bold text-green-400 bg-green-900/30 px-3 py-1 rounded-full border border-green-700">
+                        Total Value: ₱{totalInventoryValue.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
                 </div>
+            </div>
 
                 <div className="flex flex-wrap items-center gap-4 justify-end">
                     
@@ -252,24 +264,28 @@ const InventoryPage = () => {
                     <table className="kitchen-table w-full border-collapse">
                     <thead>
                     <tr className="border-b border-gray-200">
-                        <th className="py-4 text-center w-1/4">Ingredient Name</th>
-                        <th className="py-4 text-center w-1/6">Status</th>
-                        <th className="py-4 text-center w-1/6">Current Stock</th>
-                        <th className="py-4 text-center w-1/6">Unit</th>
-                        <th className="py-4 text-center w-1/12">Actions</th>
-                    </tr>
+                    <th className="py-4 text-center w-1/5">Ingredient Name</th>
+                    <th className="py-4 text-center w-1/6">Status</th>
+                    <th className="py-4 text-center w-1/8">Current Stock</th>
+                    <th className="py-4 text-center w-1/8">Unit</th>
+                    <th className="py-4 text-center w-1/12">Unit Cost</th>
+                    <th className="py-4 text-center w-1/12">Total Value</th>
+                    <th className="py-4 text-center w-1/12">Actions</th>
+                  </tr>
                     </thead>
                         <tbody>
 {filteredList.map((item) => {
     const current = parseFloat(item.stock_level);
     const threshold = parseFloat(item.reorder_point || 10);
     const isLow = current <= threshold;
+    const unitCost = parseFloat(item.unit_cost || 0);
+    const totalValue = current * unitCost;
 
     return (
         <tr key={item.ingredient_id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
             
             {/* 1. NAME: text-center, w-1/4 (Matches Header) */}
-            <td className="py-4 font-bold text-left w-1/3">{item.name}</td>
+            <td className="py-4 font-bold text-left w-1/5">{item.name}</td>
             
             {/* 2. STATUS: text-center, w-1/6 (Matches Header) */}
             <td className="py-4 text-left w-1/6">
@@ -280,14 +296,26 @@ const InventoryPage = () => {
             </td>
 
             {/* 3. STOCK: text-center, w-1/6 (Matches Header) */}
-            <td className={`py-4 text-center font-bold text-lg w-1/6 ${isLow ? 'text-red-600' : 'text-gray-700'}`}>
+            <td className={`py-4 text-center font-bold text-lg w-1/8 ${isLow ? 'text-red-600' : 'text-gray-700'}`}>
                 {Math.floor(current)}
             </td>
             
             {/* 4. UNIT: text-center, w-1/6 (Matches Header) */}
-            <td className="py-4 text-left text-gray-500 text-center w-1/6">{item.unit_of_measurement}</td>
-            
-            {/* 5. ACTIONS: text-center, w-1/4 (Matches Header) */}
+            <td className="py-4 text-left text-gray-500 text-center w-1/8">
+                {item.unit_of_measurement}
+            </td>
+
+            {/* 5. UNIT COST */}
+            <td className="py-4 text-center text-gray-700 font-medium w-1/12">
+                ₱{unitCost.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </td>
+
+            {/* 6. TOTAL VALUE */}
+            <td className="py-4 text-center font-bold text-green-700 w-1/8">
+                ₱{totalValue.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </td>
+
+            {/* 7. ACTIONS */}
             <td className="py-4 text-left w-1/12">
                 <div className="flex justify-start ">
                         <button onClick={() => handleOpenAdjustModal(item)} className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Adjust Stock">

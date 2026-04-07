@@ -9,24 +9,25 @@ const IngredientModal = ({ isOpen, onClose, onSave, ingredientToEdit }) => {
     { value: 'pcs', label: 'pcs (pieces)' },
   ];
   
-  const [formData, setFormData] = useState({
+ const [formData, setFormData] = useState({
     name: '',
     unit_of_measurement: '',
     stock_level: 0,
-    reorder_point: 10, // ✅ New State for Threshold
+    reorder_point: 10,
+    unit_cost: '',
   });
 
   const isEditMode = Boolean(ingredientToEdit);
 
-  useEffect(() => {
+useEffect(() => {
     if (isOpen) {
       if (isEditMode) {
         setFormData({
           name: ingredientToEdit.name || '',
           unit_of_measurement: ingredientToEdit.unit_of_measurement || '',
           stock_level: ingredientToEdit.stock_level, 
-          // ✅ Load existing point or default to 10
           reorder_point: ingredientToEdit.reorder_point || 10, 
+          unit_cost: ingredientToEdit.unit_cost || '',
         });
       } else {
         // Reset for new ingredient
@@ -35,6 +36,7 @@ const IngredientModal = ({ isOpen, onClose, onSave, ingredientToEdit }) => {
           unit_of_measurement: '',
           stock_level: 0,
           reorder_point: 10, 
+          unit_cost: '', 
         });
       }
     }
@@ -136,6 +138,30 @@ const IngredientModal = ({ isOpen, onClose, onSave, ingredientToEdit }) => {
             </div>
             <p className="text-xs text-orange-600 mt-1">
                 System will alert you when stock falls below this number.
+            </p>
+          </div>
+
+          {/* ✅ NEW: Unit Cost Input */}
+          <div>
+            <label htmlFor="unit_cost" className="block text-sm font-medium text-gray-700">
+              Unit Cost (₱)
+            </label>
+            <div className="relative mt-1">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 font-bold">₱</span>
+              <input
+                type="number"
+                id="unit_cost"
+                step="0.01"
+                min="0"
+                value={formData.unit_cost}
+                onChange={handleChange}
+                required
+                className="block w-full pl-8 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-amber-500 focus:border-amber-500"
+                placeholder="0.00"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Cost per single unit (e.g., cost per 1 {formData.unit_of_measurement || 'item'})
             </p>
           </div>
 
