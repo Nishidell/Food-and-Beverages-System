@@ -71,7 +71,7 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
                     <img 
                         src={getImageUrl(item.image_url)} 
                         alt={item.item_name} 
-                        className="w-full h-full object-cover"
+                        className="w-full h-32 md:h-40 object-cover rounded-t-lg"
                     />
                    </div>
                     

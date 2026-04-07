@@ -123,10 +123,10 @@ function WaiterPOS() {
         <div className="bg-amber-50 min-h-screen">
             <InternalNavBar />
             
-            <div className="max-w-[1400px] mx-auto p-4 flex gap-6 mt-4" style={{ height: 'calc(100vh - 100px)' }}>
+            <div className="max-w-[1400px] mx-auto p-4 flex flex-col md:flex-row gap-6 mt-4 h-auto md:h-[calc(100vh-100px)]">
                 
                 {/* LEFT PANEL: Reusing your Customer UI! */}
-                <div className="w-2/3 bg-white rounded-lg shadow-md border border-amber-200 flex flex-col overflow-hidden">
+               <div className="w-full md:w-7/12 bg-white rounded-lg shadow-md border border-amber-200 flex flex-col overflow-hidden h-[60vh] md:h-full">
                     
                     {/* Your exact Category Tabs component */}
                     <div className="pt-4 px-4 bg-white border-b border-gray-200">
@@ -150,7 +150,7 @@ function WaiterPOS() {
                 </div>
 
                 {/* RIGHT PANEL: The Active Ticket (Cart) */}
-                <div className="w-1/3 bg-white rounded-lg shadow-md border border-amber-200 flex flex-col overflow-hidden">
+              <div className="w-full md:w-5/12 bg-white rounded-lg shadow-md border border-amber-200 flex flex-col overflow-hidden h-[50vh] md:h-full">
                     <div className="p-4 bg-gray-100 border-b border-gray-200">
                         <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Select Open Table</label>
                         <select 
@@ -172,7 +172,7 @@ function WaiterPOS() {
                             <p className="text-center text-gray-400 mt-10 italic">Cart is empty.<br/>Tap items on the left to add.</p>
                         ) : (
                             cart.map((cartItem, idx) => (
-                                <div key={idx} className="bg-white p-3 rounded border border-gray-200 shadow-sm flex justify-between items-center">
+                                <div key={idx} className="bg-white p-3 rounded border border-gray-200 shadow-sm flex flex-col xl:flex-row justify-between xl:items-center gap-2">
                                     <div>
                                         <p className="font-bold text-gray-800">{cartItem.item_name}</p>
                                         <p className="text-sm text-amber-700">₱{parseFloat(cartItem.price).toFixed(2)} x {cartItem.quantity}</p>
