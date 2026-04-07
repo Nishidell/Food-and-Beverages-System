@@ -9,7 +9,7 @@ const AdminDashboard = ({ onNavigate }) => {
   const navigate = useNavigate(); // ✅ Hook for URL navigation
   
   const [data, setData] = useState({
-    summary: { totalSales: 0, salesGrowth: 0, activeOrders: 0, lowStock: 0, totalSeatingCapacity: 0 },
+    summary: { totalSales: 0, salesGrowth: 0, activeOrders: 0, lowStock: 0, availableTables: 0, totalTables: 0, totalSeatingCapacity: 0 },
     recentOrders: [],
     stockAlerts: [],
   });
@@ -71,15 +71,6 @@ const AdminDashboard = ({ onNavigate }) => {
         >
           <div className="flex justify-between items-center mb-2">
             <CircleDollarSign className="text-orange-400" size={28} />
-            <span
-              className={`text-xs font-semibold ${
-                summary.salesGrowth >= 0 ? "text-green-400" : "text-red-400"
-              }`}
-            >
-              {summary.salesGrowth >= 0
-                ? `+${summary.salesGrowth}%`
-                : `${summary.salesGrowth}%`}
-            </span>
           </div>
           <h3 className="text-sm text-black">Total Sales Today</h3>
           <p className="text-3xl font-bold mt-1">
@@ -94,15 +85,6 @@ const AdminDashboard = ({ onNavigate }) => {
         >
           <div className="flex justify-between items-center mb-2">
             <ShoppingCart className="text-blue-400" size={28} />
-            <span
-              className={`text-xs font-semibold ${
-                summary.ordersGrowth >= 0 ? "text-green-400" : "text-red-400"
-              }`}
-            >
-              {summary.ordersGrowth >= 0
-                ? `+${summary.ordersGrowth}%`
-                : `${summary.ordersGrowth}%`}
-            </span>
           </div>
           <h3 className="text-sm text-black">Active Orders</h3>
           <p className="text-3xl font-bold mt-1">{summary.activeOrders}</p>
@@ -125,19 +107,27 @@ const AdminDashboard = ({ onNavigate }) => {
           <p className="text-3xl font-bold mt-1">{summary.lowStock}</p>
         </div>
 
-        {/* Seating Capacity -> Switch to Tables Tab */}
+        {/* Available Tables & Seating Capacity -> Switch to Tables Tab */}
         <div 
             className={cardStyle}
             onClick={() => onNavigate('tables')}
         >
           <div className="flex justify-between items-center mb-2">
+            {/* You can keep the Armchair icon, it works for both concepts */}
             <Armchair className="text-green-600" size={28} />
           </div>
-          <h3 className="text-sm text-black">Total Seating Capacity</h3>
+          <h3 className="text-sm text-black">Available Tables</h3>
           <div className="flex items-end gap-2">
-            <p className="text-3xl font-bold mt-1">{summary.totalSeatingCapacity}</p>
-            <span className="text-gray-500 mb-1 text-sm">Seats</span>
+            {/* Displaying Available / Total Tables as the main metric */}
+            <p className="text-3xl font-bold mt-1">
+              {summary.availableTables} <span className="text-2xl font-normal text-gray-500">/ {summary.totalTables}</span>
+            </p>
+          
           </div>
+          {/* Added the small static indicator for Total Capacity below */}
+          <p className="text-xs text-gray-500 mt-1">
+            (Total Capacity: {summary.totalSeatingCapacity} Seats)
+          </p>
         </div>
       </div>
 
