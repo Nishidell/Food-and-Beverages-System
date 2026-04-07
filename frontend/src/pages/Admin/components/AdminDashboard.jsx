@@ -9,7 +9,7 @@ const AdminDashboard = ({ onNavigate }) => {
   const navigate = useNavigate(); // ✅ Hook for URL navigation
   
   const [data, setData] = useState({
-    summary: { totalSales: 0, salesGrowth: 0, activeOrders: 0, lowStock: 0, availableTables: 0, totalTables: 0 },
+    summary: { totalSales: 0, salesGrowth: 0, activeOrders: 0, lowStock: 0, totalSeatingCapacity: 0 },
     recentOrders: [],
     stockAlerts: [],
   });
@@ -125,7 +125,7 @@ const AdminDashboard = ({ onNavigate }) => {
           <p className="text-3xl font-bold mt-1">{summary.lowStock}</p>
         </div>
 
-        {/* Available Tables -> Switch to Tables Tab */}
+        {/* Seating Capacity -> Switch to Tables Tab */}
         <div 
             className={cardStyle}
             onClick={() => onNavigate('tables')}
@@ -133,10 +133,10 @@ const AdminDashboard = ({ onNavigate }) => {
           <div className="flex justify-between items-center mb-2">
             <Armchair className="text-green-600" size={28} />
           </div>
-          <h3 className="text-sm text-black">Available Tables</h3>
+          <h3 className="text-sm text-black">Total Seating Capacity</h3>
           <div className="flex items-end gap-2">
-            <p className="text-3xl font-bold mt-1">{summary.availableTables}</p>
-            <span className="text-gray-500 mb-1 text-sm">/ {summary.totalTables}</span>
+            <p className="text-3xl font-bold mt-1">{summary.totalSeatingCapacity}</p>
+            <span className="text-gray-500 mb-1 text-sm">Seats</span>
           </div>
         </div>
       </div>

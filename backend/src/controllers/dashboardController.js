@@ -63,8 +63,8 @@ export const getDashboardSummary = async (req, res) => {
       ),
       // 7. Table Stats
       safeQuery(
-        pool.query(`SELECT COUNT(*) as total, SUM(CASE WHEN status = 'Available' THEN 1 ELSE 0 END) as available FROM fb_tables`),
-        [{ total: 0, available: 0 }]
+        pool.query(`SELECT SUM(capacity) as totalCapacity FROM fb_tables`),
+        [{ totalCapacity: 0 }]
       ),
       // 8. Recent Orders (Fallback: Empty Array)
       safeQuery(
@@ -91,8 +91,7 @@ export const getDashboardSummary = async (req, res) => {
 
     const lowStock = lowStockRows[0]?.total || 0;
 
-    const availableTables = Number(tableRows[0]?.available || 0);
-    const totalTables = Number(tableRows[0]?.total || 0);
+    const totalSeatingCapacity = Number(tableRows[0]?.totalCapacity || 0);
 
     res.json({
       summary: {
@@ -102,8 +101,7 @@ export const getDashboardSummary = async (req, res) => {
         ordersGrowth,
         lowStock,
         lowStockGrowth: 0, 
-        availableTables,
-        totalTables
+        totalSeatingCapacity
       },
       // If recentOrders failed, it sends [] (empty list) instead of crashing
       recentOrders: recentOrders || [], 
