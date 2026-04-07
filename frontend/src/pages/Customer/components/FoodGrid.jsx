@@ -73,6 +73,12 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
                         alt={item.item_name} 
                         className="w-full h-32 md:h-40 object-cover rounded-t-lg"
                     />
+
+                    {isActive && (
+                    <div className="absolute top-1 left-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm z-10">
+                        {discountPercent}% OFF
+                    </div>
+                   )}
                    </div>
                     
                     {/* Bottom Half: Name & Price */}
@@ -80,9 +86,17 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
                         <span className="font-bold text-xs text-gray-800 text-center leading-tight line-clamp-1 w-full truncate">
                             {item.item_name}
                         </span>
-                        <span className="text-xs font-bold text-amber-700 mt-0.5">
-                            ₱{parseFloat(displayPrice).toFixed(2)}
-                        </span>
+                        
+                        <div className="mt-0.5 flex flex-wrap justify-center items-center gap-x-1">
+                      {isActive && (
+                          <span className="text-[10px] text-gray-400 line-through">
+                              ₱{parseFloat(originalPrice).toFixed(2)}
+                          </span>
+                      )}
+                      <span className="text-xs font-bold text-amber-700">
+                          ₱{parseFloat(displayPrice).toFixed(2)}
+                      </span>
+                  </div>
                     </div>
 
                     {/* Sold Out Overlay */}
@@ -109,21 +123,31 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
             }}
           >
            
-           <div className="card-image-container" onClick={() => onImageClick(getImageUrl(item.image_url))}>
-            <img 
-                src={getImageUrl(item.image_url)} 
-                alt={item.item_name} 
-                className="card-image" 
-            />
-           </div>
+           <div className="card-image-container relative" onClick={() => onImageClick(getImageUrl(item.image_url))}>
+          {isActive && (
+              <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md z-10">
+                  {discountPercent}% OFF
+              </div>
+          )}
+          <img 
+              src={getImageUrl(item.image_url)} 
+              alt={item.item_name} 
+              className="card-image" 
+          />
+      </div>
             
             <div className="card-content">
               <h3 className="item-name mb-1">{item.item_name}</h3>
               <div className="card-footer mt-auto">
-              <div className="price-container">
-              <span className="price-text">₱{parseFloat(displayPrice).toFixed(2)}</span>
-             </div>
-                
+
+             <div className="price-container flex items-center gap-2">
+            {isActive && (
+                <span className="text-sm text-gray-400 line-through">
+                    ₱{parseFloat(originalPrice).toFixed(2)}
+                </span>
+            )}
+            <span className="price-text text-green-700">₱{parseFloat(displayPrice).toFixed(2)}</span>
+        </div>
                 {item.is_available ? (
                   <button 
                     onClick={(e) => {
