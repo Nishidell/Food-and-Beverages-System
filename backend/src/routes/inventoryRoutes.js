@@ -7,7 +7,8 @@ import {
     updateIngredientDetails,
     adjustIngredientStock,
     deleteIngredient,
-    getInventoryLogs
+    getInventoryLogs,
+    exportInventoryValue
 } from "../controllers/inventoryController.js";
 
 const router = express.Router();
@@ -27,6 +28,13 @@ router.route("/")
     .get(protect, authorizeRoles("Operations Manager", "Stock Controller"), getAllIngredients)
     // Create: Only Operations Manager and Stock Controller
     .post(protect, authorizeRoles("Operations Manager", "Stock Controller"), createIngredient);
+
+router.get(
+    "/export", 
+    protect, 
+    authorizeRoles("Operations Manager", "Stock Controller"), 
+    exportInventoryValue
+);
 
 router.route("/:id")
     .get(protect, authorizeRoles("Operations Manager", "Stock Controller"), getIngredientById)

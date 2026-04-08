@@ -1,4 +1,5 @@
 import pool from "../config/mysql.js";
+import xlsx from 'xlsx';
 
 // Helper function to create a log entry
 const createLog = async (ingredient_id, employee_id, action_type, quantity_change, new_stock_level, reason, connection) => {
@@ -209,5 +210,60 @@ export const getInventoryLogs = async (req, res) => {
     } catch (error) {
         console.error("Get Logs Error:", error);
         res.status(500).json({ message: "Error fetching inventory logs", error: error.message });
+    }
+};
+
+// @desc    Export inventory valuation to Excel
+export const exportInventoryValue = async (req, res) => {
+    try {
+        // 1. Get the freshest data right from the database
+        const [ingredients] = await pool.query("SELECT * FROM fb_ingredients ORDER BY name ASC");
+        
+        let grandTotal = 0;
+
+        // 2. Format the data exactly how Accounting wants it
+        const excelData = ingredients.map(item => {
+            const stock = parseFloat(item.stock_level) || 0;
+            const cost = parseFloat(item.unit_cost) || 0;
+            const totalValue = stock * cost;
+            
+            grandTotal += totalValue;
+
+            return {
+                "Ingredient ID": item.ingredient_id,
+                "Ingredient Name": item.name,
+                "Current Stock": stock,
+                "Unit": item.unit_of_measurement,
+                "Unit Cost (PHP)": cost,
+                "Total Value (PHP)": totalValue
+            };
+        });
+
+        // 3. Add a blank row, then the Grand Total row at the bottom
+        excelData.push({}); 
+        excelData.push({
+            "Ingredient Name": "GRAND TOTAL",
+            "Total Value (PHP)": grandTotal
+        });
+
+        // 4. Create the Excel Workbook and Sheet
+        const worksheet = xlsx.utils.json_to_sheet(excelData);
+        const workbook = xlsx.utils.book_new();
+        xlsx.utils.book_append_sheet(workbook, worksheet, "Inventory Valuation");
+
+        // 5. Convert to a Buffer so we can send it over the internet
+        const excelBuffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+        // 6. Set headers to trigger a file download in the browser
+        const dateStr = new Date().toISOString().split('T')[0]; // Gets YYYY-MM-DD
+        res.setHeader('Content-Disposition', `attachment; filename="Inventory_Valuation_${dateStr}.xlsx"`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        
+        // 7. Send the file!
+        res.send(excelBuffer);
+
+    } catch (error) {
+        console.error("Export Error:", error);
+        res.status(500).json({ message: "Error exporting inventory", error: error.message });
     }
 };

@@ -194,6 +194,38 @@ const InventoryPage = () => {
       return sum + (stock * cost);
   }, 0);
 
+  const handleExportExcel = async () => {
+    try {
+      toast.loading("Generating Excel file...", { id: "exportToast" });
+      
+      // We use apiClient, but instead of .json(), we expect a .blob() (a file)
+      const response = await apiClient('/inventory/export');
+      
+      if (!response.ok) throw new Error("Failed to export data");
+      
+      const blob = await response.blob();
+      
+      // Create a temporary, invisible link to trigger the browser download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Add today's date to the filename
+      const dateStr = new Date().toISOString().split('T')[0];
+      link.setAttribute('download', `Inventory_Valuation_${dateStr}.xlsx`);
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      // Clean up the temporary link
+      link.parentNode.removeChild(link);
+      toast.success("Export complete!", { id: "exportToast" });
+      
+    } catch (err) {
+      toast.error(err.message, { id: "exportToast" });
+    }
+  };
+
   return (
     <>
       <InternalNavBar />
@@ -251,6 +283,15 @@ const InventoryPage = () => {
                     >
                         <Plus size={20} /> Add Ingredient
                     </button>
+
+                    {/* Export Button */}
+                    <button 
+                        onClick={handleExportExcel} 
+                        className="bg-green-600 text-white font-bold py-2 px-4 rounded hover:bg-green-700 transition-colors shadow-md flex items-center gap-2"
+                    >
+                        Export to Excel
+                    </button>
+
                 </div>
             </div>
 
