@@ -28,8 +28,8 @@ const seedDatabase = async () => {
             VALUES (?, ?, ?, ?, ?, ?)
         `;
         
-        // Mock data: Client 23, 2 Adults, 0 Children, Check-in Today, Check-out Next Week, Approved
-        const resValues = [23, 2, 0, '2026-03-30', '2026-04-05', 'Approved'];
+        // Mock data: Client 23, 3 Adults, 0 Children, Check-in Today, Check-out Next Week, Approved
+        const resValues = [23, 3, 0, '2026-04-15', '2026-04-20', 'Approved'];
         const [resResult] = await db.execute(insertResQuery, resValues);
         
         const newReservationId = resResult.insertId;

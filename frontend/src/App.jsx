@@ -13,6 +13,7 @@ import TableManager from './pages/Kitchen/TableManager';
 import LoginPage from './pages/Auth/LoginPage';
 import RegisterPage from './pages/Auth/RegisterPage';
 import NotAuthorizedPage from './pages/Auth/NotAuthorizedPage';
+import DiningReservationPage from './pages/Customer/DiningReservationPage.jsx';
 
 import PaymentSuccess from './pages/Customer/PaymentSuccess.jsx';
 import PaymentCancel from './pages/Customer/PaymentCancel.jsx';
@@ -77,14 +78,7 @@ function App() {
               </AuthRoute>
             }
           />
-          <Route
-            path="/register"
-            element={
-              <AuthRoute>
-                <RegisterPage />
-              </AuthRoute>
-            }
-          />
+          <Route path="/dining-reservation" element={<DiningReservationPage />} />
           <Route path="/not-authorized" element={<NotAuthorizedPage />} />
 
           {/* === PUBLIC ROUTES (Available to everyone) === */}

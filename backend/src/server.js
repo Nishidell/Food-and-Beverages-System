@@ -31,6 +31,7 @@ import promotionRoutes from "../src/routes/promotionRoutes.js";
 import announcementRoutes from "./routes/announcementRoutes.js";
 import ratingRoutes from './routes/ratingRoutes.js';
 import budgetRoutes from "./routes/budgetRoutes.js";
+import reservationRoutes from "./routes/reservationRoutes.js";
 
 // IMPORT THIS DIRECTLY FOR THE WEBHOOK FIX
 import { paymongoWebhook } from "../src/controllers/paymentController.js"; 
@@ -140,6 +141,7 @@ app.use('/api/announcement', announcementRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/upload', uploadRoutes); 
 app.use('/api/budget', budgetRoutes); 
+app.use('/api/reservations', reservationRoutes);
 
 
 
