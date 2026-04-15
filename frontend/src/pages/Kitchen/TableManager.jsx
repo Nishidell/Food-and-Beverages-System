@@ -160,16 +160,20 @@ const TableManager = () => {
       }
   };
 
-  // --- HELPER TO FORMAT TIME ---
+  // --- HELPER TO FORMAT TIME (Timezone-Proof) ---
   const formatTime = (timeStr) => {
     if (!timeStr) return '';
-    return new Date(`1970-01-01T${timeStr}Z`).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: 'numeric',
-      hour12: true
-    });
+    
+    // timeStr comes from MySQL as "18:00:00"
+    const [hours, minutes] = timeStr.split(':');
+    let hour = parseInt(hours, 10);
+    
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12;
+    hour = hour ? hour : 12; // Convert hour '0' (midnight) to '12'
+    
+    return `${hour}:${minutes} ${ampm}`;
   };
-
   return (
     <>
       <div className="flex flex-col min-h-screen" style={{ backgroundColor: '#523a2eff' }}>
