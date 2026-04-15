@@ -165,3 +165,55 @@ export const createReservation = async (req, res) => {
         connection.release();
     }
 };
+
+// @desc    Get all reservations for the host view
+export const getReservations = async (req, res) => {
+    try {
+        const sql = `
+            SELECT 
+                r.reservation_id, r.first_name, r.last_name, r.email, 
+                r.reservation_date, r.reservation_time, r.party_size, 
+                r.status, r.special_requests,
+                t.table_number 
+            FROM fb_dining_reservation r
+            LEFT JOIN fb_tables t ON r.table_id = t.table_id
+            WHERE DATE(r.reservation_date) = CURDATE() 
+            ORDER BY r.reservation_time ASC
+        `;
+        const [reservations] = await pool.query(sql);
+        res.json(reservations);
+    } catch (error) {
+        console.error("Get Reservations Error:", error);
+        res.status(500).json({ message: "Error fetching reservations", error: error.message });
+    }
+};
+
+// @desc    Update a reservation's status (e.g., to 'Seated' or 'No-Show')
+export const updateReservationStatus = async (req, res) => {
+    const { id } = req.params; // Grabbing the ID from the URL
+    const { status } = req.body; // Grabbing the new status from the frontend payload
+
+    // Validation: Prevent trolls from sending fake statuses
+    const validStatuses = ['Pending', 'Confirmed', 'Seated', 'No-Show', 'Cancelled'];
+    if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status update requested." });
+    }
+
+    try {
+        const sql = `
+            UPDATE fb_dining_reservation 
+            SET status = ? 
+            WHERE reservation_id = ?
+        `;
+        const [result] = await pool.query(sql, [status, id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Reservation not found." });
+        }
+
+        res.json({ message: `Reservation status updated to ${status}` });
+    } catch (error) {
+        console.error("Update Reservation Status Error:", error);
+        res.status(500).json({ message: "Error updating reservation", error: error.message });
+    }
+};
