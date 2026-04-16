@@ -154,8 +154,7 @@ function CashierDashboard() {
                                 ) : (
                                     // State 2B: Receipt loaded, show tables and buttons
                                     <>
-                                        <div className="bg-gray-50 border border-gray-200 p-4 rounded mt-4 mb-4 flex-1 overflow-y-auto">
-                                            <table className="w-full text-left text-sm">
+                                            <div className="bg-gray-50 border border-gray-200 p-4 rounded mt-4 mb-4 flex-1 overflow-y-auto min-h-[200px]">                                            <table className="w-full text-left text-sm">
                                                 <thead>
                                                     <tr className="border-b text-gray-500">
                                                         <th className="pb-2 w-16">Qty</th>
@@ -165,27 +164,34 @@ function CashierDashboard() {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {orderDetails.items?.map((item, idx) => (
-                                                        <tr key={idx} className="border-b border-dashed last:border-0 text-gray-800 font-medium">
-                                                            <td className="py-3">{item.quantity}</td>
-                                                            <td className="py-3">{item.item_name}</td>
-                                                            <td className="py-3 text-right text-gray-500">₱{parseFloat(item.price).toFixed(2)}</td>
-                                                            <td className="py-3 text-right">₱{parseFloat(item.subtotal).toFixed(2)}</td>
+                                                    {orderDetails.items && orderDetails.items.length > 0 ? (
+                                                        orderDetails.items.map((item, idx) => (
+                                                            <tr key={idx} className="border-b border-dashed last:border-0 text-gray-800 font-medium">
+                                                                <td className="py-3">{item.quantity}</td>
+                                                                <td className="py-3">{item.item_name}</td>
+                                                                <td className="py-3 text-right text-gray-500">₱{parseFloat(item.price || 0).toFixed(2)}</td>
+                                                                <td className="py-3 text-right">₱{parseFloat(item.subtotal || 0).toFixed(2)}</td>
+                                                            </tr>
+                                                        ))
+                                                    ) : (
+                                                        <tr>
+                                                            <td colSpan="4" className="py-4 text-center text-red-500 font-bold bg-red-50 rounded">
+                                                                No active items found! (The database returned 0 items for Order #{selectedTab?.order_id})
+                                                            </td>
                                                         </tr>
-                                                    ))}
+                                                    )}
                                                 </tbody>
                                             </table>
                                         </div>
 
-                                        <div className="flex flex-col items-end mb-6 space-y-1">
-                                            <p className="text-gray-500 text-sm">Subtotal: ₱{parseFloat(selectedTab.items_total).toFixed(2)}</p>
-                                            <p className="text-gray-500 text-sm">Service Charge (10%): ₱{parseFloat(selectedTab.service_charge_amount).toFixed(2)}</p>
-                                            <p className="text-gray-500 text-sm">VAT (12%): ₱{parseFloat(selectedTab.vat_amount).toFixed(2)}</p>
-                                            <p className="text-3xl font-bold text-gray-900 mt-2 border-t pt-2 border-gray-300">
-                                                Total: ₱{parseFloat(selectedTab.total_amount).toFixed(2)}
-                                            </p>
-                                        </div>
-
+                                       <div className="flex flex-col items-end mb-6 space-y-1">
+                                        <p className="text-gray-500 text-sm">Subtotal: ₱{parseFloat(orderDetails.items_total).toFixed(2)}</p>
+                                        <p className="text-gray-500 text-sm">Service Charge (10%): ₱{parseFloat(orderDetails.service_charge_amount).toFixed(2)}</p>
+                                        <p className="text-gray-500 text-sm">VAT (12%): ₱{parseFloat(orderDetails.vat_amount).toFixed(2)}</p>
+                                        <p className="text-3xl font-bold text-gray-900 mt-2 border-t pt-2 border-gray-300">
+                                            Total: ₱{parseFloat(orderDetails.total_price).toFixed(2)}
+                                        </p>
+                                    </div>
                                         <div className="mb-6">
                                             <h3 className="font-bold mb-3 text-gray-800 uppercase text-xs tracking-wider">Select Payment Method:</h3>
                                             <div className="flex gap-3">

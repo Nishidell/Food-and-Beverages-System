@@ -583,15 +583,14 @@ export const updateOrderStatus = async (req, res) => {
         }
 
         // Update the order status
-        const [result] = await connection.query(
-            "UPDATE fb_new_orders SET status = ?, employee_id = ? WHERE order_id = ?", 
-            [newStatus, employee_id, id]
-        );
-
-        await connection.query(
-            "UPDATE fb_new_order_details SET item_status = ? WHERE order_id = ? AND (item_status != 'served' OR item_status IS NULL)",
+       const [result] = await connection.query(
+            "UPDATE fb_new_order_details SET item_status = ? WHERE order_id = ? AND item_status != 'served' AND item_status != 'cancelled'",
             [newStatus, id]
         );
+
+        if (result.affectedRows === 0) {
+            throw new Error("No active items found to update");
+        }
 
         if (result.affectedRows === 0) {
             throw new Error("Order not found or status unchanged");
@@ -1000,9 +999,9 @@ export const settleBill = async (req, res) => {
        // Determine the correct payment status for the CRS Integration
         const finalPaymentStatus = payment_method === 'Room Charge' ? 'charged_to_room' : 'paid';
 
-        // 1. Mark the main order with the correct money lifecycle status
+        // 1. Mark the main order with the correct money lifecycle status AND close the kitchen tab
         const [updateResult] = await connection.query(
-            "UPDATE fb_new_orders SET payment_status = ? WHERE order_id = ?",
+            "UPDATE fb_new_orders SET payment_status = ?, status = 'Settled' WHERE order_id = ?",
             [finalPaymentStatus, id]
         );
 

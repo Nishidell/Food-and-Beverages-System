@@ -154,14 +154,29 @@ const fetchInitialData = async () => {
             }
         });
 
-        socket.on('order-status-updated', (data) => {
+       socket.on('order-status-updated', (data) => {
             setKitchenOrders(prev => {
                 const { order_id, status } = data;
+                
+                // If it's completely finished, remove it from the active screen
                 if (status === 'served' || status === 'cancelled') {
                     if (status === 'served') setServedCount(c => c + 1);
                     return prev.filter(o => o.order_id !== order_id);
                 }
-                return prev.map(o => o.order_id === order_id ? { ...o, status } : o);
+                
+                // Otherwise, update the specific order's items
+                return prev.map(o => {
+                    if (o.order_id === order_id) {
+                        // Change the status of all active items so our getTicketStatus helper recalculates!
+                        const updatedItems = o.items.map(item => 
+                            (item.item_status !== 'served' && item.item_status !== 'cancelled') 
+                                ? { ...item, item_status: status } 
+                                : item
+                        );
+                        return { ...o, items: updatedItems };
+                    }
+                    return o;
+                });
             });
         });
     }
@@ -241,7 +256,18 @@ const fetchInitialData = async () => {
     if (filter !== 'Custom') { setStartDate(startStr); setEndDate(endStr); }
   };
 
-  const filteredOrders = kitchenOrders.filter(order => {
+    // NEW: Calculate the overall ticket status based on individual food items
+    const getTicketStatus = (items) => {
+        if (!items || items.length === 0) return 'open';
+        const active = items.filter(i => i.item_status !== 'cancelled' && i.item_status !== 'served');
+
+        if (active.length === 0) return 'served';
+        if (active.every(i => i.item_status === 'pending')) return 'pending';
+        if (active.every(i => i.item_status === 'ready')) return 'ready';
+        return 'preparing'; // If there's a mix of statuses, the kitchen is actively preparing it
+    };
+
+    const filteredOrders = kitchenOrders.filter(order => {
     const statusMatch = filterStatus === 'All' || order.status?.toLowerCase() === filterStatus.toLowerCase();
     const typeMatch = filterType === 'All Types' || order.order_type?.toLowerCase() === filterType.toLowerCase();
     const orderDateObj = fixDate(order.order_date);
@@ -262,9 +288,9 @@ const fetchInitialData = async () => {
       }
   });
 
-  const pendingCount = kitchenOrders.filter(o => o.status?.toLowerCase() === 'pending').length;
-  const preparingCount = kitchenOrders.filter(o => o.status?.toLowerCase() === 'preparing').length;
-  const readyCount = kitchenOrders.filter(o => o.status?.toLowerCase() === 'ready').length;
+  const pendingCount = kitchenOrders.filter(o => getTicketStatus(o.items) === 'pending').length;
+  const preparingCount = kitchenOrders.filter(o => getTicketStatus(o.items) === 'preparing').length;
+  const readyCount = kitchenOrders.filter(o => getTicketStatus(o.items) === 'ready').length;
 
   const getStatusBadgeClass = (status) => {
     switch(status?.toLowerCase()) {
@@ -407,12 +433,13 @@ const fetchInitialData = async () => {
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {sortedOrders.map(order => {
+                    const ticketStatus = getTicketStatus(order.items);
                     const allItemsChecked = order.items?.length > 0 && order.items.every(item => checkedItems.includes(item.order_detail_id));
                     return (
                         <div key={order.order_id} className="kitchen-card">
                             <div className="kitchen-card-header relative">
-                                <span className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold uppercase ${getStatusBadgeClass(order.status)}`}>
-                                    {order.status}
+                                <span className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold uppercase ${getStatusBadgeClass(ticketStatus)}`}>
+                                    {ticketStatus}
                                 </span>
                                 <h2 className="text-xl font-bold text-gray-800">#{order.order_id}</h2>
                                 <p className="text-sm font-bold text-gray-700">{order.first_name ? `${order.first_name} ${order.last_name || ''}` : 'Guest'}</p>
@@ -463,7 +490,7 @@ const fetchInitialData = async () => {
                                     })}
 
                             <div className="kitchen-card-footer">
-                                {order.status?.toLowerCase() === 'pending' && (
+                                {ticketStatus === 'pending' && (
                                     <div className="flex gap-2">
                                         <button 
                                             onClick={() => handleUpdateStatus(order.order_id, 'Preparing')} 
@@ -475,7 +502,7 @@ const fetchInitialData = async () => {
                                         <button onClick={() => handlePromptCancel(order.order_id)} className="kitchen-btn btn-red"><Trash2 size={18}/></button>
                                     </div>
                                 )}
-                                {order.status?.toLowerCase() === 'preparing' && (
+                                {ticketStatus === 'preparing' && (
                                     <div className="flex gap-2">
                                         <button 
                                             onClick={() => handleUpdateStatus(order.order_id, 'Ready')} 
@@ -487,7 +514,7 @@ const fetchInitialData = async () => {
                                         <button onClick={() => handlePromptCancel(order.order_id)} className="kitchen-btn btn-red"><Trash2 size={18}/></button>
                                     </div>
                                 )}
-                                {order.status?.toLowerCase() === 'ready' && (
+                                {ticketStatus === 'ready' && (
                                     <button 
                                         onClick={() => handleUpdateStatus(order.order_id, 'Served')} 
                                         disabled={!allItemsChecked}
