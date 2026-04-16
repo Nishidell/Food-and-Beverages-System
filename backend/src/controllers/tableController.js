@@ -127,9 +127,9 @@ export const seatGuest = async (req, res) => {
 
         // 2. Create the brand new, empty Tab for the Cashier/Waiter
         await connection.query(
-            `INSERT INTO fb_orders 
-            (table_id, order_type, guest_name, payment_status, total_amount, items_total, vat_amount, service_charge_amount) 
-            VALUES (?, 'Dine-In', ?, 'unpaid', 0, 0, 0, 0)`,
+            `INSERT INTO fb_new_orders 
+            (table_id, order_type, guest_name, status, payment_status, total_amount) 
+            VALUES (?, 'Dine-In', ?, 'Open', 'unpaid', 0)`,
             [id, guest_name || 'Walk-in Guest']
         );
 

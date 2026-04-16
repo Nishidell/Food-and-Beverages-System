@@ -60,11 +60,11 @@ export const addRating = async (req, res) => {
         // 1. Verify Purchase (Must have a 'served' order with this item)
         const [purchaseCheck] = await pool.query(`
             SELECT o.order_id 
-            FROM fb_orders o
-            JOIN fb_order_details od ON o.order_id = od.order_id
+            FROM fb_new_orders o
+            JOIN fb_new_order_details od ON o.order_id = od.order_id
             WHERE o.client_id = ? 
               AND od.item_id = ? 
-              AND o.status = 'served'
+              AND od.item_status = 'served'
             LIMIT 1
         `, [client_id, item_id]);
 

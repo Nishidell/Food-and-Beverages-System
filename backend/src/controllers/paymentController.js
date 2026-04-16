@@ -295,38 +295,38 @@ export const paymongoWebhook = async (req, res) => {
         // ✅ Calls the helper function we added to this file
         const orderData = parseOrderMetadata(paymentData.attributes.metadata);
 
-        // C. Insert Order
-        const orderSql = `
-            INSERT INTO fb_orders 
-            (client_id, table_id, room_id, delivery_location, items_total, service_charge_amount, 
-             vat_amount, total_amount, special_instructions, status, order_date) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
-        `;
+       // C. Insert Order
+        const order_type = orderData.room_id ? 'Room Dining' : 'Dine-In';
         
+        const orderSql = `
+            INSERT INTO fb_new_orders 
+            (client_id, order_type, table_id, room_id, status, payment_status, total_amount, special_instructions, order_date) 
+            VALUES (?, ?, ?, ?, 'Open', 'paid', ?, ?, NOW())
+        `;
         const [orderResult] = await connection.query(orderSql, [
-            orderData.client_id, orderData.table_id, orderData.room_id, orderData.locationString,
-            orderData.items_total, orderData.service_charge_amount, orderData.vat_amount, 
-            orderData.total_amount, orderData.special_instructions
+            orderData.client_id, 
+            order_type, 
+            orderData.table_id || null, 
+            orderData.room_id || null,
+            orderData.total_amount, 
+            orderData.special_instructions
         ]);
-
         const new_order_id = orderResult.insertId;
 
-        // D. Insert Order Details (Bulk)
+       // D. Insert Order Details (Bulk)
         if (orderData.order_items.length > 0) {
             const detailsSql = `
-                INSERT INTO fb_order_details 
-                (order_id, item_id, quantity, price_on_purchase, subtotal, instructions) 
+                INSERT INTO fb_new_order_details 
+                (order_id, item_id, quantity, price_on_purchase, instructions, item_status) 
                 VALUES ?`;
-            
             const detailValues = orderData.order_items.map(item => [
                 new_order_id,
                 item.item_id,
                 item.quantity,
                 item.price_on_purchase,
-                (item.quantity * item.price_on_purchase),
-                item.instructions || ''
+                item.instructions || '',
+                'pending' // Send it straight to the kitchen!
             ]);
-            
             await connection.query(detailsSql, [detailValues]);
         }
 
@@ -416,7 +416,7 @@ export const recordPayment = async (req, res) => {
         const paymentSql = "INSERT INTO fb_payments (order_id, payment_method, amount, change_amount, payment_status) VALUES (?, ?, ?, ?, 'paid')";
         const [paymentResult] = await connection.query(paymentSql, [order_id, payment_method, amount, change_amount || 0]);
 
-        await connection.query("UPDATE fb_orders SET status = 'paid' WHERE order_id = ?", [order_id]);
+        await connection.query("UPDATE fb_new_orders SET payment_status = 'paid' WHERE order_id = ?", [order_id]);
 
         await connection.commit();
         res.status(201).json({ payment_id: paymentResult.insertId, message: "Payment recorded successfully" });

@@ -47,22 +47,21 @@ export const createPosOrder = async (req, res) => {
 
         // Step 2: Create the order
         // UPDATED SQL: Added 'guest_name' column
+        // Step 2: Create the order in the NEW table
         const orderSql = `
-            INSERT INTO fb_orders 
-            (client_id, guest_name, employee_id, order_type, delivery_location, table_id, status, items_total, service_charge_amount, vat_amount, total_amount) 
-            VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, 0, 0, 0)
+            INSERT INTO fb_new_orders 
+            (client_id, guest_name, employee_id, order_type, table_id, status, payment_status, total_amount) 
+            VALUES (?, ?, ?, ?, ?, 'Open', 'unpaid', 0)
         `;
-        
-        // Logic: If client_id is present, use it (App User). If not, use customer_name as guest_name (Walk-in).
+
         const finalClientId = client_id || null;
         const finalGuestName = !client_id && customer_name ? customer_name : null;
-
+        
         const [orderResult] = await connection.query(orderSql, [
             finalClientId,
-            finalGuestName, // <--- Insert Name "Nicole" here
+            finalGuestName,
             employee_id, 
             order_type, 
-            delivery_location, // <--- Insert Location "Counter (Take-out)" here
             table_id || null
         ]); 
         order_id = orderResult.insertId;
@@ -106,11 +105,13 @@ export const createPosOrder = async (req, res) => {
             }
             
             const subtotal = actualPrice * item.quantity;
-            calculatedItemsTotal += subtotal;
+            calculatedItemsTotal += subtotal; // We still calculate this for the final math!
+            
             const itemInstructions = item.instructions || instructions || '';
             
-            const detailSql = "INSERT INTO fb_order_details (order_id, item_id, quantity, price_on_purchase, subtotal, instructions) VALUES (?, ?, ?, ?, ?, ?)";
-            await connection.query(detailSql, [order_id, item.item_id, item.quantity, actualPrice, subtotal, itemInstructions]);
+            // Insert into NEW details table
+            const detailSql = "INSERT INTO fb_new_order_details (order_id, item_id, quantity, price_on_purchase, instructions, item_status) VALUES (?, ?, ?, ?, ?, 'pending')";
+            await connection.query(detailSql, [order_id, item.item_id, item.quantity, actualPrice, itemInstructions]);
         }
 
         const calculatedServiceCharge = calculatedItemsTotal * SERVICE_RATE;
@@ -118,10 +119,8 @@ export const createPosOrder = async (req, res) => {
         const calculatedTotalAmount = calculatedItemsTotal + calculatedServiceCharge + calculatedVatAmount;
 
         await connection.query(
-            `UPDATE fb_orders 
-             SET items_total = ?, service_charge_amount = ?, vat_amount = ?, total_amount = ? 
-             WHERE order_id = ?`,
-            [calculatedItemsTotal, calculatedServiceCharge, calculatedVatAmount, calculatedTotalAmount, order_id]
+            `UPDATE fb_new_orders SET total_amount = ? WHERE order_id = ?`,
+            [calculatedTotalAmount, order_id]
         );
         
         await adjustStock(items, 'deduct', connection);
@@ -239,29 +238,21 @@ export const createOrder = async (req, res) => {
 
         // --- 1. Check for Active Order OR Create New ---
         let order_id;
-        let previousTotals = { items: 0, service: 0, vat: 0, total: 0 };
+        let previousTotalAmount = 0; // We only need to track the grand total now!
 
-        // Check if the user already has an unpaid order
+        // Check if the user already has an unpaid tab
         const [existingOrders] = await connection.query(
-            "SELECT * FROM fb_orders WHERE client_id = ? AND payment_status = 'unpaid' LIMIT 1",
+            "SELECT * FROM fb_new_orders WHERE client_id = ? AND payment_status = 'unpaid' LIMIT 1",
             [client_id]
         );
 
         if (existingOrders.length > 0) {
-            // MAGIC: We found an active table! Reuse the order_id.
             order_id = existingOrders[0].order_id;
-            
-            // Save their current bill totals so we can add the new dessert to it later
-            previousTotals = {
-                items: parseFloat(existingOrders[0].items_total || 0),
-                service: parseFloat(existingOrders[0].service_charge_amount || 0),
-                vat: parseFloat(existingOrders[0].vat_amount || 0),
-                total: parseFloat(existingOrders[0].total_amount || 0)
-            };
+            previousTotalAmount = parseFloat(existingOrders[0].total_amount || 0);
         } else {
-            // No active order found. Create a brand new one.
-            const orderSql = "INSERT INTO fb_orders (client_id, order_type, delivery_location, table_id, room_id, status, payment_status) VALUES (?, ?, ?, ?, ?, 'pending', 'unpaid')";
-            const [orderResult] = await connection.query(orderSql, [client_id, order_type, finalLocation, finalTableId, finalRoomId]);
+            // No active order. Create a brand new one in the NEW table.
+            const orderSql = "INSERT INTO fb_new_orders (client_id, order_type, table_id, room_id, status, payment_status, total_amount) VALUES (?, ?, ?, ?, 'Open', 'unpaid', 0)";
+            const [orderResult] = await connection.query(orderSql, [client_id, order_type, finalTableId, finalRoomId]);
             order_id = orderResult.insertId;
 
             if (finalTableId) {
@@ -302,36 +293,26 @@ export const createOrder = async (req, res) => {
             }
             
             const subtotal = actualPrice * item.quantity;
-            calculatedItemsTotal += subtotal;
+            calculatedItemsTotal += subtotal; // Keep the math for later
             
             const itemInstructions = item.instructions || instructions || '';
             
-            const detailSql = "INSERT INTO fb_order_details (order_id, item_id, quantity, price_on_purchase, subtotal, instructions) VALUES (?, ?, ?, ?, ?, ?)";
-            await connection.query(detailSql, [order_id, item.item_id, item.quantity, actualPrice, subtotal, itemInstructions]);
+            // Insert into the NEW details table
+            const detailSql = "INSERT INTO fb_new_order_details (order_id, item_id, quantity, price_on_purchase, instructions, item_status) VALUES (?, ?, ?, ?, ?, 'pending')";
+            await connection.query(detailSql, [order_id, item.item_id, item.quantity, actualPrice, itemInstructions]);
         }
 
+        // Calculate the math for the new items
         const calculatedServiceCharge = calculatedItemsTotal * SERVICE_RATE;
         const calculatedVatAmount = (calculatedItemsTotal + calculatedServiceCharge) * VAT_RATE; 
         const calculatedTotalAmount = calculatedItemsTotal + calculatedServiceCharge + calculatedVatAmount;
 
-        // Add the new item costs to whatever was already on the bill
-        const finalItemsTotal = previousTotals.items + calculatedItemsTotal;
-        const finalServiceCharge = previousTotals.service + calculatedServiceCharge;
-        const finalVatAmount = previousTotals.vat + calculatedVatAmount;
-        const finalTotalAmount = previousTotals.total + calculatedTotalAmount;
+        // Add the cost of these new items to their running tab
+        const finalTotalAmount = previousTotalAmount + calculatedTotalAmount;
 
-        const updateSql = `
-            UPDATE fb_orders 
-            SET items_total = ?, service_charge_amount = ?, vat_amount = ?, total_amount = ?, status = 'pending'
-            WHERE order_id = ?
-        `;
-        await connection.query(updateSql, [
-            finalItemsTotal,
-            finalServiceCharge,
-            finalVatAmount,
-            finalTotalAmount,
-            order_id
-        ]);
+        // Update the NEW table with just the final total
+        const updateSql = `UPDATE fb_new_orders SET total_amount = ? WHERE order_id = ?`;
+        await connection.query(updateSql, [finalTotalAmount, order_id]);
 
         // Create Notification
         await createOrUpdateNotification(order_id, client_id, 'pending', connection, req);
@@ -349,7 +330,6 @@ export const createOrder = async (req, res) => {
                 o.order_id, 
                 o.order_date, 
                 o.order_type, 
-                o.delivery_location, 
                 o.status, 
                 o.total_amount,
                 COALESCE(c.first_name, o.guest_name) AS first_name,
@@ -358,9 +338,9 @@ export const createOrder = async (req, res) => {
                 m.item_name, 
                 d.quantity, 
                 d.instructions
-            FROM fb_orders o
+            FROM fb_new_orders o
             LEFT JOIN tbl_client_users c ON o.client_id = c.client_id
-            LEFT JOIN fb_order_details d ON o.order_id = d.order_id
+            LEFT JOIN fb_new_order_details d ON o.order_id = d.order_id
             LEFT JOIN fb_menu_items m ON d.item_id = m.item_id
             WHERE o.order_id = ?
         `, [order_id]);
@@ -371,7 +351,6 @@ export const createOrder = async (req, res) => {
                 order_id: rows[0].order_id,
                 order_date: rows[0].order_date,
                 order_type: rows[0].order_type,
-                delivery_location: rows[0].delivery_location,
                 status: rows[0].status,
                 total_amount: rows[0].total_amount,
                 first_name: rows[0].first_name,
@@ -421,13 +400,26 @@ export const getOrders = async (req, res) => {
     try {
         const sql = `
             SELECT 
-                o.*,
+                o.order_id, 
+                o.order_date, 
+                o.order_type, 
+                CASE 
+                    WHEN o.order_type = 'Room Dining' AND tr.room_num IS NOT NULL THEN CONCAT('Room ', tr.room_num)
+                    WHEN o.order_type = 'Dine-In' AND ft.table_number IS NOT NULL THEN CONCAT('Table ', ft.table_number)
+                    ELSE 'Unknown Location' 
+                END AS delivery_location,
+                o.status,
+                o.payment_status,
+                o.total_amount,
                 COALESCE(c.first_name, o.guest_name) AS first_name,
                 COALESCE(c.last_name, '') AS last_name
-            FROM fb_orders o
+            FROM fb_new_orders o
             LEFT JOIN tbl_client_users c ON o.client_id = c.client_id
+            LEFT JOIN tbl_rooms tr ON o.room_id = tr.room_id
+            LEFT JOIN fb_tables ft ON o.table_id = ft.table_id
             ORDER BY o.order_date DESC
         `;
+
         const [orders] = await pool.query(sql);
         res.json(orders);
     } catch (error) {
@@ -443,39 +435,53 @@ export const getOrderById = async (req, res) => {
     try {
         const { id } = req.params;
 
-        // ✅ FIX: Added COALESCE to check guest_name if client_id is null
+        // 1. Fetch Main Order
         const [orders] = await pool.query(
             `SELECT 
                 o.*, 
+                CASE 
+                    WHEN o.order_type = 'Room Dining' AND tr.room_num IS NOT NULL THEN CONCAT('Room ', tr.room_num)
+                    WHEN o.order_type = 'Dine-In' AND ft.table_number IS NOT NULL THEN CONCAT('Table ', ft.table_number)
+                    ELSE 'Unknown Location' 
+                END AS delivery_location,
                 COALESCE(c.first_name, o.guest_name) AS first_name,
                 COALESCE(c.last_name, '') AS last_name
-            FROM fb_orders o
+            FROM fb_new_orders o
             LEFT JOIN tbl_client_users c ON o.client_id = c.client_id
+            LEFT JOIN tbl_rooms tr ON o.room_id = tr.room_id
+            LEFT JOIN fb_tables ft ON o.table_id = ft.table_id
             WHERE o.order_id = ?`,
             [id]
         );
-        
+
         if (orders.length === 0) {
             return res.status(404).json({ message: "Order not found" });
         }
         
         const order = orders[0];
 
-        // Fetch Items (No changes needed here)
+        // 2. Fetch Items & Calculate Subtotal on the fly!
         const [items] = await pool.query(
             `SELECT 
                 mi.item_name, 
                 od.quantity, 
                 od.price_on_purchase AS price,
-                od.subtotal,
+                (od.quantity * od.price_on_purchase) AS subtotal, 
                 od.instructions,
-                od.order_detail_id
-            FROM fb_order_details od 
+                od.order_detail_id,
+                od.item_status
+            FROM fb_new_order_details od 
             JOIN fb_menu_items mi ON od.item_id = mi.item_id 
-            WHERE od.order_id = ?`,
+            WHERE od.order_id = ? AND od.item_status != 'cancelled'`, // Ignore voided items on the receipt
             [id]
         );
 
+        // 3. Reconstruct the Math for the Receipt
+        const calculatedItemsTotal = items.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
+        const calculatedServiceCharge = calculatedItemsTotal * SERVICE_RATE;
+        const calculatedVatAmount = (calculatedItemsTotal + calculatedServiceCharge) * VAT_RATE;
+
+        // 4. Fetch Payment Info
         const [payments] = await pool.query("SELECT * FROM fb_payments WHERE order_id = ?", [id]);
         const payment = payments[0] || {};
 
@@ -484,17 +490,18 @@ export const getOrderById = async (req, res) => {
             order_date: order.order_date,
             order_type: order.order_type,
             delivery_location: order.delivery_location,
-            first_name: order.first_name, // Now contains "Bentong"
+            first_name: order.first_name, 
             last_name: order.last_name,
-            items_total: order.items_total,
-            service_charge_amount: order.service_charge_amount,
-            vat_amount: order.vat_amount,
+            items_total: calculatedItemsTotal,             // Dynamic 
+            service_charge_amount: calculatedServiceCharge, // Dynamic
+            vat_amount: calculatedVatAmount,               // Dynamic
             total_price: order.total_amount,
             status: order.status,
             items,
-            payment_method: payment.payment_method || "PayMongo",
-            payment_status: payment.payment_status || "pending",
+            payment_method: payment.payment_method || "Pending",
+            payment_status: order.payment_status,
         });
+
     } catch (error) {
         console.error("Error fetching order details:", error);
         res.status(500).json({ message: "Error fetching order details", error: error.message });
@@ -529,7 +536,7 @@ export const updateOrderStatus = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        const [orders] = await connection.query("SELECT status, client_id FROM fb_orders WHERE order_id = ? FOR UPDATE", [id]);
+        const [orders] = await connection.query("SELECT status, client_id FROM fb_new_orders WHERE order_id = ? FOR UPDATE", [id]);
         if (orders.length === 0) {
             await connection.rollback();
             return res.status(404).json({ message: "Order not found" });
@@ -546,7 +553,7 @@ export const updateOrderStatus = async (req, res) => {
         // BUSINESS LOGIC: Stock management based on status transitions
         if (newStatus === 'preparing' && currentStatus === 'pending') {
             console.log(`Deducting stock for order ${id}...`);
-            const [details] = await connection.query("SELECT item_id, quantity FROM fb_order_details WHERE order_id = ?", [id]);
+            const [details] = await connection.query("SELECT item_id, quantity FROM fb_new_order_details WHERE order_id = ?", [id]);
             
             await validateStock(details, connection);
             await adjustStock(details, 'deduct', connection);
@@ -567,7 +574,7 @@ export const updateOrderStatus = async (req, res) => {
                     console.warn(`Order ${id} was already paid. Stock NOT restored (requires manual inventory adjustment).`);
                 } else {
                     console.log(`Restoring ingredient stock for cancelled unpaid order: ${id}`);
-                    const [details] = await connection.query("SELECT item_id, quantity FROM fb_order_details WHERE order_id = ?", [id]);
+                    const [details] = await connection.query("SELECT item_id, quantity FROM fb_new_order_details WHERE order_id = ?", [id]);
                     
                     await adjustStock(details, 'restore', connection);
                     await logOrderStockChange(id, details, 'ORDER_RESTORE', connection);
@@ -577,12 +584,12 @@ export const updateOrderStatus = async (req, res) => {
 
         // Update the order status
         const [result] = await connection.query(
-            "UPDATE fb_orders SET status = ?, employee_id = ? WHERE order_id = ?", 
+            "UPDATE fb_new_orders SET status = ?, employee_id = ? WHERE order_id = ?", 
             [newStatus, employee_id, id]
         );
 
         await connection.query(
-            "UPDATE fb_order_details SET item_status = ? WHERE order_id = ? AND (item_status != 'served' OR item_status IS NULL)",
+            "UPDATE fb_new_order_details SET item_status = ? WHERE order_id = ? AND (item_status != 'served' OR item_status IS NULL)",
             [newStatus, id]
         );
 
@@ -628,8 +635,9 @@ export const getKitchenOrders = async (req, res) => {
                 o.order_date, 
                 o.order_type, 
                 CASE 
-                    WHEN tr.room_num IS NOT NULL THEN CONCAT('Room ', tr.room_num)
-                    ELSE o.delivery_location 
+                    WHEN o.order_type = 'Room Dining' AND tr.room_num IS NOT NULL THEN CONCAT('Room ', tr.room_num)
+                    WHEN o.order_type = 'Dine-In' AND ft.table_number IS NOT NULL THEN CONCAT('Table ', ft.table_number)
+                    ELSE 'Unknown Location' 
                 END AS delivery_location,
                 o.status, 
                 o.total_amount,
@@ -640,11 +648,12 @@ export const getKitchenOrders = async (req, res) => {
                 d.quantity, 
                 d.instructions,
                 d.item_status
-            FROM fb_orders o
+            FROM fb_new_orders o
             LEFT JOIN tbl_client_users c ON o.client_id = c.client_id
-            JOIN fb_order_details d ON o.order_id = d.order_id 
+            JOIN fb_new_order_details d ON o.order_id = d.order_id 
             LEFT JOIN fb_menu_items m ON d.item_id = m.item_id
             LEFT JOIN tbl_rooms tr ON o.room_id = tr.room_id
+            LEFT JOIN fb_tables ft ON o.table_id = ft.table_id
             WHERE d.item_status IN ('pending', 'preparing', 'ready')
             ORDER BY o.order_date ASC
         `;
@@ -698,18 +707,30 @@ export const getServedOrders = async (req, res) => {
         // 1. Updated Query: Corrected 'order_detail_id' and added 'fb_menu_items' join
         let sql = `
             SELECT 
-                o.*, 
+                o.order_id, 
+                o.order_date, 
+                o.status,
+                o.order_type, 
+                CASE 
+                    WHEN o.order_type = 'Room Dining' AND tr.room_num IS NOT NULL THEN CONCAT('Room ', tr.room_num)
+                    WHEN o.order_type = 'Dine-In' AND ft.table_number IS NOT NULL THEN CONCAT('Table ', ft.table_number)
+                    ELSE 'Unknown Location' 
+                END AS delivery_location,
+                o.total_amount,
                 COALESCE(c.first_name, o.guest_name) AS first_name,
                 COALESCE(c.last_name, '') AS last_name,
-                d.order_detail_id,       -- ✅ CORRECTED from 'detail_id'
-                m.item_name,             -- ✅ Added to get the name of the food
+                d.order_detail_id,       
+                m.item_name,             
                 d.quantity, 
-                d.instructions
-            FROM fb_orders o
+                d.instructions,
+                d.item_status
+            FROM fb_new_orders o
             LEFT JOIN tbl_client_users c ON o.client_id = c.client_id
-            LEFT JOIN fb_order_details d ON o.order_id = d.order_id 
-            LEFT JOIN fb_menu_items m ON d.item_id = m.item_id  -- ✅ Join to get item name
-            WHERE o.status IN ('served', 'cancelled')
+            JOIN fb_new_order_details d ON o.order_id = d.order_id 
+            LEFT JOIN fb_menu_items m ON d.item_id = m.item_id  
+            LEFT JOIN tbl_rooms tr ON o.room_id = tr.room_id
+            LEFT JOIN fb_tables ft ON o.table_id = ft.table_id
+            WHERE d.item_status IN ('served', 'cancelled')
         `;
 
         const params = [];
@@ -750,7 +771,8 @@ export const getServedOrders = async (req, res) => {
                     detail_id: row.order_detail_id, 
                     item_name: row.item_name || 'Unknown Item', // Fallback if name missing
                     quantity: row.quantity,
-                    instructions: row.instructions
+                    instructions: row.instructions,
+                    item_status: row.item_status
                 });
             }
         });
@@ -774,10 +796,10 @@ const createOrUpdateNotification = async (order_id, client_id, status, connectio
         const deleteSql = `
             DELETE n
             FROM fb_notifications n
-            JOIN fb_orders o ON n.order_id = o.order_id
-            WHERE n.order_id = ? 
-              AND (o.status = 'served' OR n.order_id = ?) 
+            JOIN fb_new_orders o ON n.order_id = o.order_id
+            WHERE n.order_id = ? AND (o.status = 'served' OR n.order_id = ?) 
         `;
+
         await (connection || pool).query(deleteSql, [order_id, order_id]);
 
         let title = `Order #${order_id} Updated!`;
@@ -844,7 +866,7 @@ export const getMyOrders = async (req, res) => {
 
         // 1. Fetch Orders
         const [orders] = await pool.query(
-            `SELECT * FROM fb_orders 
+            `SELECT * FROM fb_new_orders 
              WHERE client_id = ? 
              ORDER BY order_date DESC`, 
             [client_id]
@@ -858,9 +880,9 @@ export const getMyOrders = async (req, res) => {
         const ordersWithItems = await Promise.all(orders.map(async (order) => {
             // Get order details
             const [items] = await pool.query(`
-                SELECT * FROM fb_order_details WHERE order_id = ?
+                SELECT * FROM fb_new_order_details WHERE order_id = ?
             `, [order.order_id]);
-            
+
             // Get Item Name AND Rating Status
             const itemsWithDetails = await Promise.all(items.map(async (item) => {
                  // ✅ MODIFIED QUERY: Fetch Name + Rating in one go
@@ -903,9 +925,8 @@ export const toggleItemCheckbox = async (req, res) => {
     try {
         // If the box is checked, mark the item as 'ready'. If unchecked, revert to 'pending'
         const newStatus = isChecked ? 'ready' : 'pending';
-        
         await connection.query(
-            "UPDATE fb_order_details SET item_status = ? WHERE order_detail_id = ?",
+            "UPDATE fb_new_order_details SET item_status = ? WHERE order_detail_id = ?",
             [newStatus, detailId]
         );
 
@@ -924,26 +945,23 @@ export const toggleItemCheckbox = async (req, res) => {
 export const getUnpaidTabs = async (req, res) => {
     try {
         // ✅ The "Today Only" Filter is built right into the SQL: DATE(o.order_date) = CURDATE()
-        const sql = `
+       const sql = `
             SELECT 
                 o.order_id, 
                 o.order_date, 
                 o.order_type, 
                 o.total_amount,
-                o.items_total,
-                o.service_charge_amount,
-                o.vat_amount,
                 COALESCE(c.first_name, o.guest_name) AS first_name,
                 COALESCE(c.last_name, '') AS last_name,
                 tr.room_num,
                 ft.table_number
-            FROM fb_orders o
+            FROM fb_new_orders o
             LEFT JOIN tbl_client_users c ON o.client_id = c.client_id
             LEFT JOIN tbl_rooms tr ON o.room_id = tr.room_id
             LEFT JOIN fb_tables ft ON o.table_id = ft.table_id
             WHERE o.payment_status = 'unpaid' 
             AND o.status != 'cancelled'
-              AND DATE(o.order_date) = CURDATE()
+            AND DATE(o.order_date) = CURDATE()
             ORDER BY o.order_date ASC
         `;
         
@@ -979,10 +997,13 @@ export const settleBill = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // 1. Mark the main order as paid
+       // Determine the correct payment status for the CRS Integration
+        const finalPaymentStatus = payment_method === 'Room Charge' ? 'charged_to_room' : 'paid';
+
+        // 1. Mark the main order with the correct money lifecycle status
         const [updateResult] = await connection.query(
-            "UPDATE fb_orders SET payment_status = 'paid' WHERE order_id = ?",
-            [id]
+            "UPDATE fb_new_orders SET payment_status = ? WHERE order_id = ?",
+            [finalPaymentStatus, id]
         );
 
         if (updateResult.affectedRows === 0) {
@@ -991,16 +1012,16 @@ export const settleBill = async (req, res) => {
 
         // 2. Log the payment for your accounting/reports
         await connection.query(
-            "INSERT INTO fb_payments (order_id, payment_method, amount, payment_status) VALUES (?, ?, ?, 'paid')",
-            [id, payment_method, amount]
+            "INSERT INTO fb_payments (order_id, payment_method, amount, payment_status) VALUES (?, ?, ?, ?)",
+            [id, payment_method, amount, finalPaymentStatus]
         );
 
         // 3. Optional Bonus: If they were at a dine-in table, free up the table!
         await connection.query(
-            `UPDATE fb_tables SET status = 'Available' WHERE table_id = (SELECT table_id FROM fb_orders WHERE order_id = ?)`,
+            `UPDATE fb_tables SET status = 'Available' WHERE table_id = (SELECT table_id FROM fb_new_orders WHERE order_id = ?)`,
             [id]
         );
-
+        
         await connection.commit();
         res.json({ success: true, message: "Bill settled successfully." });
     } catch (error) {
@@ -1028,17 +1049,16 @@ export const addItemsToOrder = async (req, res) => {
         await adjustStock(items, 'deduct', connection);
         await logOrderStockChange(id, items, 'ORDER_DEDUCT', connection);
 
-        // 2. Fetch the current totals of the existing tab
+        // 2. Fetch the current total of the existing tab
         const [existingOrders] = await connection.query(
-            "SELECT items_total, service_charge_amount, vat_amount, total_amount FROM fb_orders WHERE order_id = ?",
+            "SELECT total_amount FROM fb_new_orders WHERE order_id = ?",
             [id]
         );
-
         if (existingOrders.length === 0) {
             throw new Error("Order not found");
         }
 
-        const currentOrder = existingOrders[0];
+        const currentTotalAmount = parseFloat(existingOrders[0].total_amount || 0);
         let calculatedItemsTotal = 0;
 
         // 3. Loop through new items, calculate promos/prices, and insert them
@@ -1071,9 +1091,11 @@ export const addItemsToOrder = async (req, res) => {
             const subtotal = actualPrice * item.quantity;
             calculatedItemsTotal += subtotal;
 
+            const itemInstructions = item.instructions || '';
+
             // Insert new details. Notice we set item_status to 'pending' so the kitchen sees it!
-            const detailSql = "INSERT INTO fb_order_details (order_id, item_id, quantity, price_on_purchase, subtotal, item_status) VALUES (?, ?, ?, ?, ?, 'pending')";
-            await connection.query(detailSql, [id, item.item_id, item.quantity, actualPrice, subtotal]);
+            const detailSql = "INSERT INTO fb_new_order_details (order_id, item_id, quantity, price_on_purchase, instructions, item_status) VALUES (?, ?, ?, ?, ?, 'pending')";
+            await connection.query(detailSql, [id, item.item_id, item.quantity, actualPrice, itemInstructions]);
         }
 
         // 4. Calculate the additional taxes/fees for ONLY the new items
@@ -1081,18 +1103,13 @@ export const addItemsToOrder = async (req, res) => {
         const newVatAmount = (calculatedItemsTotal + newServiceCharge) * VAT_RATE;
         const newTotalAmount = calculatedItemsTotal + newServiceCharge + newVatAmount;
 
-        // 5. Add the new fees to the old totals
-        const finalItemsTotal = parseFloat(currentOrder.items_total) + calculatedItemsTotal;
-        const finalServiceCharge = parseFloat(currentOrder.service_charge_amount) + newServiceCharge;
-        const finalVatAmount = parseFloat(currentOrder.vat_amount) + newVatAmount;
-        const finalTotalAmount = parseFloat(currentOrder.total_amount) + newTotalAmount;
+        // 5. Add the new final cost to the old total
+        const finalTotalAmount = currentTotalAmount + newTotalAmount;
 
         // 6. Update the main order receipt
         await connection.query(
-            `UPDATE fb_orders 
-             SET items_total = ?, service_charge_amount = ?, vat_amount = ?, total_amount = ? 
-             WHERE order_id = ?`,
-            [finalItemsTotal, finalServiceCharge, finalVatAmount, finalTotalAmount, id]
+            `UPDATE fb_new_orders SET total_amount = ? WHERE order_id = ?`,
+            [finalTotalAmount, id]
         );
 
         await connection.commit();
@@ -1126,10 +1143,9 @@ export const voidOrderItem = async (req, res) => {
 
         // 1. Get the item details and the main order ID
         const [itemRows] = await connection.query(
-            "SELECT order_id, item_id, quantity, subtotal, item_status FROM fb_order_details WHERE order_detail_id = ?",
+            "SELECT order_id, item_id, quantity, price_on_purchase, item_status FROM fb_new_order_details WHERE order_detail_id = ?",
             [detailId]
         );
-
         if (itemRows.length === 0) {
             throw new Error("Item not found in this order.");
         }
@@ -1144,7 +1160,7 @@ export const voidOrderItem = async (req, res) => {
 
         // 2. Mark the specific item as cancelled
         await connection.query(
-            "UPDATE fb_order_details SET item_status = 'cancelled' WHERE order_detail_id = ?",
+            "UPDATE fb_new_order_details SET item_status = 'cancelled' WHERE order_detail_id = ?",
             [detailId]
         );
 
@@ -1152,28 +1168,26 @@ export const voidOrderItem = async (req, res) => {
         await adjustStock([item], 'restore', connection);
         await logOrderStockChange(order_id, [item], 'VOID_RESTORE', connection);
 
-        // 4. Fetch the current main order totals
+        // 4. Fetch the current main order total
         const [orderRows] = await connection.query(
-            "SELECT items_total FROM fb_orders WHERE order_id = ?", 
+            "SELECT total_amount FROM fb_new_orders WHERE order_id = ?", 
             [order_id]
         );
-        
-        // 5. Subtract the voided item's subtotal from the main receipt
-        const currentItemsTotal = parseFloat(orderRows[0].items_total);
-        // Ensure it doesn't drop below 0
-        const newItemsTotal = Math.max(0, currentItemsTotal - parseFloat(item.subtotal)); 
+        const currentTotalAmount = parseFloat(orderRows[0].total_amount || 0);
 
-        // Recalculate taxes and fees based on your constants
-        const newServiceCharge = newItemsTotal * SERVICE_RATE; 
-        const newVatAmount = (newItemsTotal + newServiceCharge) * VAT_RATE; 
-        const newTotalAmount = newItemsTotal + newServiceCharge + newVatAmount;
+        // 5. Calculate exactly how much money to subtract
+        const voidedSubtotal = item.quantity * item.price_on_purchase;
+        const voidedServiceCharge = voidedSubtotal * SERVICE_RATE;
+        const voidedVatAmount = (voidedSubtotal + voidedServiceCharge) * VAT_RATE;
+        const voidedGrandTotal = voidedSubtotal + voidedServiceCharge + voidedVatAmount;
+
+        // Ensure it doesn't drop below 0
+        const newTotalAmount = Math.max(0, currentTotalAmount - voidedGrandTotal);
 
         // 6. Update the main order receipt
         await connection.query(
-            `UPDATE fb_orders 
-             SET items_total = ?, service_charge_amount = ?, vat_amount = ?, total_amount = ? 
-             WHERE order_id = ?`,
-            [newItemsTotal, newServiceCharge, newVatAmount, newTotalAmount, order_id]
+            `UPDATE fb_new_orders SET total_amount = ? WHERE order_id = ?`,
+            [newTotalAmount, order_id]
         );
 
         await connection.commit();
