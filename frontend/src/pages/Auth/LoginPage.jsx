@@ -122,10 +122,7 @@ const LoginPage = () => {
                 </div>
 
                 <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                        <label className="text-xs font-bold text-[#0B3D2E] uppercase tracking-wider">Password</label>
-                        <a href="https://thecelestiahotel.vercel.app/forgot-password" className="text-xs font-bold text-[#F9A825] hover:underline">Forgot Password?</a>
-                    </div>
+                    <label className="block text-xs font-bold text-[#0B3D2E] uppercase tracking-wider">Password</label>
                     <div className="relative">
                         <Lock className="absolute left-4 top-3.5 text-gray-400" size={20} />
                         <input
@@ -143,6 +140,9 @@ const LoginPage = () => {
                         >
                             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                         </button>
+                    </div>
+                    <div className="text-center mt-2">
+                        <a href="https://thecelestiahotel.vercel.app/forgot-password" className="text-xs font-bold text-[#F9A825] hover:underline">Forgot Password?</a>
                     </div>
                 </div>
 

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import '../CustomerTheme.css'; 
 
-const CategoryTabs = ({ categories, selectedCategory, onSelectCategory, onSortChange, theme = "customer" }) => {
+const CategoryTabs = ({ categories, selectedCategory, onSelectCategory, onSortChange, theme = "customer", isLoading = false }) => {
   const [showFilter, setShowFilter] = useState(false);
   const [currentSort, setCurrentSort] = useState('a-z'); 
   const [dropdownStyle, setDropdownStyle] = useState({});
@@ -70,7 +70,7 @@ const CategoryTabs = ({ categories, selectedCategory, onSelectCategory, onSortCh
   return (
     <div className={`category-tabs-wrapper ${theme === 'kitchen' ? 'kitchen-theme' : 'customer-theme'}`}>
       
-      <div className="border border-[#F9A825] rounded-[25px] w-full max-w-5xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
+      <div className="border border-[#F9A825] rounded-[25px] w-full max-w-6xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2">
             
             {/* Left Side: Scrollable Categories */}
@@ -86,22 +86,37 @@ const CategoryTabs = ({ categories, selectedCategory, onSelectCategory, onSortCh
                     msOverflowStyle: 'none'
                 }}
             >
-            <button
-                onClick={() => onSelectCategory(0)}
-                className={`category-tab-btn flex-shrink-0 whitespace-nowrap ${selectedCategory === 0 ? 'active' : ''}`}
-            >
-                All Items
-            </button>
-
-            {categories.map((category) => (
+            {isLoading ? (
+                [...Array(6)].map((_, idx) => (
+                    <div key={idx} className={`flex-shrink-0 h-10 w-28 rounded-[50px] animate-pulse ${theme === 'kitchen' ? 'bg-gray-200' : 'bg-[#022c22]/20'}`}></div>
+                ))
+            ) : (
+                <>
                 <button
-                key={category.category_id}
-                onClick={() => onSelectCategory(category.category_id)}
-                className={`category-tab-btn flex-shrink-0 whitespace-nowrap ${selectedCategory === category.category_id ? 'active' : ''}`}
+                    onClick={() => onSelectCategory(0)}
+                    className={`category-tab-btn flex-shrink-0 whitespace-nowrap ${selectedCategory === 0 ? 'active' : ''}`}
                 >
-                {category.name}
+                    All Items
                 </button>
-            ))}
+    
+                <button
+                    onClick={() => onSelectCategory('bestseller')}
+                    className={`category-tab-btn flex-shrink-0 whitespace-nowrap ${selectedCategory === 'bestseller' ? 'active' : ''}`}
+                >
+                    Best Sellers
+                </button>
+
+                {categories.map((category) => (
+                    <button
+                    key={category.category_id}
+                    onClick={() => onSelectCategory(category.category_id)}
+                    className={`category-tab-btn flex-shrink-0 whitespace-nowrap ${selectedCategory === category.category_id ? 'active' : ''}`}
+                    >
+                    {category.name}
+                    </button>
+                ))}
+                </>
+            )}
             </div>
             
             {/* Right Side: Sticky Filter Button */}
