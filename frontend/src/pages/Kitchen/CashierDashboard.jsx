@@ -3,6 +3,7 @@ import InternalNavBar from './components/InternalNavBar';
 import apiClient from '../../utils/apiClient'; 
 import PrintableReceipt from './components/PrintableReceipt'; 
 import toast from 'react-hot-toast';
+import { FaPrint, FaReceipt, FaMoneyBillWave } from 'react-icons/fa';
 
 function CashierDashboard() {
     const [unpaidTabs, setUnpaidTabs] = useState([]);
@@ -207,16 +208,30 @@ function CashierDashboard() {
                         {!selectedTab ? (
                             // State 1: No tab selected
                             <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-                                <span className="text-6xl mb-4">🧾</span>
+                                <FaReceipt className="text-6xl mb-4 text-gray-300" />
                                 <h2 className="text-2xl font-bold text-gray-500">Select a Tab to Process Payment</h2>
                                 <p>Click on an active order from the list on the left.</p>
                             </div>
                         ) : (
                             // State 2: Tab is selected
                             <div className="flex-1 flex flex-col h-full">
-                                <h2 className="text-2xl font-bold border-b pb-2 mb-4">Settle Bill: {selectedTab.formatted_location}</h2>
-                                <p><strong>Guest:</strong> {selectedTab.first_name} {selectedTab.last_name}</p>
-                                <p><strong>Order ID:</strong> #{selectedTab.order_id}</p>
+                                <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-4">
+                                    <div className="flex items-center gap-4 text-sm md:text-base">
+                                        <h2 className="text-xl font-bold text-gray-800">Settle: {selectedTab.formatted_location}</h2>
+                                        <span className="text-gray-300">|</span>
+                                        <p className="text-gray-600"><span className="font-bold text-gray-700">Guest:</span> {selectedTab.first_name} {selectedTab.last_name}</p>
+                                        <span className="text-gray-300">|</span>
+                                        <p className="text-gray-600"><span className="font-bold text-gray-700">Order ID:</span> #{selectedTab.order_id}</p>
+                                    </div>
+                                    
+                                    <button
+                                        onClick={handlePrintBill}
+                                        className="flex items-center justify-center p-2 rounded bg-amber-100 text-amber-700 hover:bg-amber-200 hover:shadow transition-all"
+                                        title="Print Bill for Guest"
+                                    >
+                                        <FaPrint size={20} />
+                                    </button>
+                                </div>
                                 
                                 {!orderDetails ? (
                                     // State 2A: Waiting for API to return receipt data
@@ -254,101 +269,87 @@ function CashierDashboard() {
                                                         )}
                                                     </tbody>
                                                 </table>
-
-                                                {/* ================= 2. NEW DYNAMIC TOTALS ================= */}
-                                                <div className="flex flex-col items-end mb-6 space-y-1 w-full border-t border-gray-200 pt-4 mt-4">
-                                                    <p className="text-gray-500 text-sm">Base Subtotal: ₱{displaySubtotal.toFixed(2)}</p>
+                                                
+                                               {/* ================= FIXED MATH & DISCOUNT FOOTER ================= */}
+                                            <div className="flex gap-4 mb-4 mt-2">
+                                                
+                                                {/* LEFT SIDE: SPECIAL DISCOUNT (Compact) */}
+                                                <div className="w-1/2 bg-blue-50 p-3 rounded border border-blue-200 text-left flex flex-col justify-between">
+                                                    <label className="text-xs text-blue-800 uppercase tracking-wider font-bold mb-2">Apply Special Discount</label>
                                                     
-                                                    {/* Show the discount line if active */}
-                                                    {discountType !== 'None' && (
-                                                        <p className="text-red-600 text-sm font-bold bg-red-50 px-2 py-1 rounded">
-                                                            Discount (20% off 1/{paxCount} share): -₱{discountAmount.toFixed(2)}
-                                                        </p>
-                                                    )}
-                                                    
-                                                    <p className="text-gray-500 text-sm">Service Charge (10%): ₱{displayServiceCharge.toFixed(2)}</p>
-                                                    <p className="text-gray-500 text-sm">VAT (12%): ₱{displayVat.toFixed(2)}</p>
-                                                    
-                                                    <h3 className="text-3xl font-bold text-gray-900 mt-2 border-t pt-2 border-gray-300 mb-6">
-                                                        Total: ₱{displayTotal.toFixed(2)}
-                                                    </h3>
-                                                </div>
-
-                                                {/* ================= 3. SPECIAL DISCOUNT SECTION ================= */}
-                                                <div className="mb-2 bg-blue-50 p-3 rounded border border-blue-200 w-full text-left">
-                                                    <label className="text-xs text-blue-800 uppercase tracking-wider font-bold block mb-2">Apply Special Discount</label>
-                                                    
-                                                    <div className="grid grid-cols-2 gap-2 mb-2">
-                                                        <div>
-                                                            <label className="text-xs text-gray-600 block mb-1">Customer Type</label>
+                                                    <div className="flex gap-2 mb-2">
+                                                        <div className="flex-1">
                                                             <select 
                                                                 value={discountType}
                                                                 onChange={(e) => setDiscountType(e.target.value)}
-                                                                className="w-full p-2 border border-gray-300 rounded text-sm outline-none focus:border-blue-500"
+                                                                className="w-full p-2 border border-gray-300 rounded text-sm outline-none focus:border-blue-500 bg-white"
                                                             >
                                                                 <option value="None">Regular (No Discount)</option>
                                                                 <option value="Senior/PWD">Senior Citizen / PWD</option>
                                                                 <option value="Medal of Valor">Medal of Valor</option>
                                                             </select>
                                                         </div>
-                                                        
-                                                        <div>
-                                                            <label className="text-xs text-gray-600 block mb-1">Total Pax (People sharing)</label>
+                                                        <div className="w-20">
                                                             <input 
                                                                 type="number"
                                                                 min="1"
+                                                                title="Total Pax"
                                                                 value={paxCount}
                                                                 onChange={(e) => setPaxCount(Math.max(1, parseInt(e.target.value) || 1))}
                                                                 disabled={discountType === 'None'}
-                                                                className="w-full p-2 border border-gray-300 rounded text-sm outline-none disabled:bg-gray-100 disabled:text-gray-400"
+                                                                className="w-full p-2 border border-gray-300 rounded text-sm outline-none disabled:bg-gray-100 disabled:text-gray-400 text-center"
                                                             />
                                                         </div>
                                                     </div>
 
-                                                    {discountType !== 'None' && (
-                                                        <div>
-                                                            <label className="text-xs text-gray-600 block mb-1">ID Number (Required)</label>
-                                                            <input 
-                                                                type="text"
-                                                                value={discountId}
-                                                                onChange={(e) => setDiscountId(e.target.value)}
-                                                                placeholder="Enter Senior/PWD/Valor ID..."
-                                                                className="w-full p-2 border border-gray-300 rounded text-sm outline-none focus:border-blue-500"
-                                                            />
-                                                        </div>
+                                                    {discountType !== 'None' ? (
+                                                        <input 
+                                                            type="text"
+                                                            value={discountId}
+                                                            onChange={(e) => setDiscountId(e.target.value)}
+                                                            placeholder="Enter ID Number..."
+                                                            className="w-full p-2 border border-gray-300 rounded text-sm outline-none focus:border-blue-500"
+                                                        />
+                                                    ) : (
+                                                        <div className="text-xs text-gray-400 italic p-2">Select a discount type to enter ID...</div>
                                                     )}
                                                 </div>
-                                            </div>
-                                        <div className="mb-6">
 
-                                            <h3 className="font-bold mb-3 text-gray-800 uppercase text-xs tracking-wider">Select Payment Method:</h3>
-                                            <div className="flex gap-3">
-                                                {['Room Charge', 'Credit Card', 'Cash'].map(method => (
-                                                    <button
-                                                        key={method}
-                                                        onClick={() => setPaymentMethod(method)}
-                                                        className={`flex-1 py-3 rounded font-bold border-2 transition-all ${paymentMethod === method ? 'border-amber-600 bg-amber-50 text-amber-800 scale-[1.02]' : 'border-gray-200 text-gray-500 hover:border-amber-300 hover:bg-amber-50/50'}`}
-                                                    >
-                                                        {method}
-                                                    </button>
-                                                ))}
+                                                {/* RIGHT SIDE: DYNAMIC TOTALS */}
+                                                <div className="w-1/2 bg-gray-50 p-3 rounded border border-gray-200 flex flex-col items-end justify-end space-y-1">
+                                                    <p className="text-gray-500 text-sm flex justify-between w-full max-w-[250px]">
+                                                        <span>Base Subtotal:</span> <span>₱{displaySubtotal.toFixed(2)}</span>
+                                                    </p>
+                                                    
+                                                    {discountType !== 'None' && (
+                                                        <p className="text-red-600 text-sm font-bold bg-red-50 px-2 py-1 rounded flex justify-between w-full max-w-[250px] border border-red-100">
+                                                            <span>Discount (1/{paxCount}):</span> <span>-₱{discountAmount.toFixed(2)}</span>
+                                                        </p>
+                                                    )}
+                                                    
+                                                    <p className="text-gray-500 text-sm flex justify-between w-full max-w-[250px]">
+                                                        <span>Service (10%):</span> <span>₱{displayServiceCharge.toFixed(2)}</span>
+                                                    </p>
+                                                    <p className="text-gray-500 text-sm flex justify-between w-full max-w-[250px]">
+                                                        <span>VAT (12%):</span> <span>₱{displayVat.toFixed(2)}</span>
+                                                    </p>
+                                                    
+                                                    <div className="w-full max-w-[250px] border-t border-gray-300 mt-1 pt-1 flex justify-between items-end">
+                                                        <span className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-1">Total Due</span>
+                                                        <span className="text-2xl font-bold text-gray-900">₱{displayTotal.toFixed(2)}</span>
+                                                    </div>
+                                                </div>
                                             </div>
+                                            </div>
+                                        {/* ================= CHECKOUT BUTTON ================= */}
+                                        <div className="mt-4 pt-4 border-t border-gray-200">
+                                            <button
+                                                onClick={() => setShowSettleModal(true)}
+                                                className="w-full py-4 rounded font-bold text-xl bg-green-600 hover:bg-green-700 text-white shadow-lg transform hover:-translate-y-1 transition-all"
+                                            >
+                                                Proceed to Payment
+                                            </button>
                                         </div>
-
-                                        <button
-                                            onClick={handlePrintBill}
-                                            className="w-full py-3 mb-3 rounded font-bold text-lg border-2 border-amber-600 text-amber-700 hover:bg-amber-50 transition-all flex items-center justify-center gap-2"
-                                        >
-                                            Print Bill for Guest
-                                        </button>
-
-                                        <button
-                                            disabled={!paymentMethod}
-                                            onClick={() => setShowSettleModal(true)}
-                                            className={`w-full py-4 rounded font-bold text-xl transition-all ${paymentMethod ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg transform hover:-translate-y-1' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
-                                        >
-                                            Settle Bill & Close Tab
-                                        </button>
                                     </>
                                 )}
                             </div>
@@ -361,57 +362,76 @@ function CashierDashboard() {
             {showSettleModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn" style={{backgroundColor: 'rgba(0,0,0,0.6)'}}>
                     <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-2xl relative border-t-4 border-green-500">
+                        <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-2xl relative border-t-4 border-green-500">
                         <button 
                             onClick={() => setShowSettleModal(false)}
                             className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 font-bold"
                         >✕</button>
                         
-                        <div className="flex flex-col items-center text-center mb-6">
-                            <div className="bg-green-100 p-4 rounded-full mb-3 text-3xl">💰</div>
-                            <h3 className="text-xl font-bold text-gray-800">Settle Bill?</h3>
-                            <p className="text-sm text-gray-500 mt-2">
-                                You are about to close the tab for <span className="font-bold text-gray-800">{selectedTab?.formatted_location}</span>.
-                            </p>
-                            <div className="mt-3 bg-gray-50 p-2 rounded w-full border border-gray-200">
-                                <p className="text-xs text-gray-500 uppercase tracking-wider">Payment Method</p>
-                                <p className="font-bold text-amber-600">{paymentMethod}</p>
+                        <div className="flex flex-col items-center text-center mb-4">
+                            <div className="bg-green-100 p-4 rounded-full mb-3 text-green-600">
+                                <FaMoneyBillWave size={32} />
                             </div>
-                            {/* Cash Change Calculator UI */}
-                            {paymentMethod === 'Cash' && (
-                                <div className="mt-3 w-full text-left">
-                                    <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1">Amount Tendered (₱)</label>
-                                    <input
-                                        type="number"
-                                        value={amountTendered}
-                                        onChange={(e) => setAmountTendered(e.target.value)}
-                                        className="w-full p-2 border border-gray-300 rounded font-bold text-lg text-gray-800 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                                        placeholder="Enter amount given..."
-                                        autoFocus
-                                    />
-                                    
-                                    {/* Only show change if they've typed enough money */}
-                                   {amountTendered && parseFloat(amountTendered) >= displayTotal && (
-                                        <div className="mt-3 bg-green-50 p-3 rounded border border-green-200 text-center animate-fadeIn">
-                                            <p className="text-xs text-green-700 uppercase tracking-wider font-bold">Change Due to Guest</p>
-                                            <p className="font-bold text-3xl text-green-600">
-                                               ₱{(parseFloat(amountTendered) - displayTotal).toFixed(2)}
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                            <h3 className="text-2xl font-bold text-gray-800">Process Payment</h3>
+                            <p className="text-gray-500 mt-2 border-b pb-4 w-full">
+                                Total Due for <span className="font-bold text-gray-800">{selectedTab?.formatted_location}</span>: 
+                                <span className="text-xl font-bold text-green-600 ml-2">₱{displayTotal.toFixed(2)}</span>
+                            </p>
+                        </div>
+
+                        {/* --- PAYMENT METHOD SELECTOR --- */}
+                        <div className="mb-6 w-full text-left">
+                            <h3 className="font-bold mb-3 text-gray-800 uppercase text-xs tracking-wider">Select Payment Method:</h3>
+                            <div className="flex gap-2">
+                                {['Room Charge', 'Credit Card', 'Cash'].map(method => (
+                                    <button
+                                        key={method}
+                                        onClick={() => setPaymentMethod(method)}
+                                        className={`flex-1 py-3 text-sm rounded font-bold border-2 transition-all ${paymentMethod === method ? 'border-amber-600 bg-amber-50 text-amber-800 shadow-inner' : 'border-gray-200 text-gray-500 hover:border-amber-300 hover:bg-amber-50/50'}`}
+                                    >
+                                        {method}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                         
-                        <div className="flex gap-3">
+                        {/* --- CASH CALCULATOR (Only shows if Cash is selected) --- */}
+                        {paymentMethod === 'Cash' && (
+                            <div className="mb-6 w-full text-left bg-gray-50 p-4 rounded border border-gray-200">
+                                <label className="text-xs text-gray-500 uppercase tracking-wider block mb-2 font-bold">Amount Tendered (₱)</label>
+                                <input
+                                    type="number"
+                                    value={amountTendered}
+                                    onChange={(e) => setAmountTendered(e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded font-bold text-xl text-gray-800 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+                                    placeholder="Enter amount given..."
+                                    autoFocus
+                                />
+                                
+                                {amountTendered && parseFloat(amountTendered) >= displayTotal && (
+                                    <div className="mt-3 bg-green-50 p-3 rounded border border-green-200 text-center animate-fadeIn">
+                                        <p className="text-xs text-green-700 uppercase tracking-wider font-bold">Change Due to Guest</p>
+                                        <p className="font-bold text-3xl text-green-600">
+                                            ₱{(parseFloat(amountTendered) - displayTotal).toFixed(2)}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        
+                        {/* --- ACTION BUTTONS --- */}
+                        <div className="flex gap-3 mt-4">
                             <button 
                                 onClick={() => setShowSettleModal(false)}
-                                className="flex-1 py-2 rounded-lg font-bold border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors"
+                                className="flex-1 py-3 rounded-lg font-bold border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors"
                             >Cancel</button>
                             <button 
                                 onClick={handleSettleBill}
-                                className="flex-1 py-2 rounded-lg font-bold bg-green-600 text-white hover:bg-green-700 shadow-md transition-colors"
-                            >Yes, Settle Tab</button>
+                                disabled={!paymentMethod || (paymentMethod === 'Cash' && (!amountTendered || parseFloat(amountTendered) < displayTotal))}
+                                className={`flex-1 py-3 rounded-lg font-bold shadow-md transition-colors ${!paymentMethod || (paymentMethod === 'Cash' && (!amountTendered || parseFloat(amountTendered) < displayTotal)) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
+                            >Confirm Payment</button>
                         </div>
+                    </div>
                     </div>
                 </div>
             )}
