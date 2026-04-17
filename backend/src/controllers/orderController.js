@@ -127,7 +127,7 @@ export const createPosOrder = async (req, res) => {
         await logOrderStockChange(order_id, items, 'ORDER_DEDUCT', connection);
 
         if (payment_method !== 'Pay Later') {
-            const paymentSql = "INSERT INTO fb_payments (order_id, payment_method, amount, change_amount, payment_status) VALUES (?, ?, ?, ?, 'paid')";
+            const paymentSql = "INSERT INTO fb_new_payments (order_id, payment_method, amount, change_amount, payment_status) VALUES (?, ?, ?, ?, 'paid')";
             await connection.query(paymentSql, [order_id, payment_method || "Cash", calculatedTotalAmount, change_amount || 0]);
         }
 
@@ -482,7 +482,7 @@ export const getOrderById = async (req, res) => {
         const calculatedVatAmount = (calculatedItemsTotal + calculatedServiceCharge) * VAT_RATE;
 
         // 4. Fetch Payment Info
-        const [payments] = await pool.query("SELECT * FROM fb_payments WHERE order_id = ?", [id]);
+        const [payments] = await pool.query("SELECT * FROM fb_new_payments WHERE order_id = ?", [id]);
         const payment = payments[0] || {};
 
         res.json({
@@ -566,7 +566,7 @@ export const updateOrderStatus = async (req, res) => {
             // HOW: Check both status and payment status before restoring stock
             if (currentStatus === 'preparing' || currentStatus === 'ready') {
                 const [payments] = await connection.query(
-                    "SELECT * FROM fb_payments WHERE order_id = ? AND payment_status = 'paid'", 
+                    "SELECT * FROM fb_new_payments WHERE order_id = ? AND payment_status = 'paid'", 
                     [id]
                 );
 
@@ -990,8 +990,9 @@ export const getUnpaidTabs = async (req, res) => {
 // @access  Private (Staff/Cashier)
 export const settleBill = async (req, res) => {
     const { id } = req.params;
-    const { payment_method, amount } = req.body;
+    const { payment_method, amount, change_amount } = req.body;
     const connection = await pool.getConnection();
+    
 
     try {
         await connection.beginTransaction();
@@ -1009,10 +1010,10 @@ export const settleBill = async (req, res) => {
             throw new Error("Order not found or already paid.");
         }
 
-        // 2. Log the payment for your accounting/reports
+        // 2. Record the payment in our clean V2 payments table
         await connection.query(
-            "INSERT INTO fb_payments (order_id, payment_method, amount, payment_status) VALUES (?, ?, ?, ?)",
-            [id, payment_method, amount, finalPaymentStatus]
+            "INSERT INTO fb_new_payments (order_id, payment_method, amount, change_amount) VALUES (?, ?, ?, ?)",
+            [id, payment_method, amount, change_amount || 0] 
         );
 
         // 3. Optional Bonus: If they were at a dine-in table, free up the table!

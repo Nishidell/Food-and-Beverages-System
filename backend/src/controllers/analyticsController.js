@@ -107,11 +107,11 @@ export const getDashboardAnalytics = async (req, res) => {
       // 6. Payment Methods (Dynamic)
       safeQuery(
         `SELECT p.payment_method, COUNT(p.payment_id) AS transactions, SUM(p.amount) AS total_value 
-         FROM fb_payments p
+         FROM fb_new_payments p
          JOIN fb_new_orders o ON p.order_id = o.order_id
          WHERE p.payment_status = 'paid' AND o.status != 'cancelled' ${typeCondition} ${dateCondition}
          GROUP BY p.payment_method`,
-        allParams,
+         allParams,
         []
       ),
       

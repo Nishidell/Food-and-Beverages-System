@@ -332,10 +332,10 @@ export const paymongoWebhook = async (req, res) => {
 
         // E. Insert Payment Record
         await connection.query(`
-            INSERT INTO fb_payments 
-            (order_id, payment_method, amount, payment_status, paymongo_payment_id, payment_date) 
-            VALUES (?, ?, ?, 'paid', ?, NOW())`, 
-            [new_order_id, paymentData.attributes.source?.type || 'paymongo', orderData.total_amount, paymongo_payment_id]
+            INSERT INTO fb_new_payments 
+            (order_id, payment_method, amount) 
+            VALUES (?, ?, ?)`, 
+            [new_order_id, paymentData.attributes.source?.type || 'paymongo', orderData.total_amount]
         );
 
         // F. Get Client Info
@@ -413,7 +413,7 @@ export const recordPayment = async (req, res) => {
 
         await connection.beginTransaction();
 
-        const paymentSql = "INSERT INTO fb_payments (order_id, payment_method, amount, change_amount, payment_status) VALUES (?, ?, ?, ?, 'paid')";
+        const paymentSql = "INSERT INTO fb_new_payments (order_id, payment_method, amount, change_amount) VALUES (?, ?, ?, ?)";
         const [paymentResult] = await connection.query(paymentSql, [order_id, payment_method, amount, change_amount || 0]);
 
         await connection.query("UPDATE fb_new_orders SET payment_status = 'paid' WHERE order_id = ?", [order_id]);
@@ -433,7 +433,7 @@ export const recordPayment = async (req, res) => {
 // @route   GET /api/payments/:order_id
 export const getPaymentsForOrder = async (req, res) => {
     try {
-        const [payments] = await pool.query("SELECT * FROM fb_payments WHERE order_id = ?", [req.params.order_id]);
+        const [payments] = await pool.query("SELECT * FROM fb_new_payments WHERE order_id = ?", [req.params.order_id]);
         res.json(payments);
     } catch (error) {
         res.status(500).json({ message: "Error fetching payments", error: error.message });
