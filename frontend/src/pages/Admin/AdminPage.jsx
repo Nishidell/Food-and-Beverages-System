@@ -8,6 +8,7 @@ import MenuManagementTable from './components/MenuManagementTable';
 import AddItemModal from './components/AddItemModal';
 import AdminHeader from './components/AdminHeader';
 import InventoryLogsTable from './components/InventoryLogsTable';
+import BudgetRequestTable from './components/BudgetRequestTable';
 import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../utils/apiClient';
 import PromotionsManagement from './components/PromotionsManagement'; 
@@ -249,6 +250,18 @@ function AdminPage() {
           >
             Promo Management
           </button>
+          <button
+            onClick={() => setCurrentView('budget')}
+            style={{
+              padding: '8px 16px',
+              fontSize: '1.125rem',
+              fontWeight: 600,
+              color: currentView === 'budget' ? accentColor : '#ffffff',
+              borderBottom: currentView === 'budget' ? `2px solid ${accentColor}` : '2px solid transparent'
+            }}
+          >
+            Request Budget
+          </button>
             <button
               onClick={() => setCurrentView('logs')}
               style={{
@@ -309,6 +322,8 @@ function AdminPage() {
             )}
 
             {!loading && !error && currentView === 'logs' && <InventoryLogsTable />}
+
+            {!loading && !error && currentView === 'budget' && <BudgetRequestTable />}
 
             {!loading && !error && currentView === 'tables' && <TableManagement />}
 

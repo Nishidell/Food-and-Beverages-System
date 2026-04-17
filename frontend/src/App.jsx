@@ -7,17 +7,19 @@ import Snowfall from 'react-snowfall';
 import MenuPage from './pages/Customer/MenuPage';
 import AdminPage from './pages/Admin/AdminPage';
 import KitchenPage from './pages/Kitchen/KitchenPage';
+import WaiterPOS from './pages/Kitchen/WaiterPOS';
 import ArchivePage from './pages/Kitchen/ArchivePage';
 import TableManager from './pages/Kitchen/TableManager';
 import LoginPage from './pages/Auth/LoginPage';
 import RegisterPage from './pages/Auth/RegisterPage';
 import NotAuthorizedPage from './pages/Auth/NotAuthorizedPage';
+import DiningReservationPage from './pages/Customer/DiningReservationPage.jsx';
 
 import PaymentSuccess from './pages/Customer/PaymentSuccess.jsx';
 import PaymentCancel from './pages/Customer/PaymentCancel.jsx';
 import InventoryPage from './pages/Kitchen/InventoryPage.jsx';
 import MyOrdersPage from './pages/Customer/MyOrdersPage';
-import PosPage from './pages/Kitchen/PosPage.jsx';
+import CashierPage from './pages/Kitchen/CashierDashboard.jsx'; 
 import ItemDetailsPage from './pages/Customer/ItemDetailsPage.jsx';
 
 // Import Route Handlers
@@ -76,14 +78,7 @@ function App() {
               </AuthRoute>
             }
           />
-          <Route
-            path="/register"
-            element={
-              <AuthRoute>
-                <RegisterPage />
-              </AuthRoute>
-            }
-          />
+          <Route path="/dining-reservation" element={<DiningReservationPage />} />
           <Route path="/not-authorized" element={<NotAuthorizedPage />} />
 
           {/* === PUBLIC ROUTES (Available to everyone) === */}
@@ -100,7 +95,7 @@ function App() {
           <Route
             path="/my-orders"
             element={
-              <ProtectedRoute allowedRoles={['customer', 'F&B Admin', 'Kitchen Staffs', 'Cashier']}>
+              <ProtectedRoute allowedRoles={['customer', 'Operations Manager', 'Kitchen Staffs', 'Cashier']}>
                 <MyOrdersPage />
               </ProtectedRoute>
             }
@@ -110,7 +105,7 @@ function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute allowedRoles={['F&B Admin']}>
+              <ProtectedRoute allowedRoles={['Operations Manager']}>
                 <AdminPage />
               </ProtectedRoute>
             }
@@ -120,18 +115,28 @@ function App() {
           <Route
             path="/kitchen"
             element={
-              <ProtectedRoute allowedRoles={['F&B Admin', 'Kitchen Staffs']}>
+              <ProtectedRoute allowedRoles={['Operations Manager', 'Kitchen Staffs']}>
                 <KitchenPage />
               </ProtectedRoute>
             }
           />
-          
-          {/* POS: Walk-in */}
+
+          {/* Kitchen Portal: Waiter POS */}
           <Route
-            path="/kitchen/pos"
+            path="/kitchen/waiter"
             element={
-              <ProtectedRoute allowedRoles={['F&B Admin', 'Cashier']}>
-                <PosPage />
+              <ProtectedRoute allowedRoles={['Operations Manager', 'Waiter']}>
+                <WaiterPOS />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* POS: Cashier */}
+          <Route
+            path="/kitchen/cashier"
+            element={
+              <ProtectedRoute allowedRoles={['Operations Manager', 'Cashier']}>
+                <CashierPage />
               </ProtectedRoute>
             }
           />
@@ -140,7 +145,7 @@ function App() {
           <Route
             path="/kitchen/tables"
             element={
-              <ProtectedRoute allowedRoles={['F&B Admin', 'Kitchen Staffs']}>
+              <ProtectedRoute allowedRoles={['Operations Manager', 'Kitchen Staffs']}>
                 <TableManager />
               </ProtectedRoute>
             }
@@ -150,7 +155,7 @@ function App() {
           <Route
             path="/kitchen/inventory"
             element={
-              <ProtectedRoute allowedRoles={['F&B Admin', 'Stock Controller']}>
+              <ProtectedRoute allowedRoles={['Operations Manager', 'Stock Controller']}>
                 <InventoryPage />
               </ProtectedRoute>
             }
@@ -160,7 +165,7 @@ function App() {
           <Route
             path="/kitchen/archive"
             element={
-              <ProtectedRoute allowedRoles={['F&B Admin', 'Kitchen Staffs']}>
+              <ProtectedRoute allowedRoles={['Operations Manager', 'Kitchen Staffs']}>
                 <ArchivePage />
               </ProtectedRoute>
             }

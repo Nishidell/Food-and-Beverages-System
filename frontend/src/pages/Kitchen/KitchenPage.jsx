@@ -42,6 +42,34 @@ function KitchenPage() {
       return new Date(dateStr);
   };
 
+  // --- ITEM-LEVEL CHECKBOX STATE ---
+  const [checkedItems, setCheckedItems] = useState([]);
+
+  const toggleItemCheck = async (detailId) => {
+      if (!detailId) return;
+
+      // 1. Figure out if we are checking or unchecking
+      const willBeChecked = !checkedItems.includes(detailId);
+
+      // 2. Instantly update the UI so it feels fast for the chef
+      setCheckedItems(prev => 
+          willBeChecked 
+              ? [...prev, detailId] 
+              : prev.filter(id => id !== detailId)
+      );
+
+      // 3. Silently save it to the Clever Cloud database in the background!
+      try {
+          await apiClient(`/orders/item/${detailId}/toggle`, {
+              method: 'PUT',
+              body: JSON.stringify({ isChecked: willBeChecked })
+          });
+      } catch (error) {
+          console.error("Failed to save checkbox state to database:", error);
+          // Optional: You could show a toast.error here if the internet drops
+      }
+  };
+
   const getLocalDatePart = (dateObj) => new Date(dateObj).toLocaleDateString('en-CA');
 
   const fetchOrderDetails = async (orderId) => {
@@ -71,6 +99,17 @@ const fetchInitialData = async () => {
       // We can use the response directly. No more looping.
       const ordersList = await kitchenResponse.json();
       setKitchenOrders(ordersList);
+
+      const alreadyChecked = [];
+      ordersList.forEach(order => {
+          order.items?.forEach(item => {
+              // If the database remembers this item is 'ready', put it in the checked array
+              if (item.item_status === 'ready') {
+                  alreadyChecked.push(item.order_detail_id);
+              }
+          });
+      });
+      setCheckedItems(alreadyChecked);
 
       // 3. Set Served Count
       const servedList = await servedResponse.json();
@@ -115,14 +154,29 @@ const fetchInitialData = async () => {
             }
         });
 
-        socket.on('order-status-updated', (data) => {
+       socket.on('order-status-updated', (data) => {
             setKitchenOrders(prev => {
                 const { order_id, status } = data;
+                
+                // If it's completely finished, remove it from the active screen
                 if (status === 'served' || status === 'cancelled') {
                     if (status === 'served') setServedCount(c => c + 1);
                     return prev.filter(o => o.order_id !== order_id);
                 }
-                return prev.map(o => o.order_id === order_id ? { ...o, status } : o);
+                
+                // Otherwise, update the specific order's items
+                return prev.map(o => {
+                    if (o.order_id === order_id) {
+                        // Change the status of all active items so our getTicketStatus helper recalculates!
+                        const updatedItems = o.items.map(item => 
+                            (item.item_status !== 'served' && item.item_status !== 'cancelled') 
+                                ? { ...item, item_status: status } 
+                                : item
+                        );
+                        return { ...o, items: updatedItems };
+                    }
+                    return o;
+                });
             });
         });
     }
@@ -202,12 +256,25 @@ const fetchInitialData = async () => {
     if (filter !== 'Custom') { setStartDate(startStr); setEndDate(endStr); }
   };
 
-  const filteredOrders = kitchenOrders.filter(order => {
+    // NEW: Calculate the overall ticket status based on individual food items
+    const getTicketStatus = (items) => {
+        if (!items || items.length === 0) return 'open';
+        const active = items.filter(i => i.item_status !== 'cancelled' && i.item_status !== 'served');
+
+        if (active.length === 0) return 'served';
+        if (active.every(i => i.item_status === 'pending')) return 'pending';
+        if (active.every(i => i.item_status === 'ready')) return 'ready';
+        return 'preparing'; // If there's a mix of statuses, the kitchen is actively preparing it
+    };
+
+    const filteredOrders = kitchenOrders.filter(order => {
     const statusMatch = filterStatus === 'All' || order.status?.toLowerCase() === filterStatus.toLowerCase();
     const typeMatch = filterType === 'All Types' || order.order_type?.toLowerCase() === filterType.toLowerCase();
     const orderDateObj = fixDate(order.order_date);
     const orderDatePart = getLocalDatePart(orderDateObj);
-    const dateMatch = orderDatePart >= startDate && orderDatePart <= endDate;
+
+    const isActiveTicket = order.status?.toLowerCase() === 'pending' || order.status?.toLowerCase() === 'preparing';
+    const dateMatch = (orderDatePart >= startDate && orderDatePart <= endDate) || isActiveTicket;
     return statusMatch && typeMatch && dateMatch;
   });
 
@@ -221,9 +288,9 @@ const fetchInitialData = async () => {
       }
   });
 
-  const pendingCount = kitchenOrders.filter(o => o.status?.toLowerCase() === 'pending').length;
-  const preparingCount = kitchenOrders.filter(o => o.status?.toLowerCase() === 'preparing').length;
-  const readyCount = kitchenOrders.filter(o => o.status?.toLowerCase() === 'ready').length;
+  const pendingCount = kitchenOrders.filter(o => getTicketStatus(o.items) === 'pending').length;
+  const preparingCount = kitchenOrders.filter(o => getTicketStatus(o.items) === 'preparing').length;
+  const readyCount = kitchenOrders.filter(o => getTicketStatus(o.items) === 'ready').length;
 
   const getStatusBadgeClass = (status) => {
     switch(status?.toLowerCase()) {
@@ -243,6 +310,37 @@ const fetchInitialData = async () => {
       });
     } catch (err) { return 'N/A'; }
   };
+
+  const handleVoidItem = async (detailId) => {
+    // 1. Double-check so waiters don't accidentally click it
+    if (!window.confirm("Are you sure you want to void this item? This will return the stock to inventory.")) {
+        return;
+    }
+
+    try {
+        // 2. Call our new backend route
+        const response = await apiClient(`/orders/item/${detailId}/void`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        if (response.ok) {
+            toast.success("Item voided successfully!");
+            
+            // 3. IMPORTANT: Call whatever function you use to refresh the screen!
+            // Example: fetchActiveTabs() or loadOrderDetails()
+            
+        } else {
+            const data = await response.json();
+            toast.error(data.message || "Failed to void item.");
+        }
+    } catch (error) {
+        console.error("Void Error:", error);
+        toast.error("Network error. Could not void item.");
+    }
+};
 
   return (
     <>
@@ -335,53 +433,95 @@ const fetchInitialData = async () => {
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {sortedOrders.map(order => {
+                    const ticketStatus = getTicketStatus(order.items);
+                    const allItemsChecked = order.items?.length > 0 && order.items.every(item => checkedItems.includes(item.order_detail_id));
                     return (
                         <div key={order.order_id} className="kitchen-card">
                             <div className="kitchen-card-header relative">
-                                <span className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold uppercase ${getStatusBadgeClass(order.status)}`}>
-                                    {order.status}
+                                <span className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold uppercase ${getStatusBadgeClass(ticketStatus)}`}>
+                                    {ticketStatus}
                                 </span>
                                 <h2 className="text-xl font-bold text-gray-800">#{order.order_id}</h2>
                                 <p className="text-sm font-bold text-gray-700">{order.first_name ? `${order.first_name} ${order.last_name || ''}` : 'Guest'}</p>
                                 <p className="text-sm text-gray-500">{formatOrderTime(order.order_date)}</p>
                             </div>
                             
-                            <div className="kitchen-card-body">
-                                <p><span className="info-label">Type:</span> {order.order_type}</p>
-                                <p><span className="info-label">Loc:</span> {order.delivery_location}</p>
-                                <p><span classname="info-label">Name: </span>{order.first_name}</p>
-                                <div className="mt-2 border-t pt-2">
-                                    <p className="font-bold text-sm mb-1">Items:</p>
-                                    {order.items?.map((item, idx) => (
-                                        <div key={item.order_detail_id || idx} className="mb-2">
-                                            <div className="item-text font-medium">
-                                                {item.quantity} x {item.item_name}
-                                            </div>
-                                            {item.instructions && (
-                                                <div className="text-xs text-red-600 italic ml-4 bg-red-50 px-1 rounded inline-block border border-red-100">
-                                                    Note: {item.instructions}
+                            {order.items?.map((item, idx) => {
+                                        const isChecked = checkedItems.includes(item.order_detail_id);
+                                        return (
+                                            <div key={item.order_detail_id || idx} 
+                                                 className={`mb-2 flex items-start gap-3 p-2 rounded-md border transition-all duration-200 ${isChecked ? 'bg-gray-100 border-gray-200' : 'hover:bg-amber-50 border-transparent hover:border-amber-200'}`}
+                                            >
+                                                {/* ✅ THE CHECKBOX */}
+                                                <input 
+                                                    type="checkbox" 
+                                                    className="mt-1 w-5 h-5 accent-green-600 cursor-pointer flex-shrink-0"
+                                                    checked={isChecked}
+                                                    onChange={() => toggleItemCheck(item.order_detail_id)}
+                                                />
+                                                
+                                                {/* ✅ THE FOOD ITEM (Strikes through when checked) */}
+                                                <div className={`flex-1 transition-all duration-200 ${isChecked ? 'line-through text-gray-400 opacity-60' : 'text-gray-900'}`}>
+                                                    <div className="item-text font-bold text-base tracking-wide">
+                                                        <span className="text-amber-600">{item.quantity} x </span> 
+                                                        {item.item_name}
+                                                    </div>
+                                                    
+                                                    {item.instructions && (
+                                                        <div className={`text-xs italic mt-1 px-2 py-0.5 rounded inline-block border ${isChecked ? 'text-gray-400 bg-gray-50 border-gray-200' : 'text-red-700 bg-red-50 border-red-200'}`}>
+                                                            Note: {item.instructions}
+                                                        </div>
+                                                    )}
                                                 </div>
+
+                                                {/* Only show the Void button if the item isn't already cancelled or served */}
+                                            {item.item_status !== 'cancelled' && item.item_status !== 'served' && (
+                                                <button 
+                                                    onClick={() => handleVoidItem(item.order_detail_id)}
+                                                    className="ml-2 text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
+                                                    title="Void this item"
+                                                >
+                                                    {/* You can use the lucide-react 'X' icon here, or just a text 'X' */}
+                                                    <span className="font-bold text-sm">✕</span>
+                                                </button>
                                             )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                                            </div>
+                                        );
+                                    })}
 
                             <div className="kitchen-card-footer">
-                                {order.status?.toLowerCase() === 'pending' && (
+                                {ticketStatus === 'pending' && (
                                     <div className="flex gap-2">
-                                        <button onClick={() => handleUpdateStatus(order.order_id, 'Preparing')} className="kitchen-btn btn-green flex-1">Accept</button>
+                                        <button 
+                                            onClick={() => handleUpdateStatus(order.order_id, 'Preparing')} 
+                                            disabled={!allItemsChecked}
+                                            className={`kitchen-btn flex-1 ${allItemsChecked ? 'btn-green' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                                        >
+                                            Accept
+                                        </button>
                                         <button onClick={() => handlePromptCancel(order.order_id)} className="kitchen-btn btn-red"><Trash2 size={18}/></button>
                                     </div>
                                 )}
-                                {order.status?.toLowerCase() === 'preparing' && (
+                                {ticketStatus === 'preparing' && (
                                     <div className="flex gap-2">
-                                        <button onClick={() => handleUpdateStatus(order.order_id, 'Ready')} className="kitchen-btn btn-blue flex-1">Ready</button>
+                                        <button 
+                                            onClick={() => handleUpdateStatus(order.order_id, 'Ready')} 
+                                            disabled={!allItemsChecked}
+                                            className={`kitchen-btn flex-1 ${allItemsChecked ? 'btn-blue' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                                        >
+                                            Ready
+                                        </button>
                                         <button onClick={() => handlePromptCancel(order.order_id)} className="kitchen-btn btn-red"><Trash2 size={18}/></button>
                                     </div>
                                 )}
-                                {order.status?.toLowerCase() === 'ready' && (
-                                    <button onClick={() => handleUpdateStatus(order.order_id, 'Served')} className="kitchen-btn btn-amber w-full">Served</button>
+                                {ticketStatus === 'ready' && (
+                                    <button 
+                                        onClick={() => handleUpdateStatus(order.order_id, 'Served')} 
+                                        disabled={!allItemsChecked}
+                                        className={`kitchen-btn w-full ${allItemsChecked ? 'btn-amber' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                                    >
+                                        Served
+                                    </button>
                                 )}
                             </div>
                         </div>

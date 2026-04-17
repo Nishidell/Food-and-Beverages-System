@@ -44,7 +44,7 @@ export const authorizeRoles = (...allowedRolesOrPositions) => {
 
     // 4. Special Case: 'F&B Admin' should access 'admin' routes (Backward compatibility)
     // If the route asks for 'admin', but the user is 'F&B Admin', allow it.
-    if (userPosition === 'F&B Admin' && allowedRolesOrPositions.includes('admin')) {
+    if (userPosition === 'Operations Manager' && allowedRolesOrPositions.includes('admin')) {
         return next();
     }
 

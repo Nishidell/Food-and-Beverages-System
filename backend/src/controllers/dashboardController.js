@@ -33,45 +33,57 @@ export const getDashboardSummary = async (req, res) => {
     ] = await Promise.all([
       // 1. Total Sales Today (Fallback: total = 0)
       safeQuery(
-        pool.query(`SELECT SUM(total_amount) AS total FROM fb_orders WHERE DATE(order_date) = CURDATE() AND status != 'cancelled'`),
+        pool.query(`SELECT SUM(total_amount) AS total FROM fb_new_orders WHERE DATE(order_date) = CURDATE() AND status != 'cancelled'`),
         [{ total: 0 }] 
       ),
       // 2. Sales Yesterday
       safeQuery(
-        pool.query(`SELECT SUM(total_amount) AS total FROM fb_orders WHERE DATE(order_date) = CURDATE() - INTERVAL 1 DAY AND status != 'cancelled'`),
+        pool.query(`SELECT SUM(total_amount) AS total FROM fb_new_orders WHERE DATE(order_date) = CURDATE() - INTERVAL 1 DAY AND status != 'cancelled'`),
         [{ total: 0 }]
       ),
-      // 3. Active Orders
+      // 3. Active Orders (NOW SIMPLY LOOKS FOR 'Open' TABS)
       safeQuery(
-        pool.query(`SELECT COUNT(*) AS total FROM fb_orders WHERE status IN ('pending', 'preparing', 'ready')`),
+        pool.query(`SELECT COUNT(*) AS total FROM fb_new_orders WHERE status = 'Open'`),
         [{ total: 0 }]
       ),
       // 4. Volume Today
       safeQuery(
-        pool.query(`SELECT COUNT(*) AS total FROM fb_orders WHERE DATE(order_date) = CURDATE() AND status != 'cancelled'`),
+        pool.query(`SELECT COUNT(*) AS total FROM fb_new_orders WHERE DATE(order_date) = CURDATE() AND status != 'cancelled'`),
         [{ total: 0 }]
       ),
       // 5. Volume Yesterday
       safeQuery(
-        pool.query(`SELECT COUNT(*) AS total FROM fb_orders WHERE DATE(order_date) = CURDATE() - INTERVAL 1 DAY AND status != 'cancelled'`),
+        pool.query(`SELECT COUNT(*) AS total FROM fb_new_orders WHERE DATE(order_date) = CURDATE() - INTERVAL 1 DAY AND status != 'cancelled'`),
         [{ total: 0 }]
       ),
-      // 6. Low Stock Count
+      // 6. Low Stock Count (Unchanged)
       safeQuery(
         pool.query(`SELECT COUNT(*) AS total FROM fb_ingredients WHERE stock_level <= COALESCE(reorder_point, 10)`),
         [{ total: 0 }]
       ),
-      // 7. Table Stats
+      // 7. Table Stats (Unchanged)
       safeQuery(
-        pool.query(`SELECT COUNT(*) as total, SUM(CASE WHEN status = 'Available' THEN 1 ELSE 0 END) as available FROM fb_tables`),
-        [{ total: 0, available: 0 }]
+        pool.query(`SELECT SUM(CASE WHEN status = 'Available' THEN 1 ELSE 0 END) as available, COUNT(*) as total, SUM(capacity) as totalCapacity FROM fb_tables`),
+        [{ available: 0, total: 0, totalCapacity: 0 }]
       ),
-      // 8. Recent Orders (Fallback: Empty Array)
+      // 8. Recent Orders (NOW DYNAMICALLY BUILDS DELIVERY LOCATION)
       safeQuery(
-        pool.query(`SELECT order_id, client_id, order_date, status, total_amount, order_type, delivery_location FROM fb_orders ORDER BY order_date DESC LIMIT 5`),
+        pool.query(`
+          SELECT 
+            o.order_id, o.client_id, o.order_date, o.status, o.total_amount, o.order_type,
+            CASE 
+              WHEN o.order_type = 'Room Dining' AND tr.room_num IS NOT NULL THEN CONCAT('Room ', tr.room_num)
+              WHEN o.order_type = 'Dine-In' AND ft.table_number IS NOT NULL THEN CONCAT('Table ', ft.table_number)
+              ELSE 'Unknown Location' 
+            END AS delivery_location
+          FROM fb_new_orders o
+          LEFT JOIN tbl_rooms tr ON o.room_id = tr.room_id
+          LEFT JOIN fb_tables ft ON o.table_id = ft.table_id
+          ORDER BY o.order_date DESC LIMIT 5
+        `),
         [] 
       ),
-      // 9. Stock Alerts (Fallback: Empty Array)
+      // 9. Stock Alerts (Unchanged)
       safeQuery(
         pool.query(`SELECT ingredient_id, name, stock_level AS stock FROM fb_ingredients WHERE stock_level <= COALESCE(reorder_point, 10) ORDER BY stock_level ASC LIMIT 5`),
         [] 
@@ -93,6 +105,7 @@ export const getDashboardSummary = async (req, res) => {
 
     const availableTables = Number(tableRows[0]?.available || 0);
     const totalTables = Number(tableRows[0]?.total || 0);
+    const totalSeatingCapacity = Number(tableRows[0]?.totalCapacity || 0);
 
     res.json({
       summary: {
@@ -103,7 +116,8 @@ export const getDashboardSummary = async (req, res) => {
         lowStock,
         lowStockGrowth: 0, 
         availableTables,
-        totalTables
+        totalTables,
+        totalSeatingCapacity
       },
       // If recentOrders failed, it sends [] (empty list) instead of crashing
       recentOrders: recentOrders || [], 

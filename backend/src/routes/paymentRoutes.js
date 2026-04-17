@@ -20,12 +20,12 @@ const router = express.Router();
 router.post('/checkout', protect, authorizeRoles("customer"), createPayMongoPayment);
 
 // 2️⃣ Manual Record (For Cash/POS)
-// Allowed: 'Cashier', 'F&B Admin' (Positions)
-router.post("/", protect, authorizeRoles("Cashier", "F&B Admin", "Waiter"), recordPayment);
+// Allowed: 'Cashier', 'Operations Manager' (Positions)
+router.post("/", protect, authorizeRoles("Cashier", "Operations Manager", "Waiter"), recordPayment);
 
 // 3️⃣ Get Payments for an Order
-// Allowed: 'Cashier', 'F&B Admin', 'Waiter' (Positions)
-router.get("/:order_id", protect, authorizeRoles("Cashier", "F&B Admin", "Waiter"), getPaymentsForOrder);
+// Allowed: 'Cashier', 'Operations Manager', 'Waiter' (Positions)
+router.get("/:order_id", protect, authorizeRoles("Cashier", "Operations Manager", "Waiter"), getPaymentsForOrder);
 
 /* -------------------------
    💳 PayMongo Routes

@@ -7,47 +7,93 @@ import {
     getKitchenOrders,
     getServedOrders,
     createPosOrder,
-    getMyOrders
+    getMyOrders,
+    toggleItemCheckbox,
+    getUnpaidTabs,
+    settleBill,
+    addItemsToOrder,
+    voidOrderItem
 } from "../controllers/orderController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // --- 1. Kitchen Display Routes ---
-// Allowed: F&B Admin, Kitchen Staffs, Waiter, Cashier
+// Allowed: Operations Manager, Kitchen Staffs, Waiter, Cashier
 router.get(
     '/kitchen', 
     protect, 
-    authorizeRoles("F&B Admin", "Kitchen Staffs", "Waiter", "Cashier"), 
+    authorizeRoles("Operations Manager", "Kitchen Staffs", "Waiter", "Cashier"), 
     getKitchenOrders
 ); 
 
 router.get(
     '/served', 
     protect, 
-    authorizeRoles("F&B Admin", "Kitchen Staffs", "Waiter", "Cashier"), 
+    authorizeRoles("Operations Manager", "Kitchen Staffs", "Waiter", "Cashier"), 
     getServedOrders
 );
 
 // --- 2. POS Order Creation ---
-// Allowed: F&B Admin, Waiter, Cashier
+// Allowed: Operations Manager, Waiter, Cashier
 router.post(
     "/pos", 
     protect, 
-    authorizeRoles("F&B Admin", "Waiter", "Cashier"), 
+    authorizeRoles("Operations Manager", "Waiter", "Cashier"), 
     createPosOrder
 );
 
+// --- 2.5 Add Items to Existing Tab ---
+// Allowed: Operations Manager, Waiter, Cashier
+router.post(
+    "/:id/items", 
+    protect, 
+    authorizeRoles("Operations Manager", "Waiter", "Cashier"), 
+    addItemsToOrder
+);
+
 // --- 3. Order Status Updates (Kitchen/POS) ---
-// Allowed: F&B Admin, Kitchen Staffs, Waiter, Cashier
+// Allowed: Operations Manager, Kitchen Staffs, Waiter, Cashier
 router.put(
     "/:id/status", 
     protect, 
-    authorizeRoles("F&B Admin", "Kitchen Staffs", "Waiter", "Cashier"), 
+    authorizeRoles("Operations Manager", "Kitchen Staffs", "Waiter", "Cashier"), 
     updateOrderStatus
 );
 
-// --- 4. Admin/Customer Routes ---
+// --- 3.5 Item-Level Status Update (Checkboxes) ---
+// Allowed: Operations Manager, Kitchen Staffs, Waiter, Cashier
+router.put(
+    "/item/:detailId/toggle", 
+    protect, 
+    authorizeRoles("Operations Manager", "Kitchen Staffs", "Waiter", "Cashier"), 
+    toggleItemCheckbox
+);
+
+router.put(
+    "/item/:detailId/void", 
+    protect, 
+    authorizeRoles("Operations Manager", "Waiter", "Cashier"), 
+    voidOrderItem
+);
+
+// --- 4. Cashier & Billing Routes ---
+// Allowed: Operations Manager, Cashier
+router.get(
+    "/unpaid", 
+    protect, 
+    authorizeRoles("Operations Manager", "Cashier", "Admin"), 
+    getUnpaidTabs
+);
+
+router.post(
+    "/:id/settle", 
+    protect, 
+    authorizeRoles("Operations Manager", "Cashier", "Admin"), 
+    settleBill
+);
+
+// --- 4.5 Admin/Customer Routes ---
 router.post("/", protect, createOrder); // Customer creates own order (checked by role=customer internally or logic)
 router.get("/my-orders", protect, getMyOrders);
 router.get("/", getOrders); // Usually Admin only, or filtering in controller

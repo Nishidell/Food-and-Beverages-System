@@ -13,7 +13,7 @@ const AuthRoute = ({ children }) => {
     // 1. Check Position (Staff)
     if (user.position) {
       switch (user.position) {
-        case 'F&B Admin':
+        case 'Operations Manager':
           return '/admin';
         case 'Kitchen Staffs':
           return '/kitchen';

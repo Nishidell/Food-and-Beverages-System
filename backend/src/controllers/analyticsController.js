@@ -19,21 +19,20 @@ export const getDashboardAnalytics = async (req, res) => {
     let queryParams = []; // Params for Type Filter
     let debugMessage = "No Filter Applied";
 
-    // --- A. HANDLE ORDER TYPE FILTER ---
+  // --- A. HANDLE ORDER TYPE FILTER ---
     const filter = order_type ? order_type.trim() : 'All';
 
     if (filter !== 'All') {
-        // Smart Filter for Room Service
         if (['Room Dining', 'Room Service', 'room dining', 'room service'].includes(filter)) {
-            debugMessage = "✅ MATCHED: Smart Room Filter";
-            typeCondition = "AND (o.order_type IN ('Room Dining', 'Room Service') OR o.delivery_location LIKE 'Room%' OR o.room_id > 0)";
+            debugMessage = "MATCHED: Smart Room Filter";
+            typeCondition = "AND o.order_type = 'Room Dining'";
         } 
-        else if (filter === 'Dine-in') {
-            debugMessage = "✅ MATCHED: Smart Dine-in Filter";
-            typeCondition = "AND o.order_type = 'Dine-in' AND (o.delivery_location NOT LIKE 'Room%' AND (o.room_id IS NULL OR o.room_id = 0))";
+        else if (filter === 'Dine-in' || filter === 'Dine-In') {
+            debugMessage = "MATCHED: Smart Dine-in Filter";
+            typeCondition = "AND o.order_type = 'Dine-In'";
         } 
         else {
-            debugMessage = "⚠️ FALLBACK: Standard Exact Match";
+            debugMessage = "FALLBACK: Standard Exact Match";
             typeCondition = "AND o.order_type = ?";
             queryParams = [filter];
         }
@@ -68,79 +67,70 @@ export const getDashboardAnalytics = async (req, res) => {
     ] = await Promise.all([
       // 1-4: SALES TRENDS CARDS (Keep these STATIC so they always show the summary)
       safeQuery(
-        `SELECT COUNT(o.order_id) AS fb_orders, SUM(o.total_amount) AS sales 
-         FROM fb_orders o 
+        `SELECT COUNT(o.order_id) AS fb_new_orders, SUM(o.total_amount) AS sales 
+         FROM fb_new_orders o 
          WHERE DATE(o.order_date) = CURDATE() AND o.status != 'cancelled' ${typeCondition}`,
         queryParams, [{ fb_orders: 0, sales: 0 }]
       ),
       safeQuery(
-        `SELECT COUNT(o.order_id) AS fb_orders, SUM(o.total_amount) AS sales
-         FROM fb_orders o 
+        `SELECT COUNT(o.order_id) AS fb_new_orders, SUM(o.total_amount) AS sales
+         FROM fb_new_orders o 
          WHERE DATE(o.order_date) = CURDATE() - INTERVAL 1 DAY AND o.status != 'cancelled' ${typeCondition}`,
         queryParams, [{ fb_orders: 0, sales: 0 }]
       ),
       safeQuery(
-        `SELECT COUNT(o.order_id) AS fb_orders, SUM(o.total_amount) AS sales
-         FROM fb_orders o 
+        `SELECT COUNT(o.order_id) AS fb_new_orders, SUM(o.total_amount) AS sales
+         FROM fb_new_orders o 
          WHERE YEARWEEK(o.order_date, 1) = YEARWEEK(NOW(), 1) AND o.status != 'cancelled' ${typeCondition}`,
         queryParams, [{ fb_orders: 0, sales: 0 }]
       ),
       safeQuery(
-        `SELECT COUNT(o.order_id) AS fb_orders, SUM(o.total_amount) AS sales
-         FROM fb_orders o 
+        `SELECT COUNT(o.order_id) AS fb_new_orders, SUM(o.total_amount) AS sales
+         FROM fb_new_orders o 
          WHERE YEAR(o.order_date) = YEAR(NOW()) AND MONTH(o.order_date) = MONTH(NOW()) AND o.status != 'cancelled' ${typeCondition}`,
         queryParams, [{ fb_orders: 0, sales: 0 }]
       ),
 
-      // 5. Top Items (✅ NOW DYNAMIC: Uses dateCondition instead of hardcoded month)
+      // 5. Top Items (Dynamic)
       safeQuery(
-        `SELECT mi.item_name, SUM(od.quantity) AS total_sold, SUM(od.subtotal) AS total_sales 
-         FROM fb_order_details od
+        `SELECT mi.item_name, SUM(od.quantity) AS total_sold, SUM(od.quantity * od.price_on_purchase) AS total_sales 
+         FROM fb_new_order_details od
          JOIN fb_menu_items mi ON od.item_id = mi.item_id
-         JOIN fb_orders o ON od.order_id = o.order_id
-         WHERE o.status != 'cancelled' ${typeCondition} ${dateCondition}
+         JOIN fb_new_orders o ON od.order_id = o.order_id
+         WHERE o.status != 'cancelled' AND od.item_status != 'cancelled' ${typeCondition} ${dateCondition}
          GROUP BY od.item_id, mi.item_name
          ORDER BY total_sold DESC LIMIT 7`, 
-        allParams, // Use combined params
-        []
-      ),
-
-      // 6. Payment Methods (✅ NOW DYNAMIC)
-      safeQuery(
-        `SELECT p.payment_method, COUNT(p.payment_id) AS transactions, SUM(p.amount) AS total_value 
-         FROM fb_payments p
-         JOIN fb_orders o ON p.order_id = o.order_id
-         WHERE p.payment_status = 'paid' AND o.status != 'cancelled' ${typeCondition} ${dateCondition}
-         GROUP BY p.payment_method`,
         allParams,
         []
       ),
+
+      // 6. Payment Methods (Dynamic)
+      safeQuery(
+        `SELECT p.payment_method, COUNT(p.payment_id) AS transactions, SUM(p.amount) AS total_value 
+         FROM fb_new_payments p
+         JOIN fb_new_orders o ON p.order_id = o.order_id
+         WHERE p.payment_status = 'paid' AND o.status != 'cancelled' ${typeCondition} ${dateCondition}
+         GROUP BY p.payment_method`,
+         allParams,
+        []
+      ),
       
-      // 7. Order Type Distribution (✅ NOW DYNAMIC)
+      // 7. Order Type Distribution
       safeQuery(
         `SELECT 
-           CASE 
-             WHEN o.room_id IS NOT NULL AND o.room_id > 0 THEN 'Room Dining'
-             WHEN o.delivery_location LIKE 'Room%' THEN 'Room Dining'
-             ELSE o.order_type 
-           END AS order_type, 
+           o.order_type, 
            COUNT(o.order_id) AS orders, 
            SUM(o.total_amount) AS total_value 
-         FROM fb_orders o
+         FROM fb_new_orders o
          WHERE o.status != 'cancelled' ${typeCondition} ${dateCondition}
-         GROUP BY 
-           CASE 
-             WHEN o.room_id IS NOT NULL AND o.room_id > 0 THEN 'Room Dining'
-             WHEN o.delivery_location LIKE 'Room%' THEN 'Room Dining'
-             ELSE o.order_type 
-           END`,
+         GROUP BY o.order_type`,
         allParams, []
       ),
 
       // 8. Peak Hours (✅ NOW DYNAMIC)
       safeQuery(
         `SELECT HOUR(o.order_date) AS hour, COUNT(o.order_id) AS order_count 
-         FROM fb_orders o
+         FROM fb_new_orders o
          WHERE o.status != 'cancelled' ${typeCondition} ${dateCondition}
          GROUP BY hour ORDER BY order_count DESC LIMIT 1`,
         allParams, []

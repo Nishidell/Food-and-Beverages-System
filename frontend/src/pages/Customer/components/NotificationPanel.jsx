@@ -12,7 +12,7 @@ const NotificationPanel = ({
     <>
       {/* Backdrop (for clicking off the modal) */}
       <div
-        className={`fixed inset-0 bg-black/75 z-20 transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black/75 z-60 transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
@@ -20,7 +20,7 @@ const NotificationPanel = ({
 
       {/* The Sliding Panel */}
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-sm bg-orange-50 shadow-lg z-30 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-full w-full max-w-sm bg-orange-50 shadow-lg z-70 transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >

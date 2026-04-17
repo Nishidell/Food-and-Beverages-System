@@ -107,3 +107,51 @@ export const deleteTable = async (req, res) => {
         res.status(500).json({ message: "Error deleting table", error: error.message });
     }
 };
+
+// @desc    Seat a walk-in guest and open a new tab
+// @route   POST /api/tables/:id/seat
+// @access  Private (Hostess/Manager)
+export const seatGuest = async (req, res) => {
+    const { id } = req.params;
+    const { guest_name } = req.body;
+    const connection = await pool.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        // 1. Mark the physical table as Occupied
+        await connection.query(
+            "UPDATE fb_tables SET status = 'Occupied' WHERE table_id = ?",
+            [id]
+        );
+
+        // 2. Create the brand new, empty Tab for the Cashier/Waiter
+        await connection.query(
+            `INSERT INTO fb_new_orders 
+            (table_id, order_type, guest_name, status, payment_status, total_amount) 
+            VALUES (?, 'Dine-In', ?, 'Open', 'unpaid', 0)`,
+            [id, guest_name || 'Walk-in Guest']
+        );
+
+        await connection.commit();
+
+        const io = req.app.get('io');
+        if (io) {
+            // Update the Table UI
+            io.emit('table-update', { 
+                table_id: parseInt(id), 
+                status: 'Occupied' 
+            });
+   
+            io.emit('new-order'); 
+        }
+
+        res.json({ success: true, message: "Guest seated and tab opened." });
+    } catch (error) {
+        await connection.rollback();
+        console.error("Error seating guest:", error);
+        res.status(500).json({ message: "Failed to seat guest", error: error.message });
+    } finally {
+        connection.release();
+    }
+};

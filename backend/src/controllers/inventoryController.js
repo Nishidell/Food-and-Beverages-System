@@ -1,4 +1,5 @@
 import pool from "../config/mysql.js";
+import xlsx from 'xlsx';
 
 // Helper function to create a log entry
 const createLog = async (ingredient_id, employee_id, action_type, quantity_change, new_stock_level, reason, connection) => {
@@ -31,8 +32,8 @@ export const getIngredientById = async (req, res) => {
 
 // @desc    Create a new ingredient
 export const createIngredient = async (req, res) => {
-    // ✅ Extract reorder_point from request (Default to 10 if missing)
-    const { name, stock_level = 0, unit_of_measurement, reorder_point = 10 } = req.body;
+    // Extract reorder_point and unit_cost from request
+    const { name, stock_level = 0, unit_of_measurement, reorder_point = 10, unit_cost = 0.00 } = req.body;
 
     if (!name || !unit_of_measurement) {
         return res.status(400).json({ message: "Name and unit of measurement are required." });
@@ -53,9 +54,9 @@ export const createIngredient = async (req, res) => {
         }
         const employee_id = empRows[0].employee_id;
 
-        // 2. Insert Ingredient (✅ Added reorder_point column)
-        const sql = "INSERT INTO fb_ingredients (name, stock_level, unit_of_measurement, reorder_point) VALUES (?, ?, ?, ?)";
-        const [result] = await connection.query(sql, [name, stock_level, unit_of_measurement, reorder_point]);
+        // 2. Insert Ingredient (Added reorder_point and unit_cost)
+        const sql = "INSERT INTO fb_ingredients (name, stock_level, unit_of_measurement, reorder_point, unit_cost) VALUES (?, ?, ?, ?, ?)";
+        const [result] = await connection.query(sql, [name, stock_level, unit_of_measurement, reorder_point, unit_cost]);
         const newIngredientId = result.insertId;
 
         // 3. Log using employee_id
@@ -67,7 +68,7 @@ export const createIngredient = async (req, res) => {
             name,
             stock_level,
             unit_of_measurement,
-            reorder_point // ✅ Return new value
+            reorder_point // Return new value
         });
     } catch (error) {
         await connection.rollback();
@@ -80,21 +81,22 @@ export const createIngredient = async (req, res) => {
 
 // @desc    Update ingredient details
 export const updateIngredientDetails = async (req, res) => {
-    // ✅ Extract reorder_point to allow editing
-    const { name, unit_of_measurement, reorder_point } = req.body;
+    // Extract reorder_point and unit_cost to allow editing
+    const { name, unit_of_measurement, reorder_point, unit_cost } = req.body;
     const { id } = req.params;
 
     if (!name || !unit_of_measurement) {
         return res.status(400).json({ message: "Name and unit of measurement are required." });
     }
 
-    try {
-        // ✅ Update SQL query to include reorder_point
-        const sql = "UPDATE fb_ingredients SET name = ?, unit_of_measurement = ?, reorder_point = ? WHERE ingredient_id = ?";
-        // Use a default (10) if reorder_point is somehow undefined, though frontend should send it
-        const safeReorderPoint = reorder_point !== undefined ? reorder_point : 10;
+   try {
+        // Update SQL query to include reorder_point and unit_cost
+        const sql = "UPDATE fb_ingredients SET name = ?, unit_of_measurement = ?, reorder_point = ?, unit_cost = ? WHERE ingredient_id = ?";
         
-        const [result] = await pool.query(sql, [name, unit_of_measurement, safeReorderPoint, id]);
+        const safeReorderPoint = reorder_point !== undefined ? reorder_point : 10;
+        const safeUnitCost = unit_cost !== undefined ? unit_cost : 0.00;
+        
+        const [result] = await pool.query(sql, [name, unit_of_measurement, safeReorderPoint, safeUnitCost, id]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: "Ingredient not found" });
@@ -208,5 +210,60 @@ export const getInventoryLogs = async (req, res) => {
     } catch (error) {
         console.error("Get Logs Error:", error);
         res.status(500).json({ message: "Error fetching inventory logs", error: error.message });
+    }
+};
+
+// @desc    Export inventory valuation to Excel
+export const exportInventoryValue = async (req, res) => {
+    try {
+        // 1. Get the freshest data right from the database
+        const [ingredients] = await pool.query("SELECT * FROM fb_ingredients ORDER BY name ASC");
+        
+        let grandTotal = 0;
+
+        // 2. Format the data exactly how Accounting wants it
+        const excelData = ingredients.map(item => {
+            const stock = parseFloat(item.stock_level) || 0;
+            const cost = parseFloat(item.unit_cost) || 0;
+            const totalValue = stock * cost;
+            
+            grandTotal += totalValue;
+
+            return {
+                "Ingredient ID": item.ingredient_id,
+                "Ingredient Name": item.name,
+                "Current Stock": stock,
+                "Unit": item.unit_of_measurement,
+                "Unit Cost (PHP)": cost,
+                "Total Value (PHP)": totalValue
+            };
+        });
+
+        // 3. Add a blank row, then the Grand Total row at the bottom
+        excelData.push({}); 
+        excelData.push({
+            "Ingredient Name": "GRAND TOTAL",
+            "Total Value (PHP)": grandTotal
+        });
+
+        // 4. Create the Excel Workbook and Sheet
+        const worksheet = xlsx.utils.json_to_sheet(excelData);
+        const workbook = xlsx.utils.book_new();
+        xlsx.utils.book_append_sheet(workbook, worksheet, "Inventory Valuation");
+
+        // 5. Convert to a Buffer so we can send it over the internet
+        const excelBuffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+        // 6. Set headers to trigger a file download in the browser
+        const dateStr = new Date().toISOString().split('T')[0]; // Gets YYYY-MM-DD
+        res.setHeader('Content-Disposition', `attachment; filename="Inventory_Valuation_${dateStr}.xlsx"`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        
+        // 7. Send the file!
+        res.send(excelBuffer);
+
+    } catch (error) {
+        console.error("Export Error:", error);
+        res.status(500).json({ message: "Error exporting inventory", error: error.message });
     }
 };

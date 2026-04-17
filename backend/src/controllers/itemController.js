@@ -122,9 +122,9 @@ export const getItemById = async (req, res) => {
             -- ✅ NEW: Quantity Sold Calculation
             (
                 SELECT COALESCE(SUM(od.quantity), 0)
-                FROM fb_order_details od
-                JOIN fb_orders o ON od.order_id = o.order_id
-                WHERE od.item_id = mi.item_id AND o.status = 'served'
+                FROM fb_new_order_details od
+                JOIN fb_new_orders o ON od.order_id = o.order_id
+                WHERE od.item_id = mi.item_id AND od.item_status = 'served'
             ) as total_sold
         FROM fb_menu_items mi
         LEFT JOIN fb_categories c ON mi.category_id = c.category_id
