@@ -117,7 +117,9 @@ function WaiterPOS() {
     // Filter items based on selected category tab
     const displayedItems = selectedCategory === 0 
         ? menuItems 
-        : menuItems.filter(item => Number(item.category_id) === Number(selectedCategory));
+        : selectedCategory === 'bestseller'
+            ? [...menuItems].sort((a, b) => (b.total_sold || 0) - (a.total_sold || 0)).slice(0, 10)
+            : menuItems.filter(item => Number(item.category_id) === Number(selectedCategory));
 
     return (
         <div className="bg-amber-50 min-h-screen">

@@ -183,23 +183,28 @@ function PosPage() {
 // ✅ OPTIMIZATION: Cache the filtered/sorted list
   const finalItems = useMemo(() => {
     let result = items
-      .filter(item => selectedCategory === 0 || item.category_id === selectedCategory)
+      .filter(item => selectedCategory === 0 || selectedCategory === 'bestseller' || item.category_id === selectedCategory)
       .filter(item => item.item_name.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    switch (sortOption) {
-      case 'a-z': result.sort((a, b) => a.item_name.localeCompare(b.item_name)); break;
-      case 'z-a': result.sort((a, b) => b.item_name.localeCompare(a.item_name)); break;
-      case 'price-low': result.sort((a, b) => parseFloat(a.price) - parseFloat(b.price)); break;
-      case 'price-high': result.sort((a, b) => parseFloat(b.price) - parseFloat(a.price)); break;
-      case 'rating-high': result.sort((a, b) => {
-            const ratingA = parseFloat(a.average_rating || 0);
-            const ratingB = parseFloat(b.average_rating || 0);
-            if (ratingB !== ratingA) return ratingB - ratingA;
-            return (b.total_reviews || 0) - (a.total_reviews || 0);
-        });
-        break;
-      case 'recent': result.sort((a, b) => b.item_id - a.item_id); break;
-      default: break;
+    if (selectedCategory === 'bestseller') {
+      result.sort((a, b) => (b.total_sold || 0) - (a.total_sold || 0));
+      result = result.slice(0, 10);
+    } else {
+      switch (sortOption) {
+        case 'a-z': result.sort((a, b) => a.item_name.localeCompare(b.item_name)); break;
+        case 'z-a': result.sort((a, b) => b.item_name.localeCompare(a.item_name)); break;
+        case 'price-low': result.sort((a, b) => parseFloat(a.price) - parseFloat(b.price)); break;
+        case 'price-high': result.sort((a, b) => parseFloat(b.price) - parseFloat(a.price)); break;
+        case 'rating-high': result.sort((a, b) => {
+              const ratingA = parseFloat(a.average_rating || 0);
+              const ratingB = parseFloat(b.average_rating || 0);
+              if (ratingB !== ratingA) return ratingB - ratingA;
+              return (b.total_reviews || 0) - (a.total_reviews || 0);
+          });
+          break;
+        case 'recent': result.sort((a, b) => b.item_id - a.item_id); break;
+        default: break;
+      }
     }
     return result;
   }, [items, selectedCategory, searchTerm, sortOption]); // Only re-run if these change
