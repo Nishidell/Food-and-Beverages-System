@@ -11,6 +11,7 @@ function CashierDashboard() {
     const [orderDetails, setOrderDetails] = useState(null);
     const [paymentMethod, setPaymentMethod] = useState('');
     const [showSettleModal, setShowSettleModal] = useState(false);
+    const [amountTendered, setAmountTendered] = useState('');
 
     // Fetch the unpaid tabs when the page loads
     useEffect(() => {
@@ -58,26 +59,42 @@ function CashierDashboard() {
         toast.success(`Guest summary for ${selectedTab?.formatted_location} printed!`);
     };
 
-    // Handle taking the money and closing the tab
+   // Handle taking the money and closing the tab
     const handleSettleBill = async () => {
+        // Fallback to whichever total is currently rendering correctly
+        const billTotal = parseFloat(orderDetails?.total_price || selectedTab?.total_amount);
+        let changeToGive = 0;
+
+        // Validation for Cash payments
+        if (paymentMethod === 'Cash') {
+            const tendered = parseFloat(amountTendered);
+            if (isNaN(tendered) || tendered < billTotal) {
+                toast.error("Invalid amount! Customer has not given enough cash.");
+                return; // Stop the function from submitting
+            }
+            changeToGive = tendered - billTotal;
+        }
+
         try {
             const response = await apiClient(`/orders/${selectedTab.order_id}/settle`, {
                 method: 'POST',
                 body: JSON.stringify({
                     payment_method: paymentMethod,
-                    amount: selectedTab.total_amount
+                    amount: billTotal,
+                    change_amount: changeToGive // Send the calculated change to the backend!
                 })
             });
 
             if (response.ok) {
                 toast.success(`Bill for Order #${selectedTab.order_id} settled!`);
-                setShowSettleModal(false); // Close the modal
+                setShowSettleModal(false); 
                 
                 // Clean up the UI
                 setUnpaidTabs(prev => prev.filter(tab => tab.order_id !== selectedTab.order_id));
                 setSelectedTab(null);
                 setOrderDetails(null);
                 setPaymentMethod('');
+                setAmountTendered(''); // Reset the cash input
             } else {
                 const errorData = await response.json();
                 toast.error(`Error: ${errorData.message}`);
@@ -248,6 +265,30 @@ function CashierDashboard() {
                                 <p className="text-xs text-gray-500 uppercase tracking-wider">Payment Method</p>
                                 <p className="font-bold text-amber-600">{paymentMethod}</p>
                             </div>
+                            {/* Cash Change Calculator UI */}
+                            {paymentMethod === 'Cash' && (
+                                <div className="mt-3 w-full text-left">
+                                    <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1">Amount Tendered (₱)</label>
+                                    <input
+                                        type="number"
+                                        value={amountTendered}
+                                        onChange={(e) => setAmountTendered(e.target.value)}
+                                        className="w-full p-2 border border-gray-300 rounded font-bold text-lg text-gray-800 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                                        placeholder="Enter amount given..."
+                                        autoFocus
+                                    />
+                                    
+                                    {/* Only show change if they've typed enough money */}
+                                    {amountTendered && parseFloat(amountTendered) >= parseFloat(orderDetails?.total_price || selectedTab?.total_amount) && (
+                                        <div className="mt-3 bg-green-50 p-3 rounded border border-green-200 text-center animate-fadeIn">
+                                            <p className="text-xs text-green-700 uppercase tracking-wider font-bold">Change Due to Guest</p>
+                                            <p className="font-bold text-3xl text-green-600">
+                                                ₱{(parseFloat(amountTendered) - parseFloat(orderDetails?.total_price || selectedTab?.total_amount)).toFixed(2)}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         
                         <div className="flex gap-3">
