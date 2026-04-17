@@ -460,13 +460,15 @@ export const getOrderById = async (req, res) => {
         
         const order = orders[0];
 
-        // 2. Fetch Items & Calculate Subtotal on the fly!
+        // 2. Fetch Items & Calculate Subtotals on the fly!
         const [items] = await pool.query(
             `SELECT 
                 mi.item_name, 
                 od.quantity, 
                 od.price_on_purchase AS price,
+                mi.price AS original_price, 
                 (od.quantity * od.price_on_purchase) AS subtotal, 
+                (od.quantity * mi.price) AS original_subtotal,
                 od.instructions,
                 od.order_detail_id,
                 od.item_status
@@ -477,10 +479,14 @@ export const getOrderById = async (req, res) => {
         );
 
         // 3. Reconstruct the Math for the Receipt
+        // calculatedItemsTotal is what they actually bought (Promo price)
         const calculatedItemsTotal = items.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
+        // originalItemsTotal is the raw menu price (Needed for Senior Discount Law)
+        const originalItemsTotal = items.reduce((sum, item) => sum + parseFloat(item.original_subtotal), 0);
+
         const calculatedServiceCharge = calculatedItemsTotal * SERVICE_RATE;
         const calculatedVatAmount = (calculatedItemsTotal + calculatedServiceCharge) * VAT_RATE;
-
+        
         // 4. Fetch Payment Info
         const [payments] = await pool.query("SELECT * FROM fb_new_payments WHERE order_id = ?", [id]);
         const payment = payments[0] || {};
@@ -492,7 +498,8 @@ export const getOrderById = async (req, res) => {
             delivery_location: order.delivery_location,
             first_name: order.first_name, 
             last_name: order.last_name,
-            items_total: calculatedItemsTotal,             // Dynamic 
+            items_total: calculatedItemsTotal,             // Dynamic
+            original_items_total: originalItemsTotal, 
             service_charge_amount: calculatedServiceCharge, // Dynamic
             vat_amount: calculatedVatAmount,               // Dynamic
             total_price: order.total_amount,

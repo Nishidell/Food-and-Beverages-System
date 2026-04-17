@@ -73,9 +73,13 @@ function CashierDashboard() {
     let displayTotal = orderDetails ? parseFloat(orderDetails.total_price) : (selectedTab ? parseFloat(selectedTab.total_amount) : 0);
     let discountAmount = 0;
 
-    if (orderDetails && discountType !== 'None') {
-        const originalBaseFood = parseFloat(orderDetails.items_total);
-        const pax = Math.max(1, parseInt(paxCount) || 1); // Protect against dividing by 0
+   if (orderDetails && discountType !== 'None') {
+        // Fallback to the original base food price
+        const originalBaseFood = parseFloat(orderDetails.original_items_total || orderDetails.items_total);
+        const pax = Math.max(1, parseInt(paxCount) || 1); 
+
+        // Change the display subtotal so the receipt shows the correct starting price!
+        displaySubtotal = originalBaseFood; 
 
         // 1. Prorate the meal (Separate the Senior's share from the rest)
         const seniorShareBase = originalBaseFood / pax;
@@ -83,7 +87,7 @@ function CashierDashboard() {
 
         // 2. Apply the 20% discount directly to the base share
         const discountedSeniorShareBase = seniorShareBase * 0.80;
-        discountAmount = seniorShareBase * 0.20; // This is just for the receipt display
+        discountAmount = seniorShareBase * 0.20; 
 
         const newFoodBase = nonDiscountedBase + discountedSeniorShareBase;
 
