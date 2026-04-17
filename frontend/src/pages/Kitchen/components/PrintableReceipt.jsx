@@ -1,6 +1,6 @@
 import React from 'react';
 
-const PrintableReceipt = ({ tab, details }) => {
+const PrintableReceipt = ({ tab, details, discountType, paxCount, discountAmount, displaySubtotal, displayServiceCharge, displayVat, displayTotal }) => {
     if (!tab || !details) return null;
 
     return (
@@ -84,21 +84,30 @@ const PrintableReceipt = ({ tab, details }) => {
                 {/* Totals */}
                 <div className="border-t-2 border-dashed border-gray-300 pt-4 text-sm flex flex-col gap-1">
                     <div className="flex justify-between">
-                        <span>Subtotal</span>
-                        <span>₱{parseFloat(tab.items_total).toFixed(2)}</span>
+                        <span>Base Subtotal</span>
+                        <span>₱{displaySubtotal?.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between">
+
+                    {/* DYNAMIC DISCOUNT LINE */}
+                    {discountType !== 'None' && (
+                        <div className="flex justify-between font-bold" style={{ color: '#d97706' }}>
+                            <span>Discount (20% of 1/{paxCount})</span>
+                            <span>-₱{discountAmount?.toFixed(2)}</span>
+                        </div>
+                    )}
+
+                    <div className="flex justify-between mt-1">
                         <span>Service Charge (10%)</span>
-                        <span>₱{parseFloat(tab.service_charge_amount).toFixed(2)}</span>
+                        <span>₱{displayServiceCharge?.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                         <span>VAT (12%)</span>
-                        <span>₱{parseFloat(tab.vat_amount).toFixed(2)}</span>
+                        <span>₱{displayVat?.toFixed(2)}</span>
                     </div>
                     
                     <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-gray-400">
                         <span>GRAND TOTAL</span>
-                        <span>₱{parseFloat(tab.total_amount).toFixed(2)}</span>
+                        <span>₱{displayTotal?.toFixed(2)}</span>
                     </div>
                 </div>
 
