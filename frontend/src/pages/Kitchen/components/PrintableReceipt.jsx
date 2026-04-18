@@ -1,6 +1,6 @@
 import React from 'react';
 
-const PrintableReceipt = ({ tab, details, discountType, paxCount, discountAmount, displaySubtotal, displayServiceCharge, displayVat, displayTotal }) => {
+const PrintableReceipt = ({ tab, details, appliedDiscounts, paxCount, discountAmount, displaySubtotal, displayServiceCharge, displayVat, displayTotal }) => {
     if (!tab || !details) return null;
 
     return (
@@ -88,14 +88,22 @@ const PrintableReceipt = ({ tab, details, discountType, paxCount, discountAmount
                         <span>₱{displaySubtotal?.toFixed(2)}</span>
                     </div>
 
-                    {/* DYNAMIC DISCOUNT LINE */}
-                    {discountType !== 'None' && (
-                        <div className="flex justify-between font-bold" style={{ color: '#d97706' }}>
-                            <span>Discount (20% of 1/{paxCount})</span>
-                            <span>-₱{discountAmount?.toFixed(2)}</span>
+                   {/* DYNAMIC DISCOUNT LINE */}
+                    {appliedDiscounts && appliedDiscounts.length > 0 && (
+                        <div className="flex flex-col">
+                            <div className="flex justify-between font-bold" style={{ color: '#d97706' }}>
+                                <span>Discount ({appliedDiscounts.length}/{paxCount})</span>
+                                <span>-₱{discountAmount?.toFixed(2)}</span>
+                            </div>
+                            {/* The Audit Trail: List the IDs on the physical paper */}
+                            <div className="text-xs text-gray-600 pl-2 mb-1" style={{ color: '#555' }}>
+                                {appliedDiscounts.map((disc, idx) => (
+                                    <div key={idx}>• {disc.type}: {disc.id_number}</div>
+                                ))}
+                            </div>
                         </div>
                     )}
-
+                    
                     <div className="flex justify-between mt-1">
                         <span>Service Charge (10%)</span>
                         <span>₱{displayServiceCharge?.toFixed(2)}</span>
