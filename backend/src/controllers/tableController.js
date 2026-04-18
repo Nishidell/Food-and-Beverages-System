@@ -108,18 +108,28 @@ export const deleteTable = async (req, res) => {
     }
 };
 
-// @desc    Seat a walk-in guest and open a new tab
+// @desc    Seat a walk-in guest OR a reserved guest and open a new tab
 // @route   POST /api/tables/:id/seat
 // @access  Private (Hostess/Manager)
 export const seatGuest = async (req, res) => {
     const { id } = req.params;
-    const { guest_name } = req.body;
+    const { guest_name, reservation_id } = req.body; 
     const connection = await pool.getConnection();
 
     try {
         await connection.beginTransaction();
 
-        // 1. Mark the physical table as Occupied
+        const [tableCheck] = await connection.query(
+            "SELECT status FROM fb_tables WHERE table_id = ?", 
+            [id]
+        );
+        
+        if (tableCheck.length > 0 && tableCheck[0].status === 'Occupied') {
+            await connection.rollback();
+            return res.status(400).json({ message: "This table is already occupied. Please refresh." });
+        }
+        
+        // 1. Mark the physical table as Occupied (Rest of your code continues below...)
         await connection.query(
             "UPDATE fb_tables SET status = 'Occupied' WHERE table_id = ?",
             [id]
@@ -133,6 +143,14 @@ export const seatGuest = async (req, res) => {
             [id, guest_name || 'Walk-in Guest']
         );
 
+        // 3. If this is a reserved guest, mark their reservation as 'Seated'
+        if (reservation_id) {
+            await connection.query(
+                "UPDATE fb_dining_reservation SET status = 'Seated' WHERE reservation_id = ?",
+                [reservation_id]
+            );
+        }
+
         await connection.commit();
 
         const io = req.app.get('io');
@@ -142,11 +160,14 @@ export const seatGuest = async (req, res) => {
                 table_id: parseInt(id), 
                 status: 'Occupied' 
             });
-   
+            // Tell the cashier a new order tab was opened
             io.emit('new-order'); 
+            // Tell the host dashboard to refresh the Expected Guests list
+            io.emit('reservation-update'); 
         }
 
         res.json({ success: true, message: "Guest seated and tab opened." });
+
     } catch (error) {
         await connection.rollback();
         console.error("Error seating guest:", error);

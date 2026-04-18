@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, CheckCircle, XCircle } from 'lucide-react';
+import { Users, CheckCircle, XCircle, Clock} from 'lucide-react';
 import toast from 'react-hot-toast';
 import apiClient from '../../utils/apiClient';
 import InternalNavBar from './components/InternalNavBar'; // Adjust path if needed
@@ -174,6 +174,31 @@ const TableManager = () => {
     
     return `${hour}:${minutes} ${ampm}`;
   };
+
+ // --- HELPER: CHECK FOR UPCOMING RESERVATIONS (1-Hour Warning) ---
+  const getUpcomingReservation = (tableId) => {
+      const now = new Date();
+      
+      return reservations.find(r => {
+          // 1. Ensure type safety by converting both to numbers (prevents strict equality bugs)
+          if (r.status !== 'Confirmed' || parseInt(r.table_id) !== parseInt(tableId)) return false;
+          
+          // 2. Bypass MySQL UTC date shifting bugs by applying the time to the current local day
+          // (Safe because your SQL query already filters for CURDATE())
+          const [hours, minutes] = r.reservation_time.split(':');
+          const resDateTime = new Date();
+          resDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+          
+          // 3. Calculate difference in milliseconds, then convert to hours
+          const timeDiff = (resDateTime - now) / (1000 * 60 * 60);
+          
+          // 4. Trigger if arriving in <= 1 hour, AND keep yellow even if they are up to 30 mins late
+          return timeDiff > -0.5 && timeDiff <= 1;
+      });
+  };
+  
+  const [processingId, setProcessingId] = useState(null);
+  
   return (
     <>
       <div className="flex flex-col min-h-screen" style={{ backgroundColor: '#523a2eff' }}>
@@ -188,34 +213,51 @@ const TableManager = () => {
                 <div className="flex-grow">
                     {loading ? <p className="text-white text-center mt-10">Loading...</p> : (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                            {tables.map((table) => (
+                            {tables.map((table) => {
+                                // Check if this table has a reservation arriving in < 1 hour
+                                const upcomingRes = getUpcomingReservation(table.table_id);
+                                
+                                // Determine the current visual state
+                                let cardColor = 'bg-red-50 border-red-500'; // Default Occupied
+                                let statusText = table.status;
+                                let statusColor = 'text-red-700';
+
+                                if (table.status === 'Available') {
+                                    if (upcomingRes) {
+                                        cardColor = 'bg-yellow-50 border-yellow-500';
+                                        statusText = 'Reserved';
+                                        statusColor = 'text-yellow-700';
+                                    } else {
+                                        cardColor = 'bg-green-50 border-green-500';
+                                        statusColor = 'text-green-700';
+                                    }
+                                }
+
+                                return (
                                 <div 
                                     key={table.table_id}
-                                    onClick={() => handleTableClick(table)}
-                                    className={`relative p-6 rounded-xl shadow-lg border-4 cursor-pointer transition-transform hover:scale-105 flex flex-col items-center justify-center h-40
-                                        ${table.status === 'Available' 
-                                            ? 'bg-green-50 border-green-500' 
-                                            : 'bg-red-50 border-red-500'
-                                        }`}
+                                    onClick={() => handleTableClick(table, upcomingRes)} // Pass the reservation data!
+                                    className={`relative p-6 rounded-xl shadow-lg border-4 cursor-pointer transition-transform hover:scale-105 flex flex-col items-center justify-center h-40 ${cardColor}`}
                                 >
                                     <span className="absolute top-3 right-3 font-bold text-xl text-gray-400">#{table.table_number}</span>
                                     
-                                    {table.status === 'Available' ? (
-                                        <CheckCircle size={40} className="text-green-500 mb-2" />
+                                    {table.status === 'Available' && !upcomingRes && <CheckCircle size={40} className="text-green-500 mb-2" />}
+                                    {table.status === 'Available' && upcomingRes && <Clock size={40} className="text-yellow-500 mb-2" />}
+                                    {table.status !== 'Available' && <XCircle size={40} className="text-red-500 mb-2" />}
+                                    
+                                    <h3 className={`text-lg font-bold ${statusColor}`}>{statusText}</h3>
+                                    
+                                    {upcomingRes ? (
+                                        <div className="flex items-center gap-1 text-yellow-600 text-xs mt-1 font-bold">
+                                            <span>Arriving at {formatTime(upcomingRes.reservation_time)}</span>
+                                        </div>
                                     ) : (
-                                        <XCircle size={40} className="text-red-500 mb-2" />
+                                        <div className="flex items-center gap-1 text-gray-500 text-sm mt-1">
+                                            <Users size={14} /> <span>{table.capacity} Seats</span>
+                                        </div>
                                     )}
-                                    
-                                    <h3 className={`text-lg font-bold ${table.status === 'Available' ? 'text-green-700' : 'text-red-700'}`}>
-                                        {table.status}
-                                    </h3>
-                                    
-                                    <div className="flex items-center gap-1 text-gray-500 text-sm mt-1">
-                                        <Users size={14} />
-                                        <span>{table.capacity} Seats</span>
-                                    </div>
                                 </div>
-                            ))}
+                            )})}
                         </div>
                     )}
                 </div>
@@ -256,11 +298,36 @@ const TableManager = () => {
                                         {/* Quick Action Buttons */}
                                         <div className="flex gap-2 mt-2">
                                             <button 
-                                                onClick={() => handleReservationStatus(guest.reservation_id, 'Seated')}
-                                                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-1.5 px-3 rounded text-sm transition-colors"
-                                            >
-                                                Seat Guest
-                                            </button>
+                                            disabled={processingId === guest.reservation_id}
+                                            onClick={async () => {
+                                                setProcessingId(guest.reservation_id); // Lock the button immediately
+                                                try {
+                                                    const res = await apiClient(`/tables/${guest.table_id}/seat`, {
+                                                        method: 'POST',
+                                                        body: JSON.stringify({ 
+                                                            guest_name: `${guest.first_name} ${guest.last_name}`,
+                                                            reservation_id: guest.reservation_id 
+                                                        })
+                                                    });
+                                                    if (!res.ok) {
+                                                        const err = await res.json();
+                                                        throw new Error(err.message || "Failed to seat guest");
+                                                    }
+                                                    toast.success(`${guest.first_name} seated! Tab opened.`);
+                                                } catch (err) {
+                                                    toast.error(err.message);
+                                                } finally {
+                                                    setProcessingId(null); // Unlock the button when done (pass or fail)
+                                                }
+                                            }}
+                                            className={`flex-1 font-bold py-1.5 px-3 rounded text-sm transition-colors ${
+                                                processingId === guest.reservation_id 
+                                                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                                                    : 'bg-green-600 hover:bg-green-700 text-white'
+                                            }`}
+                                        >
+                                            {processingId === guest.reservation_id ? 'Seating...' : 'Seat Guest'}
+                                        </button>
                                             <button 
                                                 onClick={() => handleReservationStatus(guest.reservation_id, 'No-Show')}
                                                 className="flex-1 bg-red-100 hover:bg-red-200 text-red-700 font-bold py-1.5 px-3 rounded text-sm transition-colors"

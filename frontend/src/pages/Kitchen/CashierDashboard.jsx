@@ -267,7 +267,7 @@ function CashierDashboard() {
                                                         ) : (
                                                             <tr>
                                                                 <td colSpan="4" className="py-4 text-center text-red-500 font-bold bg-red-50 rounded">
-                                                                    No active items found! (The database returned 0 items for Order #{selectedTab?.order_id})
+                                                                    No active items found!
                                                                 </td>
                                                             </tr>
                                                         )}

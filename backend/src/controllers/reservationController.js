@@ -171,7 +171,7 @@ export const getReservations = async (req, res) => {
     try {
         const sql = `
             SELECT 
-                r.reservation_id, r.first_name, r.last_name, r.email, 
+                r.reservation_id, r.table_id, r.first_name, r.last_name, r.email, 
                 r.reservation_date, r.reservation_time, r.party_size, 
                 r.status, r.special_requests,
                 t.table_number 
