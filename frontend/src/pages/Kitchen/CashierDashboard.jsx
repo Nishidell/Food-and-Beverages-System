@@ -14,10 +14,13 @@ function CashierDashboard() {
     const [showSettleModal, setShowSettleModal] = useState(false);
     const [amountTendered, setAmountTendered] = useState('');
 
-    //Discount and change calculation states
-    const [discountType, setDiscountType] = useState('None'); // 'None', 'Senior/PWD', 'Medal of Valor'
-    const [paxCount, setPaxCount] = useState(1); // How many people are sharing the meal
-    const [discountId, setDiscountId] = useState(''); // To store the ID number
+   // --- UPDATED DISCOUNT STATES (Option B: Array Approach) ---
+    const [paxCount, setPaxCount] = useState(1); // Total people at the table
+    const [appliedDiscounts, setAppliedDiscounts] = useState([]); // The Array of IDs
+    
+    // Temporary states for the input form before they click "Add"
+    const [tempDiscountType, setTempDiscountType] = useState('Senior/PWD');
+    const [tempDiscountId, setTempDiscountId] = useState('');
 
     // Fetch the unpaid tabs when the page loads
     useEffect(() => {
@@ -65,6 +68,29 @@ function CashierDashboard() {
         toast.success(`Guest summary for ${selectedTab?.formatted_location} printed!`);
     };
 
+    // Add a discount to the list
+    const handleAddDiscount = () => {
+        if (!tempDiscountId.trim()) {
+            toast.error("Please enter an ID number.");
+            return;
+        }
+        if (appliedDiscounts.length >= paxCount) {
+            toast.error("You cannot add more discounts than the total Pax count.");
+            return;
+        }
+        
+        setAppliedDiscounts(prev => [...prev, { 
+            type: tempDiscountType, 
+            id_number: tempDiscountId.trim() 
+        }]);
+        setTempDiscountId(''); // Clear the input box after adding
+    };
+
+    // Remove a discount from the list
+    const handleRemoveDiscount = (indexToRemove) => {
+        setAppliedDiscounts(prev => prev.filter((_, idx) => idx !== indexToRemove));
+    };
+
 
     //Dynamic math calculation
     let displaySubtotal = orderDetails ? parseFloat(orderDetails.items_total) : (selectedTab ? parseFloat(selectedTab.total_amount) : 0);
@@ -72,32 +98,28 @@ function CashierDashboard() {
     let displayVat = orderDetails ? parseFloat(orderDetails.vat_amount) : 0;
     let displayTotal = orderDetails ? parseFloat(orderDetails.total_price) : (selectedTab ? parseFloat(selectedTab.total_amount) : 0);
     let discountAmount = 0;
-
-   if (orderDetails && discountType !== 'None') {
-        // Fallback to the original base food price
+    
+    if (orderDetails && appliedDiscounts.length > 0) {
         const originalBaseFood = parseFloat(orderDetails.original_items_total || orderDetails.items_total);
         const pax = Math.max(1, parseInt(paxCount) || 1); 
-
-        // Change the display subtotal so the receipt shows the correct starting price!
         displaySubtotal = originalBaseFood; 
 
-        // 1. Prorate the meal (Separate the Senior's share from the rest)
-        const seniorShareBase = originalBaseFood / pax;
-        const nonDiscountedBase = originalBaseFood - seniorShareBase;
+        const eligibleCount = appliedDiscounts.length; // How many IDs did we scan?
+        
+        // 1. Prorate the meal (Find the share for ONE person)
+        const shareBase = originalBaseFood / pax;
+        
+        // 2. Separate the total eligible share from the non-eligible share
+        const nonDiscountedBase = originalBaseFood - (shareBase * eligibleCount);
+        const discountedShareBase = (shareBase * 0.80) * eligibleCount;
+        
+        // 3. Calculate total discount amount
+        discountAmount = (shareBase * 0.20) * eligibleCount; 
+        const newFoodBase = nonDiscountedBase + discountedShareBase;
 
-        // 2. Apply the 20% discount directly to the base share
-        const discountedSeniorShareBase = seniorShareBase * 0.80;
-        discountAmount = seniorShareBase * 0.20; 
-
-        const newFoodBase = nonDiscountedBase + discountedSeniorShareBase;
-
-        // 3. Service charge remains based on the ORIGINAL food amount (Legal Rule)
-        displayServiceCharge = originalBaseFood * 0.10; 
-
-        // 4. VAT is only applied to the non-discounted food + the service charge
-        displayVat = (nonDiscountedBase + displayServiceCharge) * 0.12;
-
-        // 5. Final Total
+        // 4. Tax/Service Math
+        displayServiceCharge = originalBaseFood * 0.10;
+        displayVat = (nonDiscountedBase + displayServiceCharge) * 0.12; // VAT is exempt on the discounted portion
         displayTotal = newFoodBase + displayServiceCharge + displayVat;
     }
 
@@ -118,19 +140,18 @@ function CashierDashboard() {
         }
 
         try {
-            const response = await apiClient(`/orders/${selectedTab.order_id}/settle`, {
+           const response = await apiClient(`/orders/${selectedTab.order_id}/settle`, {
                 method: 'POST',
                 body: JSON.stringify({
                     payment_method: paymentMethod,
                     amount: billTotal,
                     change_amount: changeToGive,
-                    discount_type: discountType,
-                    discount_id: discountType !== 'None' ? discountId : null,
-                    discount_amount: discountType !== 'None' ? discountAmount : 0
+                    appliedDiscounts: appliedDiscounts // Send the whole array!
                 })
             });
 
-            if (response.ok) {
+            if (response.ok)
+                 {
                 toast.success(`Bill for Order #${selectedTab.order_id} settled!`);
                 setShowSettleModal(false); 
                 
@@ -140,9 +161,10 @@ function CashierDashboard() {
                 setOrderDetails(null);
                 setPaymentMethod('');
                 setAmountTendered('');
-                setDiscountType('None');
+                // Reset the new states:
                 setPaxCount(1);
-                setDiscountId('');
+                setAppliedDiscounts([]);
+                setTempDiscountId('');
             } else {
                 const errorData = await response.json();
                 toast.error(`Error: ${errorData.message}`);
@@ -155,11 +177,11 @@ function CashierDashboard() {
 
     return (
         <>
-            {/* 🖨️ THE INVISIBLE RECEIPT (Only shows up on the print screen) */}
+            {/* THE INVISIBLE RECEIPT (Only shows up on the print screen) */}
             <PrintableReceipt 
             tab={selectedTab} 
             details={orderDetails} 
-            discountType={discountType}
+            appliedDiscounts={appliedDiscounts}
             paxCount={paxCount}
             discountAmount={discountAmount}
             displaySubtotal={displaySubtotal}
@@ -277,45 +299,62 @@ function CashierDashboard() {
                                                {/* ================= FIXED MATH & DISCOUNT FOOTER ================= */}
                                             <div className="flex gap-4 mb-4 mt-2">
                                                 
-                                                {/* LEFT SIDE: SPECIAL DISCOUNT (Compact) */}
-                                                <div className="w-1/2 bg-blue-50 p-3 rounded border border-blue-200 text-left flex flex-col justify-between">
-                                                    <label className="text-xs text-blue-800 uppercase tracking-wider font-bold mb-2">Apply Special Discount</label>
-                                                    
-                                                    <div className="flex gap-2 mb-2">
-                                                        <div className="flex-1">
-                                                            <select 
-                                                                value={discountType}
-                                                                onChange={(e) => setDiscountType(e.target.value)}
-                                                                className="w-full p-2 border border-gray-300 rounded text-sm outline-none focus:border-blue-500 bg-white"
-                                                            >
-                                                                <option value="None">Regular (No Discount)</option>
-                                                                <option value="Senior/PWD">Senior Citizen / PWD</option>
-                                                                <option value="Medal of Valor">Medal of Valor</option>
-                                                            </select>
-                                                        </div>
-                                                        <div className="w-20">
+                                                {/* LEFT SIDE: SPECIAL DISCOUNT (List UI) */}
+                                                <div className="w-1/2 bg-blue-50 p-3 rounded border border-blue-200 flex flex-col gap-3">
+                                                    <div className="flex justify-between items-center border-b border-blue-200 pb-2">
+                                                        <label className="text-xs text-blue-800 uppercase tracking-wider font-bold">Apply Discounts</label>
+                                                        <div className="flex items-center gap-2 text-xs font-bold text-blue-800">
+                                                            <span>Total Pax:</span>
                                                             <input 
-                                                                type="number"
-                                                                min="1"
-                                                                title="Total Pax"
-                                                                value={paxCount}
-                                                                onChange={(e) => setPaxCount(Math.max(1, parseInt(e.target.value) || 1))}
-                                                                disabled={discountType === 'None'}
-                                                                className="w-full p-2 border border-gray-300 rounded text-sm outline-none disabled:bg-gray-100 disabled:text-gray-400 text-center"
+                                                                type="number" min="1" value={paxCount}
+                                                                onChange={(e) => {
+                                                                    setPaxCount(Math.max(1, parseInt(e.target.value) || 1));
+                                                                    // If they lower pax below the discount count, trim the array!
+                                                                    if (e.target.value < appliedDiscounts.length) setAppliedDiscounts([]);
+                                                                }}
+                                                                className="w-12 p-1 border border-blue-300 rounded text-center"
                                                             />
                                                         </div>
                                                     </div>
 
-                                                    {discountType !== 'None' ? (
-                                                        <input 
-                                                            type="text"
-                                                            value={discountId}
-                                                            onChange={(e) => setDiscountId(e.target.value)}
-                                                            placeholder="Enter ID Number..."
-                                                            className="w-full p-2 border border-gray-300 rounded text-sm outline-none focus:border-blue-500"
-                                                        />
-                                                    ) : (
-                                                        <div className="text-xs text-gray-400 italic p-2">Select a discount type to enter ID...</div>
+                                                    {/* The Input Form */}
+                                                    <div className="flex flex-col gap-2">
+                                                        <select 
+                                                            value={tempDiscountType}
+                                                            onChange={(e) => setTempDiscountType(e.target.value)}
+                                                            className="w-full p-2 border border-gray-300 rounded text-sm outline-none focus:border-blue-500 bg-white"
+                                                        >
+                                                            <option value="Senior/PWD">Senior Citizen / PWD</option>
+                                                            <option value="Medal of Valor">Medal of Valor</option>
+                                                        </select>
+                                                        <div className="flex gap-2">
+                                                            <input 
+                                                                type="text"
+                                                                value={tempDiscountId}
+                                                                onChange={(e) => setTempDiscountId(e.target.value)}
+                                                                placeholder="ID Number..."
+                                                                className="flex-1 p-2 border border-gray-300 rounded text-sm outline-none focus:border-blue-500"
+                                                            />
+                                                            <button 
+                                                                onClick={handleAddDiscount}
+                                                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1 rounded text-sm transition-colors disabled:opacity-50"
+                                                                disabled={appliedDiscounts.length >= paxCount}
+                                                            >
+                                                                Add
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* The Applied List */}
+                                                    {appliedDiscounts.length > 0 && (
+                                                        <div className="mt-1 flex flex-col gap-1 max-h-[80px] overflow-y-auto">
+                                                            {appliedDiscounts.map((disc, idx) => (
+                                                                <div key={idx} className="flex justify-between items-center bg-white p-1.5 rounded border border-blue-100 text-xs shadow-sm">
+                                                                    <span className="truncate pr-2"><strong className="text-blue-800">{disc.type}:</strong> {disc.id_number}</span>
+                                                                    <button onClick={() => handleRemoveDiscount(idx)} className="text-red-500 hover:text-red-700 font-bold px-1">✕</button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     )}
                                                 </div>
 
@@ -325,9 +364,10 @@ function CashierDashboard() {
                                                         <span>Base Subtotal:</span> <span>₱{displaySubtotal.toFixed(2)}</span>
                                                     </p>
                                                     
-                                                    {discountType !== 'None' && (
-                                                        <p className="text-red-600 text-sm font-bold bg-red-50 px-2 py-1 rounded flex justify-between w-full max-w-[250px] border border-red-100">
-                                                            <span>Discount (1/{paxCount}):</span> <span>-₱{discountAmount.toFixed(2)}</span>
+                                                    {appliedDiscounts.length > 0 && (
+                                                         <p className="text-red-600 text-sm font-bold bg-red-50 px-2 py-1 rounded flex justify-between w-full max-w-[250px] border border-red-100">
+                                                            <span>Discount ({appliedDiscounts.length}/{paxCount}):</span>
+                                                            <span>-₱{discountAmount.toFixed(2)}</span>
                                                         </p>
                                                     )}
                                                     

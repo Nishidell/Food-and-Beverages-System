@@ -997,40 +997,51 @@ export const getUnpaidTabs = async (req, res) => {
 // @access  Private (Staff/Cashier)
 export const settleBill = async (req, res) => {
     const { id } = req.params;
-    const { payment_method, amount, change_amount, discount_type, discount_id, discount_amount } = req.body;
-    const connection = await pool.getConnection();
     
+    // 1.Accept the new 'appliedDiscounts' array from React
+    const { payment_method, amount, change_amount, appliedDiscounts } = req.body;
+    const connection = await pool.getConnection();
 
     try {
         await connection.beginTransaction();
 
-       // Determine the correct payment status for the CRS Integration
         const finalPaymentStatus = payment_method === 'Room Charge' ? 'charged_to_room' : 'paid';
 
-       // 1. Mark the main order with the correct money lifecycle status AND save the discount
+       // 2. Clean UPDATE query (Old discount columns are completely gone!)
         const [updateResult] = await connection.query(
-            "UPDATE fb_new_orders SET payment_status = ?, status = 'Settled', discount_type = ?, discount_id = ?, discount_amount = ? WHERE order_id = ?",
-            [finalPaymentStatus, discount_type || 'None', discount_id || null, discount_amount || 0, id]
+            "UPDATE fb_new_orders SET payment_status = ?, status = 'Settled' WHERE order_id = ?",
+            [finalPaymentStatus, id]
         );
 
         if (updateResult.affectedRows === 0) {
             throw new Error("Order not found or already paid.");
         }
 
-        // 2. Record the payment in our clean V2 payments table
+        // 3. Loop through the array and insert each ID into the new table
+        if (appliedDiscounts && appliedDiscounts.length > 0) {
+            for (const discount of appliedDiscounts) {
+                await connection.query(
+                    "INSERT INTO fb_order_discounts (order_id, discount_type, discount_id) VALUES (?, ?, ?)",
+                    [id, discount.type, discount.id_number] 
+                );
+            }
+        }
+
+        // 4. Record the payment in our clean V2 payments table
         await connection.query(
             "INSERT INTO fb_new_payments (order_id, payment_method, amount, change_amount) VALUES (?, ?, ?, ?)",
             [id, payment_method, amount, change_amount || 0] 
         );
 
-        // 3. Optional Bonus: If they were at a dine-in table, free up the table!
+        // 5. Free up the dine-in table!
         await connection.query(
             `UPDATE fb_tables SET status = 'Available' WHERE table_id = (SELECT table_id FROM fb_new_orders WHERE order_id = ?)`,
             [id]
         );
-        
+
         await connection.commit();
         res.json({ success: true, message: "Bill settled successfully." });
+
     } catch (error) {
         await connection.rollback();
         console.error("Error settling bill:", error);
