@@ -28,10 +28,21 @@ const AdjustStockModal = ({ isOpen, onClose, onAdjust, ingredient }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (parseFloat(formData.quantity_change) <= 0) {
+    const changeAmount = parseFloat(formData.quantity_change);
+    
+    if (changeAmount <= 0) {
         alert('Quantity must be a positive number.');
         return;
     }
+
+    const isSubtract = formData.action_type === 'WASTE' || formData.action_type === 'ADJUST_SUBTRACT';
+    const currentStock = parseFloat(ingredient.stock_level);
+    
+    if (isSubtract && changeAmount > currentStock) {
+        alert(`Cannot subtract ${changeAmount}. You only have ${currentStock} in stock!`);
+        return;
+    }
+
     onAdjust(formData);
   };
   

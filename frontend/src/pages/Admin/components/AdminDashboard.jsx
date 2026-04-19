@@ -103,7 +103,7 @@ const AdminDashboard = ({ onNavigate }) => {
               </span>
             ) : null}
           </div>
-          <h3 className="text-sm text-black">Low Stock Items</h3>
+          <h3 className="text-sm text-black">Stock Alerts (Low & Out)</h3>
           <p className="text-3xl font-bold mt-1">{summary.lowStock}</p>
         </div>
 
@@ -183,26 +183,33 @@ const AdminDashboard = ({ onNavigate }) => {
           <h2 className="text-lg font-semibold mb-3">Stock Alerts</h2>
           {stockAlerts.length > 0 ? (
             <ul>
-              {stockAlerts.map((item) => (
-                <li
-                  key={item.ingredient_id}
-                  className="flex justify-between items-center border-b border-gray-300 py-2 text-sm"
-                >
-                  <div>
-                    <p className="font-semibold">{item.name}</p>
-                    <p className="text-gray-600">{item.supplier_name}</p>
-                  </div>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      item.stock === 0
-                        ? "bg-red-200 text-red-800"
-                        : "bg-orange-200 text-orange-800"
-                    }`}
+              {stockAlerts.map((item) => {
+                // Safely grab the stock value regardless of how the backend names it
+                const stockValue = parseFloat(item.stock_level !== undefined ? item.stock_level : item.stock || 0);
+                const isOut = stockValue <= 0;
+
+                return (
+                  <li
+                    key={item.ingredient_id}
+                    className="flex justify-between items-center border-b border-gray-300 py-2 text-sm"
                   >
-                    {item.stock === 0 ? "out-of-stock" : "low-stock"}
-                  </span>
-                </li>
-              ))}
+                    <div>
+                      <p className="font-semibold">{item.name}</p>
+                      {/* Swapped supplier_name for actual stock count so admins see the numbers instantly */}
+                      <p className="text-gray-600 text-xs font-bold">Current Stock: {stockValue}</p> 
+                    </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-bold uppercase border ${
+                        isOut
+                          ? "bg-gray-200 text-gray-700 border-gray-300"
+                          : "bg-red-100 text-red-700 border-red-200"
+                      }`}
+                    >
+                      {isOut ? "Out of Stock" : "Low Stock"}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <p className="text-gray-600 text-center">No low-stock items</p>
