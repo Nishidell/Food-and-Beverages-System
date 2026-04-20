@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom'; 
-import { User, ShoppingBag, LogOut, LogIn, UserPlus } from 'lucide-react'; // ✅ Added Icons
+import { User, ShoppingBag, LogOut, LogIn, UserPlus, Calendar } from 'lucide-react'; // ✅ Added Icons
 import { useAuth } from '../context/AuthContext';
 import '../pages/Customer/CustomerTheme.css';
 
@@ -47,6 +47,11 @@ const ProfileDropdown = () => {
     navigate('/my-orders');
   };
 
+  const handleReservation = () => {
+    setIsDropdownOpen(false);
+    navigate('/dining-reservation');
+  };
+
   const handleLogout = () => {
       logout();
       navigate('/login');
@@ -78,13 +83,22 @@ const ProfileDropdown = () => {
             /* === LOGGED IN VIEW === */
             <>
               {user.role === 'customer' && (
-                <button
-                    onClick={handleMyOrders}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                >
-                    <ShoppingBag size={16} />
-                    My Orders
-                </button>
+                <>
+                  <button
+                      onClick={handleMyOrders}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                      <ShoppingBag size={16} />
+                      My Orders
+                  </button>
+                  <button
+                      onClick={handleReservation}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                      <Calendar size={16} />
+                      Reservation
+                  </button>
+                </>
               )}
 
               <button

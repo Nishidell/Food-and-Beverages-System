@@ -82,14 +82,14 @@ function MenuPage() {
   // Memoized Filtering
   const finalItems = useMemo(() => {
     let result = items
-      .filter(item => selectedCategory === 0 || selectedCategory === 'bestseller' || item.category_id === selectedCategory)
+      .filter(item => selectedCategory === 0 || item.category_id === selectedCategory)
       .filter(item => item.item_name.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    if (selectedCategory === 'bestseller') {
-      result.sort((a, b) => (b.total_sold || 0) - (a.total_sold || 0));
-      result = result.slice(0, 10); // Optionally limit to top 10 best sellers
-    } else {
-      switch (sortOption) {
+    switch (sortOption) {
+      case 'bestseller':
+        result.sort((a, b) => (b.total_sold || 0) - (a.total_sold || 0));
+        result = result.slice(0, 10); // Optionally limit to top 10 best sellers
+        break;
         case 'a-z': result.sort((a, b) => a.item_name.localeCompare(b.item_name)); break;
         case 'z-a': result.sort((a, b) => b.item_name.localeCompare(a.item_name)); break;
         case 'price-low': result.sort((a, b) => parseFloat(a.price) - parseFloat(b.price)); break;
@@ -104,7 +104,6 @@ function MenuPage() {
         case 'recent': result.sort((a, b) => b.item_id - a.item_id); break;
         default: break;
       }
-    }
     return result;
   }, [items, selectedCategory, searchTerm, sortOption]);
 

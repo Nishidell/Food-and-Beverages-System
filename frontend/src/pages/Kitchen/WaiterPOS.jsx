@@ -11,6 +11,7 @@ function WaiterPOS() {
     const [menuItems, setMenuItems] = useState([]);
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState(0); // 0 = All Items
+    const [sortOption, setSortOption] = useState('a-z'); 
     
     // Cart & Table State
     const [activeTabs, setActiveTabs] = useState([]);
@@ -115,11 +116,41 @@ function WaiterPOS() {
 };
 
     // Filter items based on selected category tab
-    const displayedItems = selectedCategory === 0 
+    let displayedItems = selectedCategory === 0 
         ? menuItems 
-        : selectedCategory === 'bestseller'
-            ? [...menuItems].sort((a, b) => (b.total_sold || 0) - (a.total_sold || 0)).slice(0, 10)
-            : menuItems.filter(item => Number(item.category_id) === Number(selectedCategory));
+        : menuItems.filter(item => Number(item.category_id) === Number(selectedCategory));
+
+    // Apply sort/filter
+    switch (sortOption) {
+        case 'bestseller':
+            displayedItems = [...displayedItems].sort((a, b) => (b.total_sold || 0) - (a.total_sold || 0)).slice(0, 10);
+            break;
+        case 'a-z':
+            displayedItems = [...displayedItems].sort((a, b) => a.item_name.localeCompare(b.item_name));
+            break;
+        case 'z-a':
+            displayedItems = [...displayedItems].sort((a, b) => b.item_name.localeCompare(a.item_name));
+            break;
+        case 'price-low':
+            displayedItems = [...displayedItems].sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+            break;
+        case 'price-high':
+            displayedItems = [...displayedItems].sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
+            break;
+        case 'rating-high':
+            displayedItems = [...displayedItems].sort((a, b) => {
+                const ratingA = parseFloat(a.average_rating || 0);
+                const ratingB = parseFloat(b.average_rating || 0);
+                if (ratingB !== ratingA) return ratingB - ratingA;
+                return (b.total_reviews || 0) - (a.total_reviews || 0);
+            });
+            break;
+        case 'recent':
+            displayedItems = [...displayedItems].sort((a, b) => b.item_id - a.item_id);
+            break;
+        default:
+            break;
+    }
 
     return (
         <div className="bg-amber-50 min-h-screen">
@@ -136,6 +167,8 @@ function WaiterPOS() {
                             categories={categories}
                             selectedCategory={selectedCategory}
                             onSelectCategory={setSelectedCategory}
+                            sortOption={sortOption}
+                            onSortChange={setSortOption}
                             theme="kitchen"
                         />
                     </div>

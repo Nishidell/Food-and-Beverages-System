@@ -10,6 +10,7 @@ const CategoryTabs = ({ categories, selectedCategory, onSelectCategory, onSortCh
   const scrollContainerRef = useRef(null); 
 
   const sortOptions = [
+    { id: 'bestseller', label: 'Best Sellers' },
     { id: 'a-z', label: 'Alphabetical (A-Z)' },
     { id: 'z-a', label: 'Alphabetical (Z-A)' },
     { id: 'price-low', label: 'Price (Low-High)' },
@@ -70,7 +71,7 @@ const CategoryTabs = ({ categories, selectedCategory, onSelectCategory, onSortCh
   return (
     <div className={`category-tabs-wrapper ${theme === 'kitchen' ? 'kitchen-theme' : 'customer-theme'}`}>
       
-      <div className="border border-[#F9A825] rounded-[25px] w-full max-w-6xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
+      <div className="border border-[#F9A825] rounded-[25px] w-full max-w-5xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2">
             
             {/* Left Side: Scrollable Categories */}
@@ -99,12 +100,6 @@ const CategoryTabs = ({ categories, selectedCategory, onSelectCategory, onSortCh
                     All Items
                 </button>
     
-                <button
-                    onClick={() => onSelectCategory('bestseller')}
-                    className={`category-tab-btn flex-shrink-0 whitespace-nowrap ${selectedCategory === 'bestseller' ? 'active' : ''}`}
-                >
-                    Best Sellers
-                </button>
 
                 {categories.map((category) => (
                     <button

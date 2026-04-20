@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, Users, CheckCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Calendar, Clock, Users, CheckCircle, ArrowLeft, Bell } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../utils/apiClient';
 import toast from 'react-hot-toast';
 
 const DiningReservationPage = () => {
   const { token } = useAuth(); // We need to make sure they are logged in!
+  const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
     reservation_date: '',
@@ -96,6 +98,14 @@ const DiningReservationPage = () => {
     }
   };
 
+  const handleNotifyMe = () => {
+    if (!token) {
+      toast.error("Please log in to receive notifications.");
+      return;
+    }
+    toast.success("You're on the list! We'll notify you of updates.");
+  };
+
   // --- UI RENDER ---
 
   // If the booking is successful, show a beautiful confirmation screen instead of the form
@@ -122,8 +132,27 @@ const DiningReservationPage = () => {
     <div className="min-h-screen bg-[#FFF8E7] flex flex-col relative">
       
       {/* Hero Header Section */}
-      <div className="h-96 bg-[#480c1b] w-full flex flex-col items-center justify-center text-center px-4">
-        <h1 className="text-5xl md:text-6xl font-serif text-[#F9A825] mb-4">Enbu at Celestia</h1>
+      <div className="h-96 bg-[#480c1b] w-full flex flex-col items-center justify-center text-center px-4 relative">
+        
+        {/* Top Navigation Bar */}
+        <div className="absolute top-6 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center left-0 right-0">
+          <button 
+            onClick={() => navigate('/')} 
+            className="flex items-center gap-2 text-[#F9A825] hover:text-white transition-colors font-bold"
+          >
+            <ArrowLeft size={24} /> 
+            <span className="hidden sm:inline">Back to Menu</span>
+          </button>
+
+          <button 
+            // Note for your friend: Add the onClick handler or window.location.href here for the CRS subsystem
+            className="bg-[#F9A825] text-[#480c1b] px-5 py-2 rounded-md font-bold hover:bg-white transition-colors shadow-lg"
+          >
+            CRS Portal
+          </button>
+        </div>
+
+        <h1 className="text-5xl md:text-6xl font-serif text-[#F9A825] mb-4">Dining at Celestia</h1>
         <p className="text-white text-lg md:text-xl max-w-2xl">
           Experience the dancing flames of the grill. Reserve your unforgettable dining experience tonight.
         </p>
@@ -197,19 +226,29 @@ const DiningReservationPage = () => {
 
           </form>
 
-          {/* Optional Special Requests */}
-          <div className="mt-8 pt-6 border-t border-gray-100">
-            <label className="block text-sm font-bold text-gray-500 mb-2">
-              Special Requests (Optional)
-            </label>
-            <input
-              type="text"
-              name="special_requests"
-              value={formData.special_requests}
-              onChange={handleChange}
-              placeholder="Anniversary, allergies, high chair needed..."
-              className="w-full border border-gray-200 rounded p-3 text-sm focus:border-[#F9A825] outline-none"
-            />
+          {/* Optional Special Requests & Notify Me */}
+          <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col md:flex-row items-end gap-4">
+            <div className="flex-1 w-full">
+              <label className="block text-sm font-bold text-gray-500 mb-2">
+                Special Requests (Optional)
+              </label>
+              <input
+                type="text"
+                name="special_requests"
+                value={formData.special_requests}
+                onChange={handleChange}
+                placeholder="Anniversary, allergies, high chair needed..."
+                className="w-full border border-gray-200 rounded p-3 text-sm focus:border-[#F9A825] outline-none"
+              />
+            </div>
+            
+            <button
+              type="button"
+              onClick={handleNotifyMe}
+              className="bg-white border-2 border-[#480c1b] text-[#480c1b] font-bold px-6 rounded hover:bg-[#480c1b] hover:text-[#F9A825] transition-colors flex items-center justify-center gap-2 whitespace-nowrap w-full md:w-auto h-[46px]"
+            >
+              <Bell size={18} /> Notify Me
+            </button>
           </div>
 
           {/* ================= TABLE SELECTION MODAL ================= */}
