@@ -23,14 +23,14 @@ const router = express.Router();
 router.get(
     '/kitchen', 
     protect, 
-    authorizeRoles("Operations Manager", "Kitchen Staffs", "Waiter", "Cashier"), 
+    authorizeRoles("Operations Manager", "General Manager", "Head Chef"), 
     getKitchenOrders
 ); 
 
 router.get(
     '/served', 
     protect, 
-    authorizeRoles("Operations Manager", "Kitchen Staffs", "Waiter", "Cashier"), 
+    authorizeRoles("Operations Manager", "General Manager", "Head Chef"), 
     getServedOrders
 );
 
@@ -39,7 +39,7 @@ router.get(
 router.post(
     "/pos", 
     protect, 
-    authorizeRoles("Operations Manager", "Waiter", "Cashier"), 
+    authorizeRoles("Operations Manager", "General Manager", "Service Supervisor", "Finance Manager"), 
     createPosOrder
 );
 
@@ -48,7 +48,7 @@ router.post(
 router.post(
     "/:id/items", 
     protect, 
-    authorizeRoles("Operations Manager", "Waiter", "Cashier"), 
+    authorizeRoles("Operations Manager", "General Manager", "Service Supervisor", "Finance Manager"), 
     addItemsToOrder
 );
 
@@ -57,7 +57,7 @@ router.post(
 router.put(
     "/:id/status", 
     protect, 
-    authorizeRoles("Operations Manager", "Kitchen Staffs", "Waiter", "Cashier"), 
+    authorizeRoles("Operations Manager", "General Manager", " Head Chef"), 
     updateOrderStatus
 );
 
@@ -66,14 +66,14 @@ router.put(
 router.put(
     "/item/:detailId/toggle", 
     protect, 
-    authorizeRoles("Operations Manager", "Kitchen Staffs", "Waiter", "Cashier"), 
+    authorizeRoles("Operations Manager", "General Manager", "Head Chef"), 
     toggleItemCheckbox
 );
 
 router.put(
     "/item/:detailId/void", 
     protect, 
-    authorizeRoles("Operations Manager", "Waiter", "Cashier"), 
+    authorizeRoles("Operations Manager", "General Manager", "Head Chef"), 
     voidOrderItem
 );
 
@@ -82,14 +82,14 @@ router.put(
 router.get(
     "/unpaid", 
     protect, 
-    authorizeRoles("Operations Manager", "Cashier", "Admin"), 
+    authorizeRoles("Operations Manager", "General Manager", "Finance Manager"), 
     getUnpaidTabs
 );
 
 router.post(
     "/:id/settle", 
     protect, 
-    authorizeRoles("Operations Manager", "Cashier", "Admin"), 
+    authorizeRoles("Operations Manager", "General Manager", "Finance Manager"), 
     settleBill
 );
 

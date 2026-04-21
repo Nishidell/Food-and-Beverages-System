@@ -29,7 +29,7 @@ function AdminPage() {
   const [editingItem, setEditingItem] = useState(null);
   const [menuFilterCategory, setMenuFilterCategory] = useState('All');
   const [menuSearchTerm, setMenuSearchTerm] = useState('');
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   
   useEffect(() => {
     const fetchData = async () => {
@@ -189,18 +189,20 @@ function AdminPage() {
             >
               Dashboard
             </button>
-            <button
-              onClick={() => setCurrentView('analytics')}
-              style={{
-                padding: '8px 16px',
-                fontSize: '1.125rem',
-                fontWeight: 600,
-                color: currentView === 'analytics' ? accentColor : '#ffffff',
-                borderBottom: currentView === 'analytics' ? `2px solid ${accentColor}` : '2px solid transparent'
-              }}
-            >
-              Analytics
-            </button>
+            {user && user.position === 'General Manager' && (
+              <button
+                onClick={() => setCurrentView('analytics')}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '1.125rem',
+                  fontWeight: 600,
+                  color: currentView === 'analytics' ? accentColor : '#ffffff',
+                  borderBottom: currentView === 'analytics' ? `2px solid ${accentColor}` : '2px solid transparent'
+                }}
+              >
+                Analytics
+              </button>
+            )}
             <button
               onClick={() => setCurrentView('orders')}
               style={{
@@ -237,31 +239,34 @@ function AdminPage() {
             >
               Table Management
             </button>
-
-            <button
-            onClick={() => setCurrentView('promotions')}
-            style={{
-              padding: '8px 16px',
-              fontSize: '1.125rem',
-              fontWeight: 600,
-              color: currentView === 'promotions' ? accentColor : '#ffffff',
-              borderBottom: currentView === 'promotions' ? `2px solid ${accentColor}` : '2px solid transparent'
-            }}
-          >
-            Promo Management
-          </button>
-          <button
-            onClick={() => setCurrentView('budget')}
-            style={{
-              padding: '8px 16px',
-              fontSize: '1.125rem',
-              fontWeight: 600,
-              color: currentView === 'budget' ? accentColor : '#ffffff',
-              borderBottom: currentView === 'budget' ? `2px solid ${accentColor}` : '2px solid transparent'
-            }}
-          >
-            Request Budget
-          </button>
+            {user && user.position === 'General Manager' && (
+              <button
+                onClick={() => setCurrentView('promotions')}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '1.125rem',
+                  fontWeight: 600,
+                  color: currentView === 'promotions' ? accentColor : '#ffffff',
+                  borderBottom: currentView === 'promotions' ? `2px solid ${accentColor}` : '2px solid transparent'
+                }}
+              >
+                Promotions
+              </button>
+            )}
+            {user && user.position === 'General Manager' && (
+              <button
+                onClick={() => setCurrentView('budget')}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '1.125rem',
+                  fontWeight: 600,
+                  color: currentView === 'budget' ? accentColor : '#ffffff',
+                  borderBottom: currentView === 'budget' ? `2px solid ${accentColor}` : '2px solid transparent'
+                }}
+              >
+                Request Budget
+              </button>
+            )}
             <button
               onClick={() => setCurrentView('logs')}
               style={{
@@ -274,18 +279,20 @@ function AdminPage() {
             >
               Inventory Logs
             </button>
-            <button
-              onClick={() => setCurrentView('reviews')}
-              style={{
-                padding: '8px 16px',
-                fontSize: '1.125rem',
-                fontWeight: 600,
-                color: currentView === 'reviews' ? accentColor : '#ffffff',
-                borderBottom: currentView === 'reviews' ? `2px solid ${accentColor}` : '2px solid transparent'
-              }}
-            >
-              Food Reviews
-            </button>
+            {user && user.position === 'General Manager' && (
+              <button
+                onClick={() => setCurrentView('reviews')}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '1.125rem',
+                  fontWeight: 600,
+                  color: currentView === 'reviews' ? accentColor : '#ffffff',
+                  borderBottom: currentView === 'reviews' ? `2px solid ${accentColor}` : '2px solid transparent'
+                }}
+              >
+                Food Reviews
+              </button>
+            )}
           </nav>
 
           <main>

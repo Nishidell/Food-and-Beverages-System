@@ -18,6 +18,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     allowed === userRole || allowed === userPosition
   );
 
+  console.log("Checking Access. User Position is:", `"${userPosition}"`);
+  
   if (allowedRoles && !isAllowed) {
     return <Navigate to="/not-authorized" replace />;
   }
