@@ -191,7 +191,34 @@ const orderData = data.orderTypeDistribution
   };
 
   if (loading && !data) {
-      return <div className="p-8 text-center text-white text-lg animate-pulse">Loading analytics...</div>;
+      return (
+        <div className="w-full animate-pulse">
+          {/* Skeleton Header & Filters */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+            <div className="w-full sm:w-1/3">
+              <div className="h-8 bg-white/20 rounded w-3/4 mb-2"></div>
+              <div className="h-4 bg-white/20 rounded w-1/2"></div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-2/3 sm:justify-end">
+              <div className="h-12 bg-white/20 rounded w-full sm:w-32"></div>
+              <div className="h-12 bg-white/20 rounded w-full sm:w-32"></div>
+              <div className="h-12 bg-white/20 rounded w-full sm:w-40"></div>
+            </div>
+          </div>
+          {/* Skeleton Chart Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="admin-card bg-[#fff2e0] p-6 rounded-xl shadow-md border border-[#6e1a1a] h-[400px] flex flex-col">
+                <div className="flex justify-between items-center mb-4">
+                  <div className="h-6 bg-[#480c1b]/10 rounded w-1/3"></div>
+                  <div className="h-6 bg-[#480c1b]/10 rounded w-8"></div>
+                </div>
+                <div className="flex-1 bg-[#480c1b]/5 rounded-lg w-full mt-4"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
   }
   if (error) return <div className="p-8 text-center text-red-500">Error: {error}</div>;
   if (!data) return <div className="p-8 text-center text-white">No data available.</div>;

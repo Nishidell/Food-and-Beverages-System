@@ -25,8 +25,8 @@ useEffect(() => {
         setFormData({
           name: ingredientToEdit.name || '',
           unit_of_measurement: ingredientToEdit.unit_of_measurement || '',
-          stock_level: ingredientToEdit.stock_level, 
-          reorder_point: ingredientToEdit.reorder_point || 10, 
+          stock_level: Math.floor(parseFloat(ingredientToEdit.stock_level || 0)), 
+          reorder_point: Math.floor(parseFloat(ingredientToEdit.reorder_point || 10)), 
           unit_cost: ingredientToEdit.unit_cost || '',
         });
       } else {
@@ -65,7 +65,12 @@ useEffect(() => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
+    const cleanData = {
+      ...formData,
+      stock_level: Math.floor(parseFloat(formData.stock_level || 0)),
+      reorder_point: Math.floor(parseFloat(formData.reorder_point || 10))
+    };
+    onSave(cleanData);
   };
 
   return (
@@ -130,7 +135,7 @@ useEffect(() => {
                 <div>
                   <label htmlFor="stock_level" className="block text-sm font-medium text-gray-700">Initial Stock</label>
                   <input
-                    type="number" id="stock_level" step="0.01" value={formData.stock_level} onChange={handleChange} required
+                    type="number" id="stock_level" step="1" min="0" value={formData.stock_level} onChange={handleChange} required
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
                   />
                 </div>
@@ -147,7 +152,7 @@ useEffect(() => {
             </label>
             <div className="flex items-center gap-2 mt-1">
                 <input
-                  type="number" id="reorder_point" value={formData.reorder_point} onChange={handleChange} required
+                  type="number" id="reorder_point" step="1" min="0" value={formData.reorder_point} onChange={handleChange} required
                   className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500"
                 />
                 <span className="text-sm text-gray-500 font-bold min-w-[30px]">{formData.unit_of_measurement || ''}</span>

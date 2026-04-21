@@ -39,7 +39,7 @@ const AdjustStockModal = ({ isOpen, onClose, onAdjust, ingredient }) => {
     const currentStock = parseFloat(ingredient.stock_level);
     
     if (isSubtract && changeAmount > currentStock) {
-        alert(`Cannot subtract ${changeAmount}. You only have ${currentStock} in stock!`);
+        alert(`Cannot subtract ${changeAmount}. You only have ${Math.floor(currentStock)} in stock!`);
         return;
     }
 
@@ -61,7 +61,7 @@ const AdjustStockModal = ({ isOpen, onClose, onAdjust, ingredient }) => {
         <div className="mb-4 bg-blue-50 border border-blue-200 p-3 rounded-md">
             <h3 className="font-bold text-lg text-blue-800">{ingredient.name}</h3>
             <p className="text-sm text-gray-700">
-                Current Stock: <span className="font-semibold">{parseFloat(ingredient.stock_level).toFixed(2)} {ingredient.unit_of_measurement}</span>
+                Current Stock: <span className="font-semibold">{Math.floor(parseFloat(ingredient.stock_level))} {ingredient.unit_of_measurement}</span>
             </p>
         </div>
         
@@ -91,11 +91,11 @@ const AdjustStockModal = ({ isOpen, onClose, onAdjust, ingredient }) => {
             <input
               type="number"
               id="quantity_change"
-              step="0.01"
+              step="1"
               value={formData.quantity_change}
               onChange={handleChange}
               required
-              min="0.01"
+              min="1"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
               placeholder={`Amount in ${ingredient.unit_of_measurement}`}
             />

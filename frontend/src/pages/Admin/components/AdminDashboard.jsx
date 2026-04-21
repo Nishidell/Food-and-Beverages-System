@@ -13,6 +13,7 @@ const AdminDashboard = ({ onNavigate }) => {
     recentOrders: [],
     stockAlerts: [],
   });
+  const [loading, setLoading] = useState(true);
   
   const { socket } = useSocket();
 
@@ -23,6 +24,8 @@ const AdminDashboard = ({ onNavigate }) => {
       setData(json);
     } catch (err) {
       console.error("Failed to load dashboard data:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -58,6 +61,48 @@ const AdminDashboard = ({ onNavigate }) => {
 
   // ✅ Common style for clickable cards
   const cardStyle = "bg-[#fff2e0] rounded-xl p-5 shadow-md border border-[#6e1a1a] cursor-pointer transition-transform hover:scale-105 hover:shadow-lg";
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#480c1b] p-6">
+        {/* Skeleton Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-[#fff2e0] rounded-xl p-5 shadow-md border border-[#6e1a1a] animate-pulse">
+              <div className="h-7 w-7 bg-[#480c1b]/10 rounded-full mb-2"></div>
+              <div className="h-4 bg-[#480c1b]/10 rounded w-1/2 mt-1 mb-2"></div>
+              <div className="h-8 bg-[#480c1b]/10 rounded w-1/3 mt-2"></div>
+            </div>
+          ))}
+        </div>
+
+        {/* Skeleton Main Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {[1, 2].map((i) => (
+            <div key={i} className="bg-[#fff2e0] rounded-xl shadow-lg p-5 animate-pulse">
+              <div className="flex justify-between items-center mb-3">
+                <div className="h-6 bg-[#480c1b]/10 rounded w-1/3"></div>
+              </div>
+              <div className="space-y-2 mt-4">
+                {[1, 2, 3, 4].map((j) => (
+                  <div key={j} className="flex justify-between items-center border-b border-[#480c1b]/10 py-3">
+                    <div className="w-1/2">
+                      <div className="h-4 bg-[#480c1b]/10 rounded w-1/2 mb-2"></div>
+                      <div className="h-3 bg-[#480c1b]/10 rounded w-1/3"></div>
+                    </div>
+                    <div className="flex items-center gap-4 w-1/3 justify-end">
+                      <div className="h-4 bg-[#480c1b]/10 rounded w-8"></div>
+                      <div className="h-6 bg-[#480c1b]/10 rounded-full w-16"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#480c1b] text-black p-6">

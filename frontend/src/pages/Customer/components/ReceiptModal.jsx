@@ -161,6 +161,13 @@ const ReceiptModal = ({ isOpen, onClose, orderDetails }) => {
         {/* Footer Text */}
         <p className="text-center text-xs text-gray-500 mt-4">Thank you for dining at The Celestia Hotel!</p>
         
+        {/* QR Code for Rating (Visible ONLY on Paper Print) */}
+        <div className="mt-6 mb-2 hidden print:flex flex-col items-center text-center">
+            <p className="font-bold text-gray-800 mb-2 text-xs uppercase tracking-wider">Scan to Rate Your Food!</p>
+            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(window.location.origin + '/my-orders?tab=to-rate')}`} alt="QR Code" className="w-24 h-24 mb-1" />
+            <p className="text-[10px] text-gray-500">We value your feedback</p>
+        </div>
+
         {/* Buttons (Hidden on Paper) */}
         <div className="mt-5 flex gap-3 justify-center print:hidden">
           <button

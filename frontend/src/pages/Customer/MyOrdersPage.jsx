@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Clock, MapPin, Star, Package, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../utils/apiClient';
@@ -13,11 +13,15 @@ const MyOrdersPage = () => {
   const [error, setError] = useState(null);
   const [itemToRate, setItemToRate] = useState(null);
   
-  // View Filter State (Default to 'all')
-  const [activeTab, setActiveTab] = useState('all'); 
-
   const navigate = useNavigate();
+  const location = useLocation();
   const { token } = useAuth();
+
+  // View Filter State (Default to 'all' or read from query params)
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('tab') || 'all';
+  });
 
   useEffect(() => {
     const fetchMyOrders = async () => {

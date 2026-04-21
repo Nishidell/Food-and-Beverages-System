@@ -293,9 +293,28 @@ function AdminPage() {
             {currentView === 'analytics' && <AnalyticsDashboard />}
             {!loading && !error && currentView === 'promotions' && <PromotionsManagement />}
             
-            {loading && currentView !== 'analytics' && (
-              <div style={{ padding: '2rem', textAlign: 'center', fontSize: '1.25rem', color: '#ffffff' }}>
-                Loading {currentView} data...
+            {loading && currentView !== 'analytics' && currentView !== 'dashboard' && (
+              <div className="bg-[#fff2e0] rounded-xl shadow-lg p-6 border border-[#6e1a1a] animate-pulse">
+                {/* Skeleton Header & Buttons */}
+                <div className="flex justify-between items-center mb-6">
+                  <div className="h-8 bg-[#480c1b]/10 rounded w-1/4"></div>
+                  <div className="flex gap-4">
+                    <div className="h-10 bg-[#480c1b]/10 rounded w-24"></div>
+                    <div className="h-10 bg-[#480c1b]/10 rounded w-32"></div>
+                  </div>
+                </div>
+                {/* Skeleton Table Rows */}
+                <div className="space-y-4">
+                  <div className="h-10 bg-[#480c1b]/20 rounded w-full mb-4"></div>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex justify-between items-center border-b border-[#480c1b]/10 py-4">
+                      <div className="h-4 bg-[#480c1b]/10 rounded w-1/6"></div>
+                      <div className="h-4 bg-[#480c1b]/10 rounded w-1/4"></div>
+                      <div className="h-4 bg-[#480c1b]/10 rounded w-1/5"></div>
+                      <div className="h-4 bg-[#480c1b]/10 rounded w-1/12"></div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             

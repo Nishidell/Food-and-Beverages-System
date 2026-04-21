@@ -58,7 +58,7 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
               ingredients: data.ingredients.map(ing => ({
                   ingredient_id: ing.ingredient_id,
                   name: ing.name,
-                  quantity_consumed: ing.quantity_consumed,
+                  quantity_consumed: Math.floor(parseFloat(ing.quantity_consumed || 0)),
                   unit_of_measurement: ing.unit_of_measurement
               })) || [],
               // REMOVED: Promo fields mapping
@@ -143,7 +143,7 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
         {
           ingredient_id: ingredient.ingredient_id,
           name: ingredient.name,
-          quantity_consumed: parseFloat(ingredientQuantity),
+          quantity_consumed: parseInt(ingredientQuantity, 10),
           unit_of_measurement: ingredient.unit_of_measurement
         }
       ]
@@ -263,7 +263,7 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
               </div>
               <div style={{ flex: 2 }}>
                 <label htmlFor="ingredient-quantity" style={labelStyle}>Quantity</label>
-                <input type="number" id="ingredient-quantity" step="0.01" value={ingredientQuantity} onChange={(e) => setIngredientQuantity(e.target.value)} style={inputStyle} placeholder="e.g., 150" />
+                <input type="number" id="ingredient-quantity" step="1" min="1" value={ingredientQuantity} onChange={(e) => setIngredientQuantity(e.target.value)} style={inputStyle} placeholder="e.g., 150" />
               </div>
               <button type="button" onClick={handleAddIngredientToRecipe} style={{ ...buttonStyle, padding: '8px', backgroundColor: '#16A34A' }} title="Add to Recipe">
                 <PlusCircle size={24} />
