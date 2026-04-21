@@ -50,8 +50,8 @@ const io = new Server(httpServer, {    // ✅ Now works
     origin: [
       'http://localhost:5173',
       'http://localhost:21917',
-      'https://food-and-beverages-system.onrender.com',
-      'https://thecelestiahotel-dining.onrender.com',
+      'https://celestia-food-and-beverages-system.onrender.com',
+      'https://food-and-beverages-system-6nzo24rxa-nishidells-projects.vercel.app'
     ],
     credentials: true
   }
@@ -77,7 +77,8 @@ app.set('trust proxy', 1);
 const allowedOrigins = [
   'http://localhost:5173',   // Frontend Vite dev server
   'http://localhost:21917',  // Backend (for testing)
-  'https://food-and-beverages-system.onrender.com'  // Production
+  'https://celestia-food-and-beverages-system.onrender.com',
+  'https://food-and-beverages-system-6nzo24rxa-nishidells-projects.vercel.app'
 ];
 
 app.use(cors({
