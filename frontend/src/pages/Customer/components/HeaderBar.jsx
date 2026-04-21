@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingCart, Search, Bell, X } from 'lucide-react';
+import { ShoppingCart, Search, Bell, X, Calendar } from 'lucide-react';
 import ProfileDropdown from '../../../components/ProfileDropdown';
 import { useAuth } from '../../../context/AuthContext';
 import { useCart } from '../../../context/CartContext'; 
@@ -88,6 +88,10 @@ export default function HeaderBar({
                 </button>
             </>
         )}
+        
+        <Link to="/dining-reservation" className="header-icon-btn" title="Dining Reservation">
+            <Calendar size={22} />
+        </Link>
         <ProfileDropdown />
       </div>
     </header>

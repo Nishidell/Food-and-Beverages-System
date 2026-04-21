@@ -20,8 +20,8 @@ export const protect = (req, res, next) => {
   }
 };
 
-// UPDATED: Now checks for POSITIONS, not Roles.
 // UPDATED: Checks for BOTH Positions (Staff) and Roles (Customers)
+// Includes HRIS Translation Dictionary and General Manager Master Key
 export const authorizeRoles = (...allowedRolesOrPositions) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -29,26 +29,39 @@ export const authorizeRoles = (...allowedRolesOrPositions) => {
     }
 
     // 1. Get user info
-    const userPosition = req.user.position; // For Staff (e.g., "F&B Admin")
-    const userRole = req.user.role;         // For Customers (e.g., "customer")
+    const userPosition = req.user.position; // For Staff 
+    const userRole = req.user.role;         // For Customers
 
-    // 2. Check strict Position match (For Staff)
-    if (userPosition && allowedRolesOrPositions.includes(userPosition)) {
+    // THE MASTER KEY: General Manager bypasses all checks
+    if (userPosition === 'General Manager') {
         return next();
     }
 
-    // 3. Check strict Role match (For Customers or generic roles)
-    if (userRole && allowedRolesOrPositions.includes(userRole)) {
+    // THE TRANSLATION DICTIONARY: Map legacy backend roles to new HRIS titles
+    const allowedWithMapping = [...allowedRolesOrPositions];
+
+    if (allowedWithMapping.includes('Operations Manager')) allowedWithMapping.push('Operations Manager');
+    if (allowedWithMapping.includes('Kitchen Staffs')) allowedWithMapping.push('Head Chef', 'Assistant Chef');
+    if (allowedWithMapping.includes('Waiter')) allowedWithMapping.push('Service Supervisor');
+    if (allowedWithMapping.includes('Cashier')) allowedWithMapping.push('Finance Manager');
+    if (allowedWithMapping.includes('Stock Controller')) allowedWithMapping.push('Inventory Manager');
+
+    // 2. Check strict Position match (For Staff) using our new translated list
+    if (userPosition && allowedWithMapping.includes(userPosition)) {
         return next();
     }
 
-    // 4. Special Case: 'F&B Admin' should access 'admin' routes (Backward compatibility)
-    // If the route asks for 'admin', but the user is 'F&B Admin', allow it.
-    if (userPosition === 'Operations Manager' && allowedRolesOrPositions.includes('admin')) {
+    // 3. Check strict Role match (For Customers)
+    if (userRole && allowedWithMapping.includes(userRole)) {
         return next();
     }
 
-    console.log(`Access Denied. User: ${userRole}/${userPosition}. Allowed: ${allowedRolesOrPositions}`);
+    // 4. Special Case: Backward compatibility for admin routes
+    if ((userPosition === 'Operations Manager' || userPosition === 'Operation Manager') && allowedWithMapping.includes('admin')) {
+        return next();
+    }
+
+    console.log(`Access Denied. User: ${userRole || 'None'}/${userPosition || 'None'}. Allowed: ${allowedWithMapping}`);
     return res.status(403).json({ message: "Access forbidden: insufficient privileges" });
   };
 };

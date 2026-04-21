@@ -13,6 +13,7 @@ const AdminDashboard = ({ onNavigate }) => {
     recentOrders: [],
     stockAlerts: [],
   });
+  const [loading, setLoading] = useState(true);
   
   const { socket } = useSocket();
 
@@ -23,6 +24,8 @@ const AdminDashboard = ({ onNavigate }) => {
       setData(json);
     } catch (err) {
       console.error("Failed to load dashboard data:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -58,6 +61,48 @@ const AdminDashboard = ({ onNavigate }) => {
 
   // ✅ Common style for clickable cards
   const cardStyle = "bg-[#fff2e0] rounded-xl p-5 shadow-md border border-[#6e1a1a] cursor-pointer transition-transform hover:scale-105 hover:shadow-lg";
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#480c1b] p-6">
+        {/* Skeleton Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-[#fff2e0] rounded-xl p-5 shadow-md border border-[#6e1a1a] animate-pulse">
+              <div className="h-7 w-7 bg-[#480c1b]/10 rounded-full mb-2"></div>
+              <div className="h-4 bg-[#480c1b]/10 rounded w-1/2 mt-1 mb-2"></div>
+              <div className="h-8 bg-[#480c1b]/10 rounded w-1/3 mt-2"></div>
+            </div>
+          ))}
+        </div>
+
+        {/* Skeleton Main Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {[1, 2].map((i) => (
+            <div key={i} className="bg-[#fff2e0] rounded-xl shadow-lg p-5 animate-pulse">
+              <div className="flex justify-between items-center mb-3">
+                <div className="h-6 bg-[#480c1b]/10 rounded w-1/3"></div>
+              </div>
+              <div className="space-y-2 mt-4">
+                {[1, 2, 3, 4].map((j) => (
+                  <div key={j} className="flex justify-between items-center border-b border-[#480c1b]/10 py-3">
+                    <div className="w-1/2">
+                      <div className="h-4 bg-[#480c1b]/10 rounded w-1/2 mb-2"></div>
+                      <div className="h-3 bg-[#480c1b]/10 rounded w-1/3"></div>
+                    </div>
+                    <div className="flex items-center gap-4 w-1/3 justify-end">
+                      <div className="h-4 bg-[#480c1b]/10 rounded w-8"></div>
+                      <div className="h-6 bg-[#480c1b]/10 rounded-full w-16"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#480c1b] text-black p-6">
@@ -103,7 +148,7 @@ const AdminDashboard = ({ onNavigate }) => {
               </span>
             ) : null}
           </div>
-          <h3 className="text-sm text-black">Low Stock Items</h3>
+          <h3 className="text-sm text-black">Stock Alerts (Low & Out)</h3>
           <p className="text-3xl font-bold mt-1">{summary.lowStock}</p>
         </div>
 
@@ -183,26 +228,33 @@ const AdminDashboard = ({ onNavigate }) => {
           <h2 className="text-lg font-semibold mb-3">Stock Alerts</h2>
           {stockAlerts.length > 0 ? (
             <ul>
-              {stockAlerts.map((item) => (
-                <li
-                  key={item.ingredient_id}
-                  className="flex justify-between items-center border-b border-gray-300 py-2 text-sm"
-                >
-                  <div>
-                    <p className="font-semibold">{item.name}</p>
-                    <p className="text-gray-600">{item.supplier_name}</p>
-                  </div>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      item.stock === 0
-                        ? "bg-red-200 text-red-800"
-                        : "bg-orange-200 text-orange-800"
-                    }`}
+              {stockAlerts.map((item) => {
+                // Safely grab the stock value regardless of how the backend names it
+                const stockValue = parseFloat(item.stock_level !== undefined ? item.stock_level : item.stock || 0);
+                const isOut = stockValue <= 0;
+
+                return (
+                  <li
+                    key={item.ingredient_id}
+                    className="flex justify-between items-center border-b border-gray-300 py-2 text-sm"
                   >
-                    {item.stock === 0 ? "out-of-stock" : "low-stock"}
-                  </span>
-                </li>
-              ))}
+                    <div>
+                      <p className="font-semibold">{item.name}</p>
+                      {/* Swapped supplier_name for actual stock count so admins see the numbers instantly */}
+                      <p className="text-gray-600 text-xs font-bold">Current Stock: {stockValue}</p> 
+                    </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-bold uppercase border ${
+                        isOut
+                          ? "bg-gray-200 text-gray-700 border-gray-300"
+                          : "bg-red-100 text-red-700 border-red-200"
+                      }`}
+                    >
+                      {isOut ? "Out of Stock" : "Low Stock"}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <p className="text-gray-600 text-center">No low-stock items</p>

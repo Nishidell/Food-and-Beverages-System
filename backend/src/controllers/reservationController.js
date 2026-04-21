@@ -171,7 +171,7 @@ export const getReservations = async (req, res) => {
     try {
         const sql = `
             SELECT 
-                r.reservation_id, r.first_name, r.last_name, r.email, 
+                r.reservation_id, r.table_id, r.first_name, r.last_name, r.email, 
                 r.reservation_date, r.reservation_time, r.party_size, 
                 r.status, r.special_requests,
                 t.table_number 
@@ -215,5 +215,53 @@ export const updateReservationStatus = async (req, res) => {
     } catch (error) {
         console.error("Update Reservation Status Error:", error);
         res.status(500).json({ message: "Error updating reservation", error: error.message });
+    }
+};
+
+// @desc    Get available tables for a specific date, time, and pax
+// @route   POST /api/reservations/available-tables
+// @access  Public (or Private depending on your auth setup)
+export const getAvailableTables = async (req, res) => {
+    const { date, time, party_size } = req.body;
+
+    if (!date || !time || !party_size) {
+        return res.status(400).json({ message: "Please provide date, time, and party size." });
+    }
+
+    const connection = await pool.getConnection();
+
+    try {
+        // The 2-Hour Overlap SQL Query
+        const sql = `
+            SELECT table_id, table_number, capacity AS seating_capacity 
+            FROM fb_tables
+            WHERE capacity >= ? 
+            AND status = 'Available' 
+            AND table_id NOT IN (
+                SELECT table_id 
+                FROM fb_dining_reservation
+                WHERE reservation_date = ?
+                AND status IN ('Pending', 'Confirmed', 'Seated') 
+                AND table_id IS NOT NULL
+                AND reservation_time < ADDTIME(?, '02:00:00') 
+                AND ADDTIME(reservation_time, '02:00:00') > ?
+            )
+            ORDER BY capacity ASC; 
+        `;
+
+        const [availableTables] = await connection.query(sql, [
+            party_size, 
+            date, 
+            time, 
+            time
+        ]);
+
+        res.status(200).json(availableTables);
+
+    } catch (error) {
+        console.error("Error fetching available tables:", error);
+        res.status(500).json({ message: "Failed to fetch tables", error: error.message });
+    } finally {
+        connection.release();
     }
 };

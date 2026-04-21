@@ -29,7 +29,7 @@ function AdminPage() {
   const [editingItem, setEditingItem] = useState(null);
   const [menuFilterCategory, setMenuFilterCategory] = useState('All');
   const [menuSearchTerm, setMenuSearchTerm] = useState('');
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   
   useEffect(() => {
     const fetchData = async () => {
@@ -189,18 +189,20 @@ function AdminPage() {
             >
               Dashboard
             </button>
-            <button
-              onClick={() => setCurrentView('analytics')}
-              style={{
-                padding: '8px 16px',
-                fontSize: '1.125rem',
-                fontWeight: 600,
-                color: currentView === 'analytics' ? accentColor : '#ffffff',
-                borderBottom: currentView === 'analytics' ? `2px solid ${accentColor}` : '2px solid transparent'
-              }}
-            >
-              Analytics
-            </button>
+            {user && user.position === 'General Manager' && (
+              <button
+                onClick={() => setCurrentView('analytics')}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '1.125rem',
+                  fontWeight: 600,
+                  color: currentView === 'analytics' ? accentColor : '#ffffff',
+                  borderBottom: currentView === 'analytics' ? `2px solid ${accentColor}` : '2px solid transparent'
+                }}
+              >
+                Analytics
+              </button>
+            )}
             <button
               onClick={() => setCurrentView('orders')}
               style={{
@@ -237,31 +239,34 @@ function AdminPage() {
             >
               Table Management
             </button>
-
-            <button
-            onClick={() => setCurrentView('promotions')}
-            style={{
-              padding: '8px 16px',
-              fontSize: '1.125rem',
-              fontWeight: 600,
-              color: currentView === 'promotions' ? accentColor : '#ffffff',
-              borderBottom: currentView === 'promotions' ? `2px solid ${accentColor}` : '2px solid transparent'
-            }}
-          >
-            Promo Management
-          </button>
-          <button
-            onClick={() => setCurrentView('budget')}
-            style={{
-              padding: '8px 16px',
-              fontSize: '1.125rem',
-              fontWeight: 600,
-              color: currentView === 'budget' ? accentColor : '#ffffff',
-              borderBottom: currentView === 'budget' ? `2px solid ${accentColor}` : '2px solid transparent'
-            }}
-          >
-            Request Budget
-          </button>
+            {user && user.position === 'General Manager' && (
+              <button
+                onClick={() => setCurrentView('promotions')}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '1.125rem',
+                  fontWeight: 600,
+                  color: currentView === 'promotions' ? accentColor : '#ffffff',
+                  borderBottom: currentView === 'promotions' ? `2px solid ${accentColor}` : '2px solid transparent'
+                }}
+              >
+                Promotions
+              </button>
+            )}
+            {user && user.position === 'General Manager' && (
+              <button
+                onClick={() => setCurrentView('budget')}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '1.125rem',
+                  fontWeight: 600,
+                  color: currentView === 'budget' ? accentColor : '#ffffff',
+                  borderBottom: currentView === 'budget' ? `2px solid ${accentColor}` : '2px solid transparent'
+                }}
+              >
+                Request Budget
+              </button>
+            )}
             <button
               onClick={() => setCurrentView('logs')}
               style={{
@@ -274,18 +279,20 @@ function AdminPage() {
             >
               Inventory Logs
             </button>
-            <button
-              onClick={() => setCurrentView('reviews')}
-              style={{
-                padding: '8px 16px',
-                fontSize: '1.125rem',
-                fontWeight: 600,
-                color: currentView === 'reviews' ? accentColor : '#ffffff',
-                borderBottom: currentView === 'reviews' ? `2px solid ${accentColor}` : '2px solid transparent'
-              }}
-            >
-              Food Reviews
-            </button>
+            {user && user.position === 'General Manager' && (
+              <button
+                onClick={() => setCurrentView('reviews')}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '1.125rem',
+                  fontWeight: 600,
+                  color: currentView === 'reviews' ? accentColor : '#ffffff',
+                  borderBottom: currentView === 'reviews' ? `2px solid ${accentColor}` : '2px solid transparent'
+                }}
+              >
+                Food Reviews
+              </button>
+            )}
           </nav>
 
           <main>
@@ -293,9 +300,28 @@ function AdminPage() {
             {currentView === 'analytics' && <AnalyticsDashboard />}
             {!loading && !error && currentView === 'promotions' && <PromotionsManagement />}
             
-            {loading && currentView !== 'analytics' && (
-              <div style={{ padding: '2rem', textAlign: 'center', fontSize: '1.25rem', color: '#ffffff' }}>
-                Loading {currentView} data...
+            {loading && currentView !== 'analytics' && currentView !== 'dashboard' && (
+              <div className="bg-[#fff2e0] rounded-xl shadow-lg p-6 border border-[#6e1a1a] animate-pulse">
+                {/* Skeleton Header & Buttons */}
+                <div className="flex justify-between items-center mb-6">
+                  <div className="h-8 bg-[#480c1b]/10 rounded w-1/4"></div>
+                  <div className="flex gap-4">
+                    <div className="h-10 bg-[#480c1b]/10 rounded w-24"></div>
+                    <div className="h-10 bg-[#480c1b]/10 rounded w-32"></div>
+                  </div>
+                </div>
+                {/* Skeleton Table Rows */}
+                <div className="space-y-4">
+                  <div className="h-10 bg-[#480c1b]/20 rounded w-full mb-4"></div>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex justify-between items-center border-b border-[#480c1b]/10 py-4">
+                      <div className="h-4 bg-[#480c1b]/10 rounded w-1/6"></div>
+                      <div className="h-4 bg-[#480c1b]/10 rounded w-1/4"></div>
+                      <div className="h-4 bg-[#480c1b]/10 rounded w-1/5"></div>
+                      <div className="h-4 bg-[#480c1b]/10 rounded w-1/12"></div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             

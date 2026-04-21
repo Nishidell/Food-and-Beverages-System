@@ -8,6 +8,6 @@ const router = express.Router();
 router.get('/', getAnnouncement);
 
 // Admin only: Update message
-router.put('/', protect, authorizeRoles("Operations Manager"), updateAnnouncement);
+router.put('/', protect, authorizeRoles("General Manager"), updateAnnouncement);
 
 export default router;

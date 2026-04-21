@@ -460,13 +460,15 @@ export const getOrderById = async (req, res) => {
         
         const order = orders[0];
 
-        // 2. Fetch Items & Calculate Subtotal on the fly!
+        // 2. Fetch Items & Calculate Subtotals on the fly!
         const [items] = await pool.query(
             `SELECT 
                 mi.item_name, 
                 od.quantity, 
                 od.price_on_purchase AS price,
+                mi.price AS original_price, 
                 (od.quantity * od.price_on_purchase) AS subtotal, 
+                (od.quantity * mi.price) AS original_subtotal,
                 od.instructions,
                 od.order_detail_id,
                 od.item_status
@@ -477,10 +479,14 @@ export const getOrderById = async (req, res) => {
         );
 
         // 3. Reconstruct the Math for the Receipt
+        // calculatedItemsTotal is what they actually bought (Promo price)
         const calculatedItemsTotal = items.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
+        // originalItemsTotal is the raw menu price (Needed for Senior Discount Law)
+        const originalItemsTotal = items.reduce((sum, item) => sum + parseFloat(item.original_subtotal), 0);
+
         const calculatedServiceCharge = calculatedItemsTotal * SERVICE_RATE;
         const calculatedVatAmount = (calculatedItemsTotal + calculatedServiceCharge) * VAT_RATE;
-
+        
         // 4. Fetch Payment Info
         const [payments] = await pool.query("SELECT * FROM fb_new_payments WHERE order_id = ?", [id]);
         const payment = payments[0] || {};
@@ -492,7 +498,8 @@ export const getOrderById = async (req, res) => {
             delivery_location: order.delivery_location,
             first_name: order.first_name, 
             last_name: order.last_name,
-            items_total: calculatedItemsTotal,             // Dynamic 
+            items_total: calculatedItemsTotal,             // Dynamic
+            original_items_total: originalItemsTotal, 
             service_charge_amount: calculatedServiceCharge, // Dynamic
             vat_amount: calculatedVatAmount,               // Dynamic
             total_price: order.total_amount,
@@ -990,17 +997,17 @@ export const getUnpaidTabs = async (req, res) => {
 // @access  Private (Staff/Cashier)
 export const settleBill = async (req, res) => {
     const { id } = req.params;
-    const { payment_method, amount, change_amount } = req.body;
-    const connection = await pool.getConnection();
     
+    // 1.Accept the new 'appliedDiscounts' array from React
+    const { payment_method, amount, change_amount, appliedDiscounts } = req.body;
+    const connection = await pool.getConnection();
 
     try {
         await connection.beginTransaction();
 
-       // Determine the correct payment status for the CRS Integration
         const finalPaymentStatus = payment_method === 'Room Charge' ? 'charged_to_room' : 'paid';
 
-        // 1. Mark the main order with the correct money lifecycle status AND close the kitchen tab
+       // 2. Clean UPDATE query (Old discount columns are completely gone!)
         const [updateResult] = await connection.query(
             "UPDATE fb_new_orders SET payment_status = ?, status = 'Settled' WHERE order_id = ?",
             [finalPaymentStatus, id]
@@ -1010,20 +1017,31 @@ export const settleBill = async (req, res) => {
             throw new Error("Order not found or already paid.");
         }
 
-        // 2. Record the payment in our clean V2 payments table
+        // 3. Loop through the array and insert each ID into the new table
+        if (appliedDiscounts && appliedDiscounts.length > 0) {
+            for (const discount of appliedDiscounts) {
+                await connection.query(
+                    "INSERT INTO fb_order_discounts (order_id, discount_type, discount_id) VALUES (?, ?, ?)",
+                    [id, discount.type, discount.id_number] 
+                );
+            }
+        }
+
+        // 4. Record the payment in our clean V2 payments table
         await connection.query(
             "INSERT INTO fb_new_payments (order_id, payment_method, amount, change_amount) VALUES (?, ?, ?, ?)",
             [id, payment_method, amount, change_amount || 0] 
         );
 
-        // 3. Optional Bonus: If they were at a dine-in table, free up the table!
+        // 5. Free up the dine-in table!
         await connection.query(
             `UPDATE fb_tables SET status = 'Available' WHERE table_id = (SELECT table_id FROM fb_new_orders WHERE order_id = ?)`,
             [id]
         );
-        
+
         await connection.commit();
         res.json({ success: true, message: "Bill settled successfully." });
+
     } catch (error) {
         await connection.rollback();
         console.error("Error settling bill:", error);

@@ -67,11 +67,11 @@ const InternalNavBar = () => {
         </Link>
       </div>
 
-      {/* Center: Navigation Links */}
+{/* Center: Navigation Links */}
       <div style={{ display: 'flex', gap: '0.5rem' }}>
           
           {/* 1. Kitchen View (Orders) */}
-          {hasAccess(['Operations Manager', 'Kitchen Staffs']) && (
+          {hasAccess(['General Manager', 'Operations Manager', 'Head Chef', 'Assistant Chef']) && (
             <NavLink 
                 to="/kitchen" 
                 end 
@@ -82,19 +82,19 @@ const InternalNavBar = () => {
           )}
 
           {/* 2. Waiter POS */}
-          {hasAccess(['Operations Manager', 'Waiter']) && (
+          {hasAccess(['General Manager', 'Operations Manager', 'Service Supervisor']) && (
              <NavLink 
-                 to="/kitchen/waiter" 
+                to="/kitchen/waiter" 
                 style={({ isActive }) => (isActive ? activeNavLinkStyle : navLinkStyle)}
              >
                Waiter
              </NavLink>
           )}
 
-          {/* 3. Cashier Dashboard (Replaced Walk-in) */}
-          {hasAccess(['Operations Manager', 'Cashier']) && (
+          {/* 3. Cashier Dashboard */}
+          {hasAccess(['General Manager', 'Operations Manager', 'Finance Manager']) && (
              <NavLink 
-                 to="/kitchen/cashier" 
+                to="/kitchen/cashier" 
                 style={({ isActive }) => (isActive ? activeNavLinkStyle : navLinkStyle)}
              >
                Cashier
@@ -102,7 +102,7 @@ const InternalNavBar = () => {
           )}
           
           {/* 4. Tables */}
-          {hasAccess(['Operations Manager', 'Kitchen Staffs']) && (
+          {hasAccess(['General Manager', 'Operations Manager', 'Service Supervisor']) && (
              <NavLink 
                 to="/kitchen/tables" 
                 style={({ isActive }) => (isActive ? activeNavLinkStyle : navLinkStyle)}
@@ -112,7 +112,7 @@ const InternalNavBar = () => {
           )}
 
           {/* 5. Inventory */}
-          {hasAccess(['Operations Manager', 'Stock Controller']) && (
+          {hasAccess(['General Manager', 'Operations Manager', 'Inventory Manager']) && (
              <NavLink 
                 to="/kitchen/inventory" 
                 style={({ isActive }) => (isActive ? activeNavLinkStyle : navLinkStyle)}
@@ -122,7 +122,7 @@ const InternalNavBar = () => {
           )}
 
           {/* 6. Archive */}
-          {hasAccess(['Operations Manager', 'Kitchen Staffs']) && (
+          {hasAccess(['General Manager', 'Operations Manager', 'Head Chef', 'Assistant Chef']) && (
              <NavLink 
                 to="/kitchen/archive" 
                 style={({ isActive }) => (isActive ? activeNavLinkStyle : navLinkStyle)}
@@ -136,7 +136,7 @@ const InternalNavBar = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
         
         {/* Conditionally render Admin Dashboard link */}
-        {user && user.position === 'Operations Manager' && ( 
+        {user && (user.position === 'General Manager' || user.position === 'Operations Manager') && (
           <Link
             to="/admin"
             style={isHovered ? { ...baseAdminLinkStyle, ...hoverAdminLinkStyle } : baseAdminLinkStyle}

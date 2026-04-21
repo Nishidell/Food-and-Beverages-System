@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Sliders, Edit2, AlertTriangle, CheckCircle, Filter, Trash2, X } from 'lucide-react';
+import { Plus, Sliders, Edit2, AlertTriangle, CheckCircle, Filter, Trash2, X, XCircle} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../utils/apiClient';
@@ -39,20 +39,6 @@ const InventoryPage = () => {
       const data = await response.json();
       setIngredients(data);
       setError(null);
-
-      if (!isBackground) {
-        const hasLowStock = data.some(item => {
-           const current = parseFloat(item.stock_level);
-           const threshold = parseFloat(item.reorder_point || 10);
-           return current <= threshold;
-        });
-
-        if (hasLowStock) {
-            setFilterStatus('Low Stock');
-        } else {
-            setFilterStatus('All');
-        }
-      }
 
     } catch (err) {
        if (err.message !== 'Session expired') {
@@ -161,10 +147,13 @@ const InventoryPage = () => {
       let result = ingredients.filter(item => {
           const current = parseFloat(item.stock_level);
           const threshold = parseFloat(item.reorder_point || 10);
-          const isLow = current <= threshold;
+          
+          const isOut = current <= 0;
+          const isLow = current > 0 && current <= threshold;
 
+          if (filterStatus === 'Out of Stock') return isOut;
           if (filterStatus === 'Low Stock') return isLow;
-          if (filterStatus === 'Good') return !isLow;
+          if (filterStatus === 'Good') return !isOut && !isLow;
           return true; // 'All'
       });
 
@@ -256,6 +245,7 @@ const InventoryPage = () => {
                         >
                             <option value="All">All Status</option>
                             <option value="Low Stock">Low Stock</option>
+                            <option value="Out of Stock">Out of Stock</option>
                             <option value="Good">Good Stock</option>
                         </select>
                         <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-[#3C2A21]">
@@ -263,12 +253,12 @@ const InventoryPage = () => {
                         </div>
                     </div>
 
-                    {/* Sort Dropdown */}
+                   {/* Sort Dropdown */}
                     <div className="relative">
                         <select 
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
-                            className="admin-btn bg-white text-[#3C2A21] hover:bg-gray-100 shadow-lg border border-gray-200"
+                            className="kitchen-select-primary shadow-md"
                         >
                             <option value="name">Name (A-Z)</option>
                             <option value="stock-low">Stock (Lowest First)</option>
@@ -287,7 +277,7 @@ const InventoryPage = () => {
                     {/* Export Button */}
                     <button 
                         onClick={handleExportExcel} 
-                        className="bg-green-600 text-white font-bold py-2 px-4 rounded hover:bg-green-700 transition-colors shadow-md flex items-center gap-2"
+                       className="kitchen-select-primary shadow-md"
                     >
                         Export to Excel
                     </button>
@@ -318,26 +308,36 @@ const InventoryPage = () => {
 {filteredList.map((item) => {
     const current = parseFloat(item.stock_level);
     const threshold = parseFloat(item.reorder_point || 10);
-    const isLow = current <= threshold;
+    
+    const isOut = current <= 0;
+    const isLow = current > 0 && current <= threshold;
     const unitCost = parseFloat(item.unit_cost || 0);
     const totalValue = current * unitCost;
 
     return (
         <tr key={item.ingredient_id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
             
-            {/* 1. NAME: text-center, w-1/4 (Matches Header) */}
+            {/* 1. NAME */}
             <td className="py-4 font-bold text-left w-1/5">{item.name}</td>
             
-            {/* 2. STATUS: text-center, w-1/6 (Matches Header) */}
+            {/* 2. STATUS BADGE */}
             <td className="py-4 text-left w-1/6">
-                <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold uppercase border ${isLow ? 'bg-red-100 text-red-700 border-red-200' : 'bg-green-100 text-green-700 border-green-200'}`}>
-                        {isLow ? <AlertTriangle size={14}/> : <CheckCircle size={14}/>}
-                        {isLow ? 'Low Stock' : 'Good'}
+                <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold uppercase border ${
+                    isOut ? 'bg-gray-200 text-gray-700 border-gray-300' :
+                    isLow ? 'bg-red-100 text-red-700 border-red-200' : 
+                    'bg-green-100 text-green-700 border-green-200'
+                }`}>
+                    {isOut ? <XCircle size={14}/> : (isLow ? <AlertTriangle size={14}/> : <CheckCircle size={14}/>)}
+                    {isOut ? 'Out of Stock' : (isLow ? 'Low Stock' : 'Good')}
                 </div>
             </td>
 
-            {/* 3. STOCK: text-center, w-1/6 (Matches Header) */}
-            <td className={`py-4 text-center font-bold text-lg w-1/8 ${isLow ? 'text-red-600' : 'text-gray-700'}`}>
+            {/* 3. STOCK NUMBER */}
+            <td className={`py-4 text-center font-bold text-lg w-1/8 ${
+                isOut ? 'text-gray-400' : 
+                isLow ? 'text-red-600' : 
+                'text-gray-700'
+            }`}>
                 {Math.floor(current)}
             </td>
             

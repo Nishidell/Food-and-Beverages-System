@@ -1,6 +1,6 @@
 import React from 'react';
 
-const PrintableReceipt = ({ tab, details }) => {
+const PrintableReceipt = ({ tab, details, appliedDiscounts, paxCount, discountAmount, displaySubtotal, displayServiceCharge, displayVat, displayTotal }) => {
     if (!tab || !details) return null;
 
     return (
@@ -84,21 +84,38 @@ const PrintableReceipt = ({ tab, details }) => {
                 {/* Totals */}
                 <div className="border-t-2 border-dashed border-gray-300 pt-4 text-sm flex flex-col gap-1">
                     <div className="flex justify-between">
-                        <span>Subtotal</span>
-                        <span>₱{parseFloat(tab.items_total).toFixed(2)}</span>
+                        <span>Base Subtotal</span>
+                        <span>₱{displaySubtotal?.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between">
+
+                   {/* DYNAMIC DISCOUNT LINE */}
+                    {appliedDiscounts && appliedDiscounts.length > 0 && (
+                        <div className="flex flex-col">
+                            <div className="flex justify-between font-bold" style={{ color: '#d97706' }}>
+                                <span>Discount ({appliedDiscounts.length}/{paxCount})</span>
+                                <span>-₱{discountAmount?.toFixed(2)}</span>
+                            </div>
+                            {/* The Audit Trail: List the IDs on the physical paper */}
+                            <div className="text-xs text-gray-600 pl-2 mb-1" style={{ color: '#555' }}>
+                                {appliedDiscounts.map((disc, idx) => (
+                                    <div key={idx}>• {disc.type}: {disc.id_number}</div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    
+                    <div className="flex justify-between mt-1">
                         <span>Service Charge (10%)</span>
-                        <span>₱{parseFloat(tab.service_charge_amount).toFixed(2)}</span>
+                        <span>₱{displayServiceCharge?.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                         <span>VAT (12%)</span>
-                        <span>₱{parseFloat(tab.vat_amount).toFixed(2)}</span>
+                        <span>₱{displayVat?.toFixed(2)}</span>
                     </div>
                     
                     <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-gray-400">
                         <span>GRAND TOTAL</span>
-                        <span>₱{parseFloat(tab.total_amount).toFixed(2)}</span>
+                        <span>₱{displayTotal?.toFixed(2)}</span>
                     </div>
                 </div>
 
@@ -107,6 +124,13 @@ const PrintableReceipt = ({ tab, details }) => {
                     <p>*** PRE-PAYMENT BILL ***</p>
                     <p className="mt-2">Thank you for dining with us!</p>
                     <p>Please present this summary to your server.</p>
+                    
+                    {/* QR Code for Rating */}
+                    <div className="mt-6 mb-2 flex flex-col items-center">
+                        <p className="font-bold text-black mb-2 text-[10px] uppercase tracking-wider">Scan to Rate Your Food!</p>
+                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(window.location.origin + '/my-orders?tab=to-rate')}`} alt="QR Code" className="w-24 h-24 mb-1" />
+                        <p className="text-[10px]">We value your feedback</p>
+                    </div>
                 </div>
             </div>
         </>

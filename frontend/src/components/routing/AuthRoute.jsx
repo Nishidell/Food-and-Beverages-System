@@ -13,13 +13,17 @@ const AuthRoute = ({ children }) => {
     // 1. Check Position (Staff)
     if (user.position) {
       switch (user.position) {
+        case 'General Manager':
         case 'Operations Manager':
           return '/admin';
-        case 'Kitchen Staffs':
+        case 'Head Chef':
+        case 'Assistant Chef':
           return '/kitchen';
-        case 'Cashier':
-          return '/kitchen/pos';
-        case 'Stock Controller':
+        case 'Service Supervisor':
+          return '/kitchen/waiter';
+        case 'Finance Manager':
+          return '/kitchen/cashier';
+        case 'Inventory Manager':
           return '/kitchen/inventory';
         default:
           return '/kitchen';

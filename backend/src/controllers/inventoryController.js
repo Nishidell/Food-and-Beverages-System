@@ -149,8 +149,10 @@ export const adjustIngredientStock = async (req, res) => {
             newStockLevel = currentStock + parsedQty;
         } else if (action_type === 'WASTE' || action_type === 'ADJUST_SUBTRACT') {
             newStockLevel = currentStock - parsedQty;
+
             if (newStockLevel < 0) {
-                console.warn(`Ingredient ${id} stock is now negative.`);
+                await connection.rollback(); // Cancel the transaction
+                return res.status(400).json({ message: "Invalid action: Stock cannot drop below zero." });
             }
         } else {
             await connection.rollback();

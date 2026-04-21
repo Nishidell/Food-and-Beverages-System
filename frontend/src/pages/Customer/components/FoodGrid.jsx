@@ -63,15 +63,15 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
                 <div 
                     key={item.item_id}
                     onClick={() => { if (item.is_available) onAddToCart(itemForCart); }}
-                    className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition-all active:scale-95 flex flex-col h-32 shadow-sm 
+                    className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition-all active:scale-95 flex flex-col h-58 shadow-sm 
                         ${!item.is_available ? 'opacity-50 grayscale border-gray-300' : 'border-gray-200 hover:border-amber-500 hover:shadow-md bg-white'}`}
                 >
                     {/* Top Half: The Image */}
-                    <div className="h-24 w-full bg-gray-100 overflow-hidden flex justify-center items-center border-b border-gray-100">
+                    <div className="h-32 w-full bg-gray-100 overflow-hidden flex justify-center items-center border-b border-gray-100">
                     <img 
                         src={getImageUrl(item.image_url)} 
                         alt={item.item_name} 
-                        className="w-full h-32 md:h-40 object-cover rounded-t-lg"
+                        className="w-full h-full object-cover rounded-t-lg"
                     />
 
                     {isActive && (
