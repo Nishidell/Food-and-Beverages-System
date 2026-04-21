@@ -78,7 +78,8 @@ const allowedOrigins = [
   'http://localhost:5173',   // Frontend Vite dev server
   'http://localhost:21917',  // Backend (for testing)
   'https://celestia-food-and-beverages-system.onrender.com',
-  'https://food-and-beverages-system-6nzo24rxa-nishidells-projects.vercel.app'
+  'https://food-and-beverages-system-6nzo24rxa-nishidells-projects.vercel.app',
+  'https://food-and-beverages-system.vercel.app'
 ];
 
 app.use(cors({
@@ -147,13 +148,6 @@ app.use('/api/reservations', reservationRoutes);
 
 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-
-if(process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname,"../../frontend/dist")))
-  app.get("*",(req,res)=>{
-    res.sendFile(path.join(__dirname,"../../frontend","dist","index.html"))
-  })
-}
 
 app.use(notFound);
 app.use(errorHandler);
