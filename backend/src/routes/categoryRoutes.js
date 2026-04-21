@@ -5,8 +5,8 @@ import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 router.get("/", getAllCategories);
-router.post("/", protect, authorizeRoles("Operations Manager"), createCategory);
-router.put("/:id", protect, authorizeRoles("Operations Manager"), updateCategory); 
-router.delete("/:id", protect, authorizeRoles("Operations Manager"), deleteCategory);
+router.post("/", protect, authorizeRoles("General Manager"), createCategory);
+router.put("/:id", protect, authorizeRoles("General Manager"), updateCategory); 
+router.delete("/:id", protect, authorizeRoles("General Manager"), deleteCategory);
 
 export default router;

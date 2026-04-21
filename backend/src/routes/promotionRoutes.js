@@ -13,7 +13,7 @@ import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 // All routes require Operations Manager permission
-router.use(protect, authorizeRoles("Operations Manager"));
+router.use(protect, authorizeRoles("General Manager"));
 
 router.post("/", createPromotion);           // Create "Christmas Special"
 router.get("/", getAllPromotions);           // List all promos

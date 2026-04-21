@@ -38,7 +38,7 @@ function App() {
 
   return (
     <>
-      {/* ✅ CONDITIONAL RENDERING:
+      {/* CONDITIONAL RENDERING:
         The Snowfall component only exists in the DOM if isDecember is true.
       */}
       {isDecember && (
@@ -66,7 +66,7 @@ function App() {
         }}
       />
       
-      {/* ✅ WRAPPER: Protects all routes from Rate Limiting */}
+      {/* WRAPPER: Protects all routes from Rate Limiting */}
       <GlobalRateLimitHandler>
         <Routes>
           {/* === AUTH ROUTES (Only for guests) === */}
@@ -81,8 +81,7 @@ function App() {
           <Route path="/dining-reservation" element={<DiningReservationPage />} />
           <Route path="/not-authorized" element={<NotAuthorizedPage />} />
 
-          {/* === PUBLIC ROUTES (Available to everyone) === */}
-        {/* ✅ CHANGED: MenuPage is now public (Guest Mode) */}
+        {/*  MenuPage is now public (Guest Mode) */}
           <Route path="/" element={<MenuPage />} />
           <Route path="/item/:id" element={<ItemDetailsPage />} />
           
@@ -91,11 +90,11 @@ function App() {
 
           {/* === PROTECTED ROUTES (Login Required) === */}
           
-          {/* Customer Protected Pages */}
+         {/* Customer Protected Pages */}
           <Route
             path="/my-orders"
             element={
-              <ProtectedRoute allowedRoles={['customer', 'Operations Manager', 'Kitchen Staffs', 'Cashier']}>
+              <ProtectedRoute allowedRoles={['customer']}>
                 <MyOrdersPage />
               </ProtectedRoute>
             }
@@ -105,17 +104,17 @@ function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute allowedRoles={['Operations Manager']}>
+              <ProtectedRoute allowedRoles={['General Manager', 'Operations Manager']}>
                 <AdminPage />
               </ProtectedRoute>
             }
           />
 
-          {/* Kitchen Portal: Orders */}
+          {/* Kitchen Portal: Orders (KOD) */}
           <Route
             path="/kitchen"
             element={
-              <ProtectedRoute allowedRoles={['Operations Manager', 'Kitchen Staffs']}>
+              <ProtectedRoute allowedRoles={['General Manager', 'Operations Manager', 'Head Chef', 'Assistant Chef']}>
                 <KitchenPage />
               </ProtectedRoute>
             }
@@ -125,7 +124,7 @@ function App() {
           <Route
             path="/kitchen/waiter"
             element={
-              <ProtectedRoute allowedRoles={['Operations Manager', 'Waiter']}>
+              <ProtectedRoute allowedRoles={['General Manager', 'Operations Manager', 'Service Supervisor']}>
                 <WaiterPOS />
               </ProtectedRoute>
             }
@@ -135,7 +134,7 @@ function App() {
           <Route
             path="/kitchen/cashier"
             element={
-              <ProtectedRoute allowedRoles={['Operations Manager', 'Cashier']}>
+              <ProtectedRoute allowedRoles={['General Manager', 'Operations Manager', 'Finance Manager']}>
                 <CashierPage />
               </ProtectedRoute>
             }
@@ -145,7 +144,7 @@ function App() {
           <Route
             path="/kitchen/tables"
             element={
-              <ProtectedRoute allowedRoles={['Operations Manager', 'Kitchen Staffs']}>
+              <ProtectedRoute allowedRoles={['General Manager', 'Operations Manager', 'Service Supervisor']}>
                 <TableManager />
               </ProtectedRoute>
             }
@@ -155,7 +154,7 @@ function App() {
           <Route
             path="/kitchen/inventory"
             element={
-              <ProtectedRoute allowedRoles={['Operations Manager', 'Stock Controller']}>
+              <ProtectedRoute allowedRoles={['General Manager', 'Operations Manager', 'Inventory Manager']}>
                 <InventoryPage />
               </ProtectedRoute>
             }
@@ -165,7 +164,7 @@ function App() {
           <Route
             path="/kitchen/archive"
             element={
-              <ProtectedRoute allowedRoles={['Operations Manager', 'Kitchen Staffs']}>
+              <ProtectedRoute allowedRoles={['General Manager', 'Operations Manager', 'Head Chef', 'Assistant Chef']}>
                 <ArchivePage />
               </ProtectedRoute>
             }

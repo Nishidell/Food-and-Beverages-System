@@ -46,25 +46,29 @@ export const AuthProvider = ({ children }) => {
   // Handles redirecting the user based on their role
   const handleRedirect = (decodedUser) => {
     const { role, position } = decodedUser;
-
-    // 1. Check Position (For Staff)
+// 1. Check Position (For Staff)
     if (position) {
       switch (position) {
-        case 'Operations Manager':
+        case 'General Manager':
+        case 'Operation Manager':
           navigate('/admin');
           break;
-        case 'Kitchen Staffs':
+        case 'Head Chef':
+        case 'Assistant Chef':
           navigate('/kitchen'); 
           break;
-        case 'Cashier':
-          navigate('/kitchen/pos'); 
+        case 'Service Supervisor':
+          navigate('/kitchen/waiter'); 
           break;
-        case 'Stock Controller':
+        case 'Finance Manager':
+          navigate('/kitchen/cashier'); 
+          break;
+        case 'Inventory Manager':
           navigate('/kitchen/inventory'); 
           break;
         default:
           console.warn(`Unknown staff position: ${position}`);
-          navigate('/kitchen'); 
+          navigate('/kitchen');
       }
       return;
     }
@@ -121,7 +125,6 @@ export const AuthProvider = ({ children }) => {
         throw new Error(data.message || 'Login failed');
       }
 
-      // ✅ FIX: Set ALL state immediately (Don't wait for useEffect)
       const decoded = jwtDecode(data.token);
       
       setToken(data.token);           // 1. Set Token

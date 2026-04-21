@@ -11,21 +11,18 @@ import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-/* -------------------------
-   🔒 Protected Routes
--------------------------- */
 
-// 1️⃣ Customer create Payment (PayMongo)
+//  Customer create Payment (PayMongo)
 // Allowed: 'customer' (Role)
 router.post('/checkout', protect, authorizeRoles("customer"), createPayMongoPayment);
 
-// 2️⃣ Manual Record (For Cash/POS)
+//  Manual Record (For Cash/POS)
 // Allowed: 'Cashier', 'Operations Manager' (Positions)
-router.post("/", protect, authorizeRoles("Cashier", "Operations Manager", "Waiter"), recordPayment);
+router.post("/", protect, authorizeRoles("General Manager", "Operations Manager", "Financial Manager"), recordPayment);
 
-// 3️⃣ Get Payments for an Order
+//  Get Payments for an Order
 // Allowed: 'Cashier', 'Operations Manager', 'Waiter' (Positions)
-router.get("/:order_id", protect, authorizeRoles("Cashier", "Operations Manager", "Waiter"), getPaymentsForOrder);
+router.get("/:order_id", protect, authorizeRoles("General Manager", "Operations Manager", "Financial Manager"), getPaymentsForOrder);
 
 /* -------------------------
    💳 PayMongo Routes
