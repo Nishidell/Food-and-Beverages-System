@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Users, CheckCircle, ArrowLeft, Bell } from 'lucide-react';
+import { Calendar, Clock, Users, CheckCircle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../utils/apiClient';
 import toast from 'react-hot-toast';
@@ -96,14 +96,6 @@ const DiningReservationPage = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleNotifyMe = () => {
-    if (!token) {
-      toast.error("Please log in to receive notifications.");
-      return;
-    }
-    toast.success("You're on the list! We'll notify you of updates.");
   };
 
   // --- UI RENDER ---
@@ -241,14 +233,6 @@ const DiningReservationPage = () => {
                 className="w-full border border-gray-200 rounded p-3 text-sm focus:border-[#F9A825] outline-none"
               />
             </div>
-            
-            <button
-              type="button"
-              onClick={handleNotifyMe}
-              className="bg-white border-2 border-[#480c1b] text-[#480c1b] font-bold px-6 rounded hover:bg-[#480c1b] hover:text-[#F9A825] transition-colors flex items-center justify-center gap-2 whitespace-nowrap w-full md:w-auto h-[46px]"
-            >
-              <Bell size={18} /> Notify Me
-            </button>
           </div>
 
           {/* ================= TABLE SELECTION MODAL ================= */}
