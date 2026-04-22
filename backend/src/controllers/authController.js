@@ -186,6 +186,8 @@ export const loginUser = async (req, res) => {
 
       // Verify Password
       if (await bcrypt.compare(password, user.password)) {
+        console.log("--- LOGIN ATTEMPT DEBUG ---");
+        console.log("Is JWT_SECRET present during login?", !!process.env.JWT_SECRET);
         const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "2h" });
         return res.json({ token, user: payload });
       }

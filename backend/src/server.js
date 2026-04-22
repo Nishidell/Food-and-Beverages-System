@@ -32,9 +32,14 @@ import announcementRoutes from "./routes/announcementRoutes.js";
 import ratingRoutes from './routes/ratingRoutes.js';
 import budgetRoutes from "./routes/budgetRoutes.js";
 import reservationRoutes from "./routes/reservationRoutes.js";
-
-// IMPORT THIS DIRECTLY FOR THE WEBHOOK FIX
 import { paymongoWebhook } from "../src/controllers/paymentController.js"; 
+
+console.log("=========================================");
+console.log("SERVER BOOT CHECK:");
+// We use !! to just print true/false so your actual secret doesn't print in the logs!
+console.log("Is JWT_SECRET present at boot?", !!process.env.JWT_SECRET); 
+console.log("Current NODE_ENV:", process.env.NODE_ENV);
+console.log("=========================================");
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
