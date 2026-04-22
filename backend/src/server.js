@@ -50,16 +50,17 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 const app = express();
-const httpServer = createServer(app);  // ✅ Now works
+const httpServer = createServer(app);  
 
 // Socket.IO setup
-const io = new Server(httpServer, {    // ✅ Now works
+const io = new Server(httpServer, {  
   cors: {
     origin: [
       'http://localhost:5173',
       'http://localhost:21917',
-      'https://celestia-food-and-beverages-system.onrender.com',
-      'https://food-and-beverages-system-6nzo24rxa-nishidells-projects.vercel.app'
+      'https://food-and-beverages-system-backend.allowedOriginsonrender.com', // <-- New Backend URL
+      'https://food-and-beverages-system-6nzo24rxa-nishidells-projects.vercel.app',
+      'https://food-and-beverages-system.vercel.app' // <-- Added Clean Vercel URL
     ],
     credentials: true
   }
@@ -85,7 +86,7 @@ app.set('trust proxy', 1);
 const allowedOrigins = [
   'http://localhost:5173',   // Frontend Vite dev server
   'http://localhost:21917',  // Backend (for testing)
-  'https://celestia-food-and-beverages-system.onrender.com',
+  'https://food-and-beverages-system-backend.onrender.com',
   'https://food-and-beverages-system-6nzo24rxa-nishidells-projects.vercel.app',
   'https://food-and-beverages-system.vercel.app'
 ];
