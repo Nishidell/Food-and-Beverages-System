@@ -151,6 +151,11 @@ export const registerUser = async (req, res) => {
 // @route   POST /api/auth/login
 // @access  Public
 export const loginUser = async (req, res) => {
+  console.log("======================================");
+  console.log("🚨 LOGIN ROUTE HIT!");
+  console.log("🚨 Is JWT_SECRET here?", !!process.env.JWT_SECRET);
+  console.log("🚨 Secret Length:", process.env.JWT_SECRET ? process.env.JWT_SECRET.length : "UNDEFINED");
+  console.log("======================================");
   try {
     const { email, password } = req.body;
 
@@ -186,8 +191,6 @@ export const loginUser = async (req, res) => {
 
       // Verify Password
       if (await bcrypt.compare(password, user.password)) {
-        console.log("--- LOGIN ATTEMPT DEBUG ---");
-        console.log("Is JWT_SECRET present during login?", !!process.env.JWT_SECRET);
         const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "2h" });
         return res.json({ token, user: payload });
       }
