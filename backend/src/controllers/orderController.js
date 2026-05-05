@@ -950,10 +950,10 @@ export const toggleItemCheckbox = async (req, res) => {
 // @access  Private (Staff/Cashier)
 export const getUnpaidTabs = async (req, res) => {
     try {
-        // ✅ The "Today Only" Filter is built right into the SQL: DATE(o.order_date) = CURDATE()
-       const sql = `
+        const sql = `
             SELECT 
                 o.order_id, 
+                o.room_id,
                 o.order_date, 
                 o.order_type, 
                 o.total_amount,
@@ -967,7 +967,6 @@ export const getUnpaidTabs = async (req, res) => {
             LEFT JOIN fb_tables ft ON o.table_id = ft.table_id
             WHERE o.payment_status = 'unpaid' 
             AND o.status != 'cancelled'
-            AND DATE(o.order_date) = CURDATE()
             ORDER BY o.order_date ASC
         `;
         
@@ -997,13 +996,83 @@ export const getUnpaidTabs = async (req, res) => {
 // @access  Private (Staff/Cashier)
 export const settleBill = async (req, res) => {
     const { id } = req.params;
+    console.log("DEBUG: Backend received body:", req.body);
     
     // 1.Accept the new 'appliedDiscounts' array from React
-    const { payment_method, amount, change_amount, appliedDiscounts } = req.body;
+    const { payment_method, amount, change_amount, appliedDiscounts, room_id } = req.body;
     const connection = await pool.getConnection();
 
     try {
         await connection.beginTransaction();
+
+if (payment_method === 'Charge to Deposit') {
+    const { room_id } = req.body; 
+    if (!room_id) {
+        throw new Error("This order is not linked to a Room. Only Room Dining or checked-in guests can use Deposit Charge.");
+    }
+
+    // 2. Secret Translation: Find the ACTIVE reservation for this room
+    const [resRows] = await connection.query(`
+        SELECT r.reservation_id 
+        FROM tbl_reservations r
+        JOIN tbl_reservation_rooms br ON r.reservation_id = br.reservation_id
+        WHERE br.room_id = ? 
+        AND CURDATE() BETWEEN r.check_in AND r.check_out
+        AND r.status = 'approved' 
+        LIMIT 1
+    `, [room_id]);
+
+    if (resRows.length === 0) {
+        throw new Error("No active reservation found for this room today.");
+    }
+
+const finalReservationId = resRows[0].reservation_id;
+
+   // 1. Fetch their current deposit balance. (If the row exists, the money is there!)
+    const [depositRows] = await connection.query(
+        "SELECT remaining_deposit, amount_deducted FROM tbl_deposit WHERE reservation_id = ? LIMIT 1",
+        [finalReservationId]
+    );
+
+    if (depositRows.length === 0) {
+        throw new Error("No deposit record found for this guest's reservation.");
+    }
+
+    const remainingDeposit = parseFloat(depositRows[0].remaining_deposit);
+
+    // 2. The Overdraft Check
+    if (remainingDeposit < amount) {
+        throw new Error(`Insufficient funds. The bill is ₱${amount.toFixed(2)}, but their remaining deposit is only ₱${remainingDeposit.toFixed(2)}.`);
+    }
+
+    // --- EXISTING: BUILD THE PAYLOAD STRING ---
+    const [items] = await connection.query(`
+        SELECT od.quantity, mi.item_name
+        FROM fb_new_order_details od
+        JOIN fb_menu_items mi ON od.item_id = mi.item_id
+        WHERE od.order_id = ?
+    `, [id]);
+
+    const itemStrings = items.map(item => `${item.quantity}x ${item.item_name}`).join(', ');
+    const referenceNote = `F&B Order #${id}: ${itemStrings}`;
+
+    // --- NEW: UPDATE THE DEPOSIT MATH ---
+    // 3. Deduct from remaining_deposit, and add to amount_deducted
+    await connection.query(`
+        UPDATE tbl_deposit 
+        SET remaining_deposit = remaining_deposit - ?, 
+            amount_deducted = amount_deducted + ? 
+        WHERE reservation_id = ?
+    `, [amount, amount, finalReservationId]);
+
+    // --- EXISTING: LOG THE RECEIPT ---
+    // 4. Insert into the CRS Ledger history
+    await connection.query(`
+        INSERT INTO tbl_deposit_logs 
+        (reservation_id, transaction_type, amount, reference_note, created_by) 
+        VALUES (?, 'DEDUCTION', ?, ?, 'F&B System')
+    `, [finalReservationId, amount, referenceNote]);
+}
 
         const finalPaymentStatus = payment_method === 'Room Charge' ? 'charged_to_room' : 'paid';
 

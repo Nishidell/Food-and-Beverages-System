@@ -12,7 +12,9 @@ function CashierDashboard() {
     const [orderDetails, setOrderDetails] = useState(null);
     const [paymentMethod, setPaymentMethod] = useState('');
     const [showSettleModal, setShowSettleModal] = useState(false);
+
     const [amountTendered, setAmountTendered] = useState('');
+    const [roomNumber, setRoomNumber] = useState('');
 
    // --- UPDATED DISCOUNT STATES (Option B: Array Approach) ---
     const [paxCount, setPaxCount] = useState(1); // Total people at the table
@@ -125,9 +127,11 @@ function CashierDashboard() {
 
    // Handle taking the money and closing the tab
     const handleSettleBill = async () => {
-        // Fallback to whichever total is currently rendering correctly
-       const billTotal = displayTotal; // Uses our new dynamic math!
-        let changeToGive = 0;
+        console.log("DEBUG: Current selectedTab data:", selectedTab);
+    const billTotal = displayTotal; 
+    let changeToGive = 0;
+
+    const roomIdToSend = selectedTab?.room_id || selectedTab?.room_num;
 
         // Validation for Cash payments
         if (paymentMethod === 'Cash') {
@@ -139,16 +143,17 @@ function CashierDashboard() {
             changeToGive = tendered - billTotal;
         }
 
-        try {
-           const response = await apiClient(`/orders/${selectedTab.order_id}/settle`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    payment_method: paymentMethod,
-                    amount: billTotal,
-                    change_amount: changeToGive,
-                    appliedDiscounts: appliedDiscounts // Send the whole array!
-                })
-            });
+    try {
+        const response = await apiClient(`/orders/${selectedTab.order_id}/settle`, {
+            method: 'POST',
+            body: JSON.stringify({
+                payment_method: paymentMethod,
+                amount: billTotal,
+                change_amount: changeToGive,
+                appliedDiscounts: appliedDiscounts,
+                room_id: selectedTab.room_id 
+            })
+        });
 
             if (response.ok)
                  {
@@ -426,8 +431,8 @@ function CashierDashboard() {
                         {/* --- PAYMENT METHOD SELECTOR --- */}
                         <div className="mb-6 w-full text-left">
                             <h3 className="font-bold mb-3 text-gray-800 uppercase text-xs tracking-wider">Select Payment Method:</h3>
-                            <div className="flex gap-2">
-                                {['Room Charge', 'Credit Card', 'Cash'].map(method => (
+                            <div className="grid grid-cols-2 gap-2">
+                                {['Credit Card', 'Cash', 'Charge to Deposit'].map(method => (
                                     <button
                                         key={method}
                                         onClick={() => setPaymentMethod(method)}
@@ -462,6 +467,18 @@ function CashierDashboard() {
                                 )}
                             </div>
                         )}
+
+                        {/* --- DEPOSIT CALCULATOR (Only shows if Charge to Deposit is selected) --- */}
+                        {paymentMethod === 'Charge to Deposit' && (
+                        <div className="mb-6 w-full text-left bg-blue-50 p-4 rounded border border-blue-200">
+                            <p className="text-sm text-blue-800 font-bold">
+                                Confirming deduction for {selectedTab.formatted_location}
+                            </p>
+                            <p className="text-xs text-blue-600 mt-2">
+                                The system will automatically find the active guest reservation for this room and deduct ₱{displayTotal.toFixed(2)}.
+                            </p>
+                        </div>
+                         )}
                         
                         {/* --- ACTION BUTTONS --- */}
                         <div className="flex gap-3 mt-4">
@@ -470,10 +487,17 @@ function CashierDashboard() {
                                 className="flex-1 py-3 rounded-lg font-bold border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors"
                             >Cancel</button>
                             <button 
-                                onClick={handleSettleBill}
-                                disabled={!paymentMethod || (paymentMethod === 'Cash' && (!amountTendered || parseFloat(amountTendered) < displayTotal))}
-                                className={`flex-1 py-3 rounded-lg font-bold shadow-md transition-colors ${!paymentMethod || (paymentMethod === 'Cash' && (!amountTendered || parseFloat(amountTendered) < displayTotal)) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
-                            >Confirm Payment</button>
+                            onClick={handleSettleBill}
+                            disabled={
+                                !paymentMethod || 
+                                (paymentMethod === 'Cash' && (!amountTendered || parseFloat(amountTendered) < displayTotal))
+                            }
+                            className={`flex-1 py-3 rounded-lg font-bold shadow-md transition-colors ${
+                                !paymentMethod || 
+                                (paymentMethod === 'Cash' && (!amountTendered || parseFloat(amountTendered) < displayTotal))
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'
+                            }`}
+                        >Confirm Payment</button>
                         </div>
                     </div>
                     </div>
