@@ -11,6 +11,22 @@ import AdjustStockModal from './components/AdjustStockModal';
 import InternalNavBar from './components/InternalNavBar';
 import { useSocket } from '../../context/SocketContext';
 
+//  NEW HELPER FUNCTION: Add this outside your component functions
+const formatUnitDisplay = (value, unit) => {
+    const num = parseFloat(value);
+    if (isNaN(num)) return `${value} ${unit}`;
+
+    if (unit === 'g' && num >= 1000) {
+        return `${(num / 1000).toLocaleString('en-PH', { maximumFractionDigits: 2 })} kg`;
+    }
+    if (unit === 'ml' && num >= 1000) {
+        return `${(num / 1000).toLocaleString('en-PH', { maximumFractionDigits: 2 })} L`;
+    }
+    
+    // For pieces or amounts under 1000, just format with commas
+    return `${num.toLocaleString('en-PH', { maximumFractionDigits: 2 })} ${unit}`;
+};
+
 const InventoryPage = () => {
   const [ingredients, setIngredients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +42,7 @@ const InventoryPage = () => {
   const [isIngredientModalOpen, setIsIngredientModalOpen] = useState(false);
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
   
-  // ✅ NEW: Delete Modal State
+  //  NEW: Delete Modal State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   
   const [selectedIngredient, setSelectedIngredient] = useState(null);
@@ -71,7 +87,7 @@ const InventoryPage = () => {
   const handleOpenEditModal = (ing) => { setSelectedIngredient(ing); setIsIngredientModalOpen(true); };
   const handleOpenAdjustModal = (ing) => { setSelectedIngredient(ing); setIsAdjustModalOpen(true); };
   
-  // ✅ NEW: Delete Handlers
+  //  NEW: Delete Handlers
   const handleOpenDeleteModal = (ing) => { setSelectedIngredient(ing); setIsDeleteModalOpen(true); };
   
   const handleCloseModals = () => {
@@ -294,15 +310,14 @@ const InventoryPage = () => {
                     <div className="kitchen-table-container">
                     <table className="kitchen-table w-full border-collapse">
                     <thead>
-                    <tr className="border-b border-gray-200">
-                    <th className="py-4 text-center w-1/5">Ingredient Name</th>
-                    <th className="py-4 text-center w-1/6">Status</th>
-                    <th className="py-4 text-center w-1/8">Current Stock</th>
-                    <th className="py-4 text-center w-1/8">Unit</th>
-                    <th className="py-4 text-center w-1/12">Unit Cost</th>
-                    <th className="py-4 text-center w-1/12">Total Value</th>
-                    <th className="py-4 text-center w-1/12">Actions</th>
-                  </tr>
+                        <tr className="border-b border-gray-200">
+                            <th className="py-4 text-left w-1/6">Ingredient Name</th>
+                            <th className="py-4 text-center w-1/6">Status</th>
+                            <th className="py-4 text-right w-1/6">Current Stock</th>
+                            <th className="py-4 text-right w-1/6">Unit Cost</th>
+                            <th className="py-4 text-right w-1/6">Total Value</th>
+                            <th className="py-4 text-center w-1/6">Actions</th>
+                        </tr>
                     </thead>
                         <tbody>
 {filteredList.map((item) => {
@@ -318,7 +333,7 @@ const InventoryPage = () => {
         <tr key={item.ingredient_id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
             
             {/* 1. NAME */}
-            <td className="py-4 font-bold text-left w-1/5">{item.name}</td>
+            <td className="py-4 font-bold text-left w-1/6">{item.name}</td>
             
             {/* 2. STATUS BADGE */}
             <td className="py-4 text-left w-1/6">
@@ -332,32 +347,28 @@ const InventoryPage = () => {
                 </div>
             </td>
 
-            {/* 3. STOCK NUMBER */}
-            <td className={`py-4 text-center font-bold text-lg w-1/8 ${
+           {/* 3. CURRENT STOCK (Removed colSpan, just a normal cell now) */}
+            <td className={`py-4 text-left font-bold text-lg w-1/6 ${
                 isOut ? 'text-gray-400' : 
                 isLow ? 'text-red-600' : 
                 'text-gray-700'
             }`}>
-                {Math.floor(current)}
-            </td>
-            
-            {/* 4. UNIT: text-center, w-1/6 (Matches Header) */}
-            <td className="py-4 text-left text-gray-500 text-center w-1/8">
-                {item.unit_of_measurement}
+                {formatUnitDisplay(current, item.unit_of_measurement)}
             </td>
 
-            {/* 5. UNIT COST */}
-            <td className="py-4 text-center text-gray-700 font-medium w-1/12">
-                ₱{unitCost.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {/* 4. UNIT COST (Added the "/ unit" so the clerk knows exactly what the cost means) */}
+            <td className="py-4 text-left text-gray-700 font-medium w-1/6">
+                ₱{unitCost.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
+                <span className="text-sm text-gray-400 font-normal ml-1">/ {item.unit_of_measurement}</span>
             </td>
 
-            {/* 6. TOTAL VALUE */}
-            <td className="py-4 text-center font-bold text-green-700 w-1/8">
+            {/* 5. TOTAL VALUE */}
+            <td className="py-4 text-left font-bold text-green-700 w-1/6">
                 ₱{totalValue.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </td>
 
             {/* 7. ACTIONS */}
-            <td className="py-4 text-left w-1/12">
+            <td className="py-4 text-left w-1/6">
                 <div className="flex justify-start ">
                         <button onClick={() => handleOpenAdjustModal(item)} className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Adjust Stock">
                             <Sliders size={18} />
@@ -385,7 +396,7 @@ const InventoryPage = () => {
             <IngredientModal isOpen={isIngredientModalOpen} onClose={handleCloseModals} onSave={handleSaveIngredient} ingredientToEdit={selectedIngredient} />
             <AdjustStockModal isOpen={isAdjustModalOpen} onClose={handleCloseModals} onAdjust={handleAdjustStock} ingredient={selectedIngredient} />
             
-            {/* ✅ NEW: Delete Confirmation Modal */}
+            {/*  NEW: Delete Confirmation Modal */}
             {isDeleteModalOpen && selectedIngredient && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn" style={{backgroundColor: 'rgba(0,0,0,0.6)'}}>
                     <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-2xl relative border-t-4 border-red-500">

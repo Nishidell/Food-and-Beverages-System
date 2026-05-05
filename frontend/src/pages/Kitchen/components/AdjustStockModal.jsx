@@ -61,7 +61,9 @@ const AdjustStockModal = ({ isOpen, onClose, onAdjust, ingredient }) => {
         <div className="mb-4 bg-blue-50 border border-blue-200 p-3 rounded-md">
             <h3 className="font-bold text-lg text-blue-800">{ingredient.name}</h3>
             <p className="text-sm text-gray-700">
-                Current Stock: <span className="font-semibold">{Math.floor(parseFloat(ingredient.stock_level))} {ingredient.unit_of_measurement}</span>
+                Current Stock: <span className="font-semibold">
+                    {formatUnitDisplay(ingredient.stock_level, ingredient.unit_of_measurement)}
+                </span>
             </p>
         </div>
         
@@ -86,19 +88,18 @@ const AdjustStockModal = ({ isOpen, onClose, onAdjust, ingredient }) => {
           
           <div>
             <label htmlFor="quantity_change" className="block text-sm font-medium text-gray-700">
-              Quantity {isSubtractAction ? 'to Subtract' : 'to Add'}
+              Quantity {isSubtractAction ? 'to Subtract' : 'to Add'} (in {ingredient.unit_of_measurement})
             </label>
             <input
-              type="number"
-              id="quantity_change"
-              step="1"
-              value={formData.quantity_change}
-              onChange={handleChange}
-              required
-              min="1"
+              type="number" id="quantity_change" step="1" value={formData.quantity_change} onChange={handleChange} required min="1"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
-              placeholder={`Amount in ${ingredient.unit_of_measurement}`}
             />
+             {/* NEW UX HELPER TEXT */}
+             {formData.quantity_change > 0 && (
+                 <p className="text-xs text-green-600 mt-1 font-semibold">
+                     Equivalent to: {formatUnitDisplay(formData.quantity_change, ingredient.unit_of_measurement)}
+                 </p>
+             )}
           </div>
 
           <div>

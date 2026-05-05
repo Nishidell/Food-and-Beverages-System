@@ -130,7 +130,7 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* 4. Initial Stock (Only for New Items) */}
+              {/* 4. Initial Stock */}
               {!isEditMode && (
                 <div>
                   <label htmlFor="stock_level" className="block text-sm font-medium text-gray-700">Initial Stock</label>
@@ -138,6 +138,12 @@ useEffect(() => {
                     type="number" id="stock_level" step="1" min="0" value={formData.stock_level} onChange={handleChange} required
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
                   />
+                  {/*  NEW UX HELPER TEXT */}
+                  {formData.stock_level > 0 && formData.unit_of_measurement && (
+                      <p className="text-xs text-green-600 mt-1 font-semibold">
+                          Equivalent to: {formatUnitDisplay(formData.stock_level, formData.unit_of_measurement)}
+                      </p>
+                  )}
                 </div>
               )}
             </div>
