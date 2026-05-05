@@ -1,6 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { X, AlertTriangle } from 'lucide-react';
 
+const formatUnitDisplay = (value, unit) => {
+    const num = parseFloat(value);
+    if (isNaN(num)) return `${value} ${unit}`;
+
+    if (unit === 'g' && num >= 1000) {
+        return `${(num / 1000).toLocaleString('en-PH', { maximumFractionDigits: 2 })} kg`;
+    }
+    if (unit === 'ml' && num >= 1000) {
+        return `${(num / 1000).toLocaleString('en-PH', { maximumFractionDigits: 2 })} L`;
+    }
+    
+    // For pieces or amounts under 1000, just format with commas
+    return `${num.toLocaleString('en-PH', { maximumFractionDigits: 2 })} ${unit}`;
+};
+
 const IngredientModal = ({ isOpen, onClose, onSave, ingredientToEdit }) => {
 
   const unitOptions = [
