@@ -194,14 +194,22 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
     }}>
       <div style={{ 
         backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-        padding: '32px', width: '100%', maxWidth: '42rem' 
+        padding: '32px', width: '100%', 
+        maxWidth: '1000px', 
+        maxHeight: '90vh',  
+        display: 'flex', flexDirection: 'column' 
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{isEditMode ? 'Edit Menu Item' : 'Add New Menu Item'}</h2>
           <button onClick={onClose} style={{ color: '#6B7280', border: 'none', background: 'none', cursor: 'pointer' }}><X size={24} /></button>
         </div>
         
-        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '24px' }}>
+        <form id="main-form" onSubmit={handleSubmit} style={{ 
+            display: 'flex', gap: '24px', 
+            overflowY: 'auto', 
+            paddingRight: '12px', 
+            flex: 1
+        }}>
           
           {/* Column 1: Item Details */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -301,7 +309,7 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
           </div>
         </form>
         
-        <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'flex-end', gap: '16px', paddingTop: '24px', borderTop: '1px solid #E5E7EB' }}>
+        <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', gap: '16px', paddingTop: '24px', borderTop: '1px solid #E5E7EB' }}>
           <button type="button" onClick={onClose} style={cancelButtonStyle}>Cancel</button>
           <button type="submit" form="main-form" onClick={handleSubmit} style={{ ...buttonStyle, backgroundColor: '#1D4ED8' }} disabled={uploading}>
             {uploading ? 'Waiting for upload...' : 'Save Item'}
