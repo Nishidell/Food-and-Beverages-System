@@ -12,7 +12,8 @@ import {
     getUnpaidTabs,
     settleBill,
     addItemsToOrder,
-    voidOrderItem
+    voidOrderItem,
+    cancelEntireOrder
 } from "../controllers/orderController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
@@ -76,6 +77,11 @@ router.put(
     authorizeRoles("Operations Manager", "General Manager", "Head Chef"), 
     voidOrderItem
 );
+
+router.put('/:id/cancel',
+    protect, 
+    authorizeRoles("Operations Manager", "General Manager", "Head Chef"),
+    cancelEntireOrder);
 
 // --- 4. Cashier & Billing Routes ---
 // Allowed: Operations Manager, Cashier

@@ -589,10 +589,31 @@ export const updateOrderStatus = async (req, res) => {
             }
         }
 
+        // 1. Fetch the items we are about to cancel (we need their price!)
+        const [cancelDetails] = await connection.query(
+            "SELECT quantity, price_on_purchase FROM fb_new_order_details WHERE order_id = ? AND item_status != 'served' AND item_status != 'cancelled'", 
+            [id]
+        );
+
+        // 2. Calculate the exact grand total of these cancelled items
+        let voidedSubtotal = 0;
+        for (const item of cancelDetails) {
+            voidedSubtotal += (item.quantity * item.price_on_purchase);
+        }
+        const voidedServiceCharge = voidedSubtotal * SERVICE_RATE;
+        const voidedVatAmount = (voidedSubtotal + voidedServiceCharge) * VAT_RATE;
+        const voidedGrandTotal = voidedSubtotal + voidedServiceCharge + voidedVatAmount;
+
+        // 3. Deduct this amount from the main order's total_amount
+        await connection.query(
+            "UPDATE fb_new_orders SET total_amount = GREATEST(0, total_amount - ?) WHERE order_id = ?",
+            [voidedGrandTotal, id]
+        );
+
         // Update the order status
-       const [result] = await connection.query(
-            "UPDATE fb_new_order_details SET item_status = ? WHERE order_id = ? AND item_status != 'served' AND item_status != 'cancelled'",
-            [newStatus, id]
+       await connection.query(
+        "UPDATE fb_new_orders SET status = ? WHERE order_id = ?",
+        [newStatus, id]
         );
 
         if (result.affectedRows === 0) {
@@ -736,7 +757,8 @@ export const getServedOrders = async (req, res) => {
             LEFT JOIN fb_menu_items m ON d.item_id = m.item_id  
             LEFT JOIN tbl_rooms tr ON o.room_id = tr.room_id
             LEFT JOIN fb_tables ft ON o.table_id = ft.table_id
-            WHERE d.item_status IN ('served', 'cancelled')
+            WHERE d.item_status IN ('served', 'cancelled') 
+               OR o.status IN ('Settled', 'cancelled')
         `;
 
         const params = [];
@@ -1288,6 +1310,90 @@ export const voidOrderItem = async (req, res) => {
         await connection.rollback();
         console.error("VOID ITEM ERROR:", error);
         res.status(500).json({ message: "Failed to void item", error: error.message });
+    } finally {
+        connection.release();
+    }
+};
+
+// @desc    Cancel an entire order (Walkout/Full Void)
+// @route   PUT /api/orders/:id/cancel
+// @access  Private (Staff)
+export const cancelEntireOrder = async (req, res) => {
+    const { id } = req.params;
+    const connection = await pool.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        // 1. Fetch the order to ensure it exists and get table/client info
+        const [orders] = await connection.query(
+            "SELECT status, table_id, client_id, payment_status FROM fb_new_orders WHERE order_id = ? FOR UPDATE", 
+            [id]
+        );
+        
+        if (orders.length === 0) throw new Error("Order not found");
+        if (orders[0].payment_status === 'paid') throw new Error("Cannot cancel an order that is already paid.");
+        if (orders[0].status === 'cancelled') throw new Error("Order is already cancelled.");
+
+        const { table_id, client_id } = orders[0];
+
+        // 2. The Item Sweep: Find all active items that need stock restored
+        const [activeItems] = await connection.query(
+            "SELECT item_id, quantity FROM fb_new_order_details WHERE order_id = ? AND item_status NOT IN ('served', 'cancelled')",
+            [id]
+        );
+
+        // 3. The Inventory Rollback: Restore Stock
+        if (activeItems.length > 0) {
+            await adjustStock(activeItems, 'restore', connection);
+            await logOrderStockChange(id, activeItems, 'FULL_ORDER_CANCEL_RESTORE', connection);
+        }
+
+        // 4. Mark every single item as cancelled
+        await connection.query(
+            "UPDATE fb_new_order_details SET item_status = 'cancelled' WHERE order_id = ?",
+            [id]
+        );
+
+        // 5. The Financial Wipe & Parent Status Update
+        await connection.query(
+            "UPDATE fb_new_orders SET total_amount = 0, status = 'cancelled' WHERE order_id = ?",
+            [id]
+        );
+
+        // 6. The Table Release: Free up the table for the next guest
+        if (table_id) {
+            await connection.query(
+                "UPDATE fb_tables SET status = 'Available' WHERE table_id = ?",
+                [table_id]
+            );
+            
+            // Ping sockets to update the table map instantly
+            const io = req.app.get('io');
+            if (io) {
+                io.emit('table-update', { table_id: parseInt(table_id), status: 'Available' });
+            }
+        }
+
+        // 7. Notification for the customer (if applicable)
+        await createOrUpdateNotification(id, client_id, 'cancelled', connection, req);
+
+        await connection.commit();
+
+        // 8. Tell all screens (Kitchen & Cashier) to wipe this order away
+        emitOrderUpdate(req, 'order-status-updated', {
+            order_id: parseInt(id),
+            status: 'cancelled',
+            client_id,
+            timestamp: new Date()
+        });
+
+        res.json({ success: true, message: "Entire order successfully cancelled and stock restored." });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error("CANCEL ENTIRE ORDER ERROR:", error);
+        res.status(500).json({ message: "Failed to cancel entire order", error: error.message });
     } finally {
         connection.release();
     }

@@ -114,8 +114,10 @@ useEffect(() => {
 
   // Helper for status colors
   const getStatusBadgeStyle = (status) => {
-      if (status === 'cancelled') return { backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' }; // Red-ish
-      return { backgroundColor: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' }; // Green-ish
+      if (status?.toLowerCase() === 'cancelled') {
+          return { backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' }; 
+      }
+      return { backgroundColor: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' }; 
   };
 
   return (
@@ -142,7 +144,7 @@ useEffect(() => {
                     boxShadow: '0 2px 4px rgba(0,0,0,0.1)' 
                 }}
             >
-                {/* NEW: Status Filter */}
+                {/* Status Filter */}
                 <div>
                     <label className="block text-xs font-bold mb-1 text-[#F9A825]">Status</label>
                     <select 
@@ -152,6 +154,7 @@ useEffect(() => {
                         style={{ minWidth: '100px' }}
                     >  
                         <option value="All">All</option>
+                        <option value="Settled">Settled</option>
                         <option value="Served">Served</option>
                         <option value="Cancelled">Cancelled</option>
                     </select>

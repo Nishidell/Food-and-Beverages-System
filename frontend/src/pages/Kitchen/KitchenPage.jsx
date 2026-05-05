@@ -342,6 +342,35 @@ const fetchInitialData = async () => {
     }
 };
 
+const handleCancelEntireOrder = async (orderId) => {
+    // 1. Always add a safety confirmation for destructive actions!
+    if (!window.confirm(`Are you sure you want to cancel Order #${orderId}? This will void all items and restore inventory.`)) {
+        return;
+    }
+
+    try {
+        // 2. Call your brand new backend route
+        const response = await apiClient(`/orders/${orderId}/cancel`, {
+            method: 'PUT'
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.message || 'Failed to cancel the order');
+        }
+
+        // 3. Show success message
+        toast.success(`Order #${orderId} has been successfully cancelled.`);
+
+        // 4. Refresh your data! 
+        // (Call whatever function you use to fetch the active orders, e.g., fetchKitchenOrders() or fetchData())
+        // Note: If your Socket.io setup is listening for 'order-status-updated', it might auto-refresh for you!
+        
+    } catch (error) {
+        toast.error(error.message);
+    }
+};
+
   return (
     <>
     <InternalNavBar />
@@ -499,7 +528,7 @@ const fetchInitialData = async () => {
                                         >
                                             Accept
                                         </button>
-                                        <button onClick={() => handlePromptCancel(order.order_id)} className="kitchen-btn btn-red"><Trash2 size={18}/></button>
+                                        <button onClick={() => handleCancelEntireOrder(order.order_id)} className="bg-red-500 hover:bg-red-600 text-white p-2 rounded shadow transition-colors" title="Cancel Entire Order"><Trash2 size={20} /> </button>
                                     </div>
                                 )}
                                 {ticketStatus === 'preparing' && (
@@ -511,7 +540,7 @@ const fetchInitialData = async () => {
                                         >
                                             Ready
                                         </button>
-                                        <button onClick={() => handlePromptCancel(order.order_id)} className="kitchen-btn btn-red"><Trash2 size={18}/></button>
+                                         <button onClick={() => handleCancelEntireOrder(order.order_id)} className="bg-red-500 hover:bg-red-600 text-white p-2 rounded shadow transition-colors" title="Cancel Entire Order"><Trash2 size={20} /> </button>
                                     </div>
                                 )}
                                 {ticketStatus === 'ready' && (
