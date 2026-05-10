@@ -55,19 +55,24 @@ const apiClient = async (url, options = {}) => {
     if (response.status === 401) {
       // Only force logout if the error didn't come from the Login Page itself
       if (url !== '/auth/login') { 
-        localStorage.removeItem('authToken');
         
-        // Dispatch optional event if you want other components to react
-        window.dispatchEvent(new Event('session-expired')); 
-
-        toast.error('Your session has expired. Please log in again.');
+        if (token) {
+            localStorage.removeItem('authToken');
+            
+            // Dispatch optional event if you want other components to react
+            window.dispatchEvent(new Event('session-expired')); 
+            toast.error('Your session has expired. Please log in again.');
+            
+            // Slight delay to allow toast to show before redirect
+            setTimeout(() => {
+                 window.location.href = '/login'; 
+            }, 1000);
+        }
         
-        // Slight delay to allow toast to show before redirect
-        setTimeout(() => {
-             window.location.href = '/login'; 
-        }, 1000);
-        
-        throw new Error('Session expired');
+        // If they don't have a token, we just throw the error back to the component
+        // so the MenuPage can fail gracefully (e.g., showing 0 items in the cart) 
+        // without crashing the whole page.
+        throw new Error('Unauthorized or Session expired');
       }
     }
 
