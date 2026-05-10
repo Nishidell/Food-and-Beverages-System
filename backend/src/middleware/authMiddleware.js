@@ -10,10 +10,25 @@ export const protect = (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.user = decoded;
-    next();
+    // 1. Try to verify using the standard F&B Staff Secret
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded;
+      return next(); // Exit early if successful
+
+    } catch (fbErr) {
+      // 2. F&B secret failed. Let's try the CRS Secret!
+      if (process.env.CRS_JWT_SECRET) {
+        const decodedCrs = jwt.verify(token, process.env.CRS_JWT_SECRET);
+        req.user = decodedCrs;
+        req.user.is_crs_guest = true; // Tag them as a guest for your controllers
+        return next();
+      } else {
+        // If you haven't added the CRS secret to .env yet, throw the original error
+        throw fbErr;
+      }
+    }
   } catch (err) {
     console.error("JWT verification failed:", err.message);
     res.status(401).json({ message: "Invalid or expired token" });
@@ -25,7 +40,7 @@ export const protect = (req, res, next) => {
 export const authorizeRoles = (...allowedRolesOrPositions) => {
   return (req, res, next) => {
     if (!req.user) {
-       return res.status(403).json({ message: "Access forbidden: not authenticated" });
+      return res.status(403).json({ message: "Access forbidden: not authenticated" });
     }
 
     // 1. Get user info
@@ -34,7 +49,7 @@ export const authorizeRoles = (...allowedRolesOrPositions) => {
 
     // THE MASTER KEY: General Manager bypasses all checks
     if (userPosition === 'General Manager') {
-        return next();
+      return next();
     }
 
     // THE TRANSLATION DICTIONARY: Map legacy backend roles to new HRIS titles
@@ -48,17 +63,17 @@ export const authorizeRoles = (...allowedRolesOrPositions) => {
 
     // 2. Check strict Position match (For Staff) using our new translated list
     if (userPosition && allowedWithMapping.includes(userPosition)) {
-        return next();
+      return next();
     }
 
     // 3. Check strict Role match (For Customers)
     if (userRole && allowedWithMapping.includes(userRole)) {
-        return next();
+      return next();
     }
 
     // 4. Special Case: Backward compatibility for admin routes
     if ((userPosition === 'Operations Manager' || userPosition === 'Operation Manager') && allowedWithMapping.includes('admin')) {
-        return next();
+      return next();
     }
 
     console.log(`Access Denied. User: ${userRole || 'None'}/${userPosition || 'None'}. Allowed: ${allowedWithMapping}`);

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import Snowfall from 'react-snowfall';
 
 // Import Pages
@@ -27,7 +27,34 @@ import GlobalRateLimitHandler from './components/GlobalRateLimitHandler';
 import ProtectedRoute from './components/routing/ProtectedRoute';
 import AuthRoute from './components/routing/AuthRoute';
 
+
+
 function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // --- SSO TOKEN CATCHER ---
+  useEffect(() => {
+    // 1. Scan the URL for the 'sso_token' parameter
+    const searchParams = new URLSearchParams(location.search);
+    const ssoToken = searchParams.get('sso_token');
+
+    if (ssoToken) {
+      // 2. Save it exactly where your normal F&B login saves it
+      localStorage.setItem('authToken', ssoToken);
+      
+      // 3. Delete the token from the URL for security and a cleaner UI
+      searchParams.delete('sso_token');
+      
+      // 4. Rebuild the URL without the token and replace the current browser history
+      const cleanUrl = searchParams.toString() 
+        ? `${location.pathname}?${searchParams.toString()}` 
+        : location.pathname;
+        
+      navigate(cleanUrl, { replace: true });
+    }
+  }, [location, navigate]);
+
   // --- SEASONAL LOGIC ---
   // JavaScript months are 0-indexed (0 = Jan, 11 = Dec)
   const currentMonth = new Date().getMonth();
