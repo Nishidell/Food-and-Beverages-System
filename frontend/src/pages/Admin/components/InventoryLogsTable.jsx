@@ -90,11 +90,13 @@ const InventoryLogsTable = () => {
   };
 
   const getActionStyle = (action) => {
-    if (action.includes('ADD') || action.includes('RESTOCK')) return { color: '#059669', backgroundColor: '#D1FAE5' };
-    if (action.includes('SUBTRACT') || action.includes('WASTE')) return { color: '#DC2626', backgroundColor: '#FEE2E2' };
+   
+    if (action.includes('ADD') || action.includes('RESTOCK') || action.includes('RESTORE')) return { color: '#059669', backgroundColor: '#D1FAE5' };
+    
+    if (action.includes('SUBTRACT') || action.includes('WASTE') || action.includes('DEDUCT')) return { color: '#DC2626', backgroundColor: '#FEE2E2' };
+    
     return { color: '#4B5563', backgroundColor: '#E5E7EB' };
   };
-
   // --- FILTER LOGIC (Source + Date) ---
   const filteredLogs = logs.filter(log => {
     // 1. Source Check
@@ -203,9 +205,9 @@ const InventoryLogsTable = () => {
                     </td>
                     <td style={{
                         fontWeight: 'bold',
-                        color: (log.action_type.includes('ADD') || log.action_type.includes('RESTOCK') || log.action_type === 'INITIAL') ? '#059669' : '#DC2626'
+                        color: (log.action_type.includes('ADD') || log.action_type.includes('RESTOCK') || log.action_type.includes('RESTORE') || log.action_type === 'INITIAL') ? '#059669' : '#DC2626'
                     }}>
-                    {(log.action_type.includes('ADD') || log.action_type.includes('RESTOCK') || log.action_type === 'INITIAL') ? '+' : '-'}{log.quantity_change}
+                    {(log.action_type.includes('ADD') || log.action_type.includes('RESTOCK') || log.action_type.includes('RESTORE') || log.action_type === 'INITIAL') ? '+' : '-'}{log.quantity_change}
                     </td>
                     <td className="font-bold">{log.new_stock_level}</td>
                     <td>{log.reason || 'N/A'}</td>
