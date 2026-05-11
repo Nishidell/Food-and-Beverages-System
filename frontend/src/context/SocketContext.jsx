@@ -4,10 +4,10 @@ import { useAuth } from './AuthContext';
 
 const SocketContext = createContext();
 
-// Detect environment to automatically set the correct URL
-const SOCKET_URL = import.meta.env.MODE === 'production' 
-  ? 'https://food-and-beverages-system.onrender.com' 
-  : 'http://localhost:21917';
+// ✅ FIX 1: Bulletproof Runtime URL Check
+const SOCKET_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:21917' 
+  : 'https://food-and-beverages-system.onrender.com';
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
@@ -16,14 +16,17 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     // Only connect if the user is authenticated
     if (isAuthenticated && user) {
+      
+      // ✅ FIX 2: Added 'transports' to force a stable WebSocket connection
       const newSocket = io(SOCKET_URL, {
-        withCredentials: true, // Crucial for CORS
+        withCredentials: true, 
+        transports: ['websocket', 'polling'] 
       });
 
       setSocket(newSocket);
 
       newSocket.on('connect', () => {
-        console.log('✅ Connected to WebSocket:', newSocket.id);
+        console.log('✅ Connected to WebSocket:', newSocket.id, 'at URL:', SOCKET_URL);
 
         // 1. Join "Kitchen" room (For Kitchen Staff & Admins)
         if (user.position === 'Kitchen Staffs' || user.position === 'Operations Manager') {
