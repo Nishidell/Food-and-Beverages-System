@@ -21,8 +21,15 @@ export const protect = (req, res, next) => {
       // 2. F&B secret failed. Let's try the CRS Secret!
       if (process.env.CRS_JWT_SECRET) {
         const decodedCrs = jwt.verify(token, process.env.CRS_JWT_SECRET);
-        req.user = decodedCrs;
-        req.user.is_crs_guest = true; // Tag them as a guest for your controllers
+        
+        // ✅ THE TRANSLATOR: Map the missing fields so F&B understands it!
+        req.user = {
+          ...decodedCrs,
+          id: decodedCrs.client_id || decodedCrs.id, // Maps CRS client_id to F&B id
+          role: decodedCrs.role || 'customer',       // Automatically grants customer privileges
+          is_crs_guest: true                         // Tags them as a guest for your controllers
+        };
+        
         return next();
       } else {
         // If you haven't added the CRS secret to .env yet, throw the original error
@@ -54,7 +61,6 @@ export const authorizeRoles = (...allowedRolesOrPositions) => {
 
     // THE TRANSLATION DICTIONARY: Map legacy backend roles to new HRIS titles
     const allowedWithMapping = [...allowedRolesOrPositions];
-
     if (allowedWithMapping.includes('Operations Manager')) allowedWithMapping.push('Operations Manager');
     if (allowedWithMapping.includes('Kitchen Staffs')) allowedWithMapping.push('Head Chef', 'Assistant Chef');
     if (allowedWithMapping.includes('Waiter')) allowedWithMapping.push('Service Supervisor');
