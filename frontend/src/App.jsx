@@ -46,14 +46,15 @@ function App() {
       // 3. Delete the token from the URL for security and a cleaner UI
       searchParams.delete('sso_token');
       
-      // 4. Rebuild the URL without the token and replace the current browser history
+      // 4. Rebuild the URL without the token
       const cleanUrl = searchParams.toString() 
         ? `${location.pathname}?${searchParams.toString()}` 
         : location.pathname;
         
-      navigate(cleanUrl, { replace: true });
+      // Force a hard reload so AuthContext wakes up and sees the new token
+      window.location.replace(cleanUrl);
     }
-  }, [location, navigate]);
+  }, [location]); 
 
   // --- SEASONAL LOGIC ---
   // JavaScript months are 0-indexed (0 = Jan, 11 = Dec)
