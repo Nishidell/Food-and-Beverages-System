@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Sliders, Edit2, AlertTriangle, CheckCircle, Filter, Trash2, X, XCircle} from 'lucide-react';
+import { Plus, Sliders, Edit2, AlertTriangle, CheckCircle, Filter, Trash2, X, XCircle, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../utils/apiClient';
@@ -37,6 +37,7 @@ const InventoryPage = () => {
   // --- FILTERS & SORTING STATE ---
   const [filterStatus, setFilterStatus] = useState('All'); 
   const [sortBy, setSortBy] = useState('stock-low'); 
+  const [searchQuery, setSearchQuery] = useState('');
 
   // --- MODAL STATE ---
   const [isIngredientModalOpen, setIsIngredientModalOpen] = useState(false);
@@ -161,6 +162,10 @@ const InventoryPage = () => {
   const getProcessedIngredients = () => {
       // 1. Filter
       let result = ingredients.filter(item => {
+          //  Check the search query first
+          const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+          if (!matchesSearch) return false;
+
           const current = parseFloat(item.stock_level);
           const threshold = parseFloat(item.reorder_point || 10);
           
@@ -250,6 +255,20 @@ const InventoryPage = () => {
             </div>
 
                 <div className="flex flex-wrap items-center gap-4 justify-end">
+                   {/* ✅ UPDATED: Static Width Search Bar (No Expansion) */}
+                    <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#3C2A21] opacity-70 group-focus-within:opacity-100 transition-opacity">
+                            <Search size={18} />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Search..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            /* Locked to w-44, removed all focus expansion and transition classes */
+                            className="kitchen-select-primary !pl-10 !pr-4 shadow-md outline-none w-36 placeholder-[#3C2A21]/60"
+                        />
+                    </div>
                     
                     {/* Filter Dropdown */}
                     <div className="relative">
