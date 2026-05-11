@@ -154,24 +154,19 @@ const fetchInitialData = async () => {
             }
         });
 
-       socket.on('order-status-updated', (data) => {
-            console.log("⚡ LIVE UPDATE RECEIVED:", data); // Proof the backend sent it!
-
+      socket.on('order-status-updated', (data) => {
             setKitchenOrders(prev => {
                 const { order_id, status } = data;
                 
-                // If it's completely finished, remove it from the active screen
                 if (status === 'served' || status === 'cancelled') {
                     if (status === 'served') setServedCount(c => c + 1);
-                    // ✅ SAFELY MATCH IDs by forcing both to be Strings
+                    // ✅ FIX 3: Force String comparison to prevent strict equality mismatch
                     return prev.filter(o => String(o.order_id) !== String(order_id)); 
                 }
                 
-                // Otherwise, update the specific order's items
                 return prev.map(o => {
-                    // ✅ SAFELY MATCH IDs by forcing both to be Strings
+                    // ✅ FIX 3: Force String comparison
                     if (String(o.order_id) === String(order_id)) {
-                        // Change the status of all active items so our getTicketStatus helper recalculates!
                         const updatedItems = o.items.map(item => 
                             (item.item_status !== 'served' && item.item_status !== 'cancelled') 
                                 ? { ...item, item_status: status } 
@@ -193,7 +188,7 @@ const fetchInitialData = async () => {
     };
   }, [socket]);
 
-  const handleUpdateStatus = async (orderId, newStatus) => {
+const handleUpdateStatus = async (orderId, newStatus) => {
     try {
       const response = await apiClient(`/orders/${orderId}/status`, {
         method: 'PUT',
@@ -201,11 +196,20 @@ const fetchInitialData = async () => {
       });
       if (!response.ok) throw new Error('Failed to update status');
       toast.success(`Order #${orderId} marked as ${newStatus}`);
+
+      // Clear the checkboxes for this order locally so they reset for the new stage!
+      setCheckedItems(prev => {
+          const orderToUpdate = kitchenOrders.find(o => String(o.order_id) === String(orderId));
+          if (!orderToUpdate) return prev;
+          
+          const itemIds = orderToUpdate.items.map(i => i.order_detail_id);
+          return prev.filter(id => !itemIds.includes(id));
+      });
+
     } catch (err) {
       toast.error(err.message);
     }
   };
-
   // --- CANCELLATION HANDLERS ---
   const handlePromptCancel = (orderId) => {
       setOrderIdToCancel(orderId);
@@ -272,13 +276,18 @@ const fetchInitialData = async () => {
     };
 
     const filteredOrders = kitchenOrders.filter(order => {
-    const statusMatch = filterStatus === 'All' || order.status?.toLowerCase() === filterStatus.toLowerCase();
+    // ✅ FIX 2: Use the exact Kitchen Ticket Status, not the Parent Payment Status!
+    const ticketStatus = getTicketStatus(order.items);
+    
+    const statusMatch = filterStatus === 'All' || ticketStatus.toLowerCase() === filterStatus.toLowerCase();
     const typeMatch = filterType === 'All Types' || order.order_type?.toLowerCase() === filterType.toLowerCase();
+    
     const orderDateObj = fixDate(order.order_date);
     const orderDatePart = getLocalDatePart(orderDateObj);
 
-    const isActiveTicket = order.status?.toLowerCase() === 'pending' || order.status?.toLowerCase() === 'preparing';
+    const isActiveTicket = ticketStatus === 'pending' || ticketStatus === 'preparing';
     const dateMatch = (orderDatePart >= startDate && orderDatePart <= endDate) || isActiveTicket;
+    
     return statusMatch && typeMatch && dateMatch;
   });
 
