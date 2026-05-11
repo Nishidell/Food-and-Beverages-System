@@ -568,17 +568,13 @@ export const updateOrderStatus = async (req, res) => {
             console.log(`Ingredient stock deducted and logged for order ${id}`);
 
         } else if (newStatus === 'cancelled') {
-            // BUG FIX #7: Only restore stock if order was preparing/ready AND not paid
-            // WHY: Prevents incorrect stock restoration for already-paid orders
-            // HOW: Check both status and payment status before restoring stock
             if (currentStatus === 'preparing' || currentStatus === 'ready') {
-                const [payments] = await connection.query(
+                 const [payments] = await connection.query(
                     "SELECT * FROM fb_new_payments WHERE order_id = ? AND payment_status = 'paid'", 
                     [id]
                 );
-
                 if (payments.length > 0) {
-                    console.warn(`Order ${id} was already paid. Stock NOT restored (requires manual inventory adjustment).`);
+                    console.warn(`Order ${id} was already paid. Stock NOT restored.`);
                 } else {
                     console.log(`Restoring ingredient stock for cancelled unpaid order: ${id}`);
                     const [details] = await connection.query("SELECT item_id, quantity FROM fb_new_order_details WHERE order_id = ?", [id]);
@@ -587,38 +583,35 @@ export const updateOrderStatus = async (req, res) => {
                     await logOrderStockChange(id, details, 'ORDER_RESTORE', connection);
                 }
             }
+
+            //  MOVED INSIDE THE CANCELLED BLOCK
+            // 1. Fetch the items we are about to cancel (we need their price!)
+            const [cancelDetails] = await connection.query(
+                "SELECT quantity, price_on_purchase FROM fb_new_order_details WHERE order_id = ? AND item_status != 'served' AND item_status != 'cancelled'", 
+                [id]
+            );
+
+            // 2. Calculate the exact grand total of these cancelled items
+            let voidedSubtotal = 0;
+            for (const item of cancelDetails) {
+                voidedSubtotal += (item.quantity * item.price_on_purchase);
+            }
+            const voidedServiceCharge = voidedSubtotal * SERVICE_RATE;
+            const voidedVatAmount = (voidedSubtotal + voidedServiceCharge) * VAT_RATE;
+            const voidedGrandTotal = voidedSubtotal + voidedServiceCharge + voidedVatAmount;
+
+            // 3. Deduct this amount from the main order's total_amount
+            await connection.query(
+                "UPDATE fb_new_orders SET total_amount = GREATEST(0, total_amount - ?) WHERE order_id = ?",
+                [voidedGrandTotal, id]
+            );
         }
 
-        // 1. Fetch the items we are about to cancel (we need their price!)
-        const [cancelDetails] = await connection.query(
-            "SELECT quantity, price_on_purchase FROM fb_new_order_details WHERE order_id = ? AND item_status != 'served' AND item_status != 'cancelled'", 
-            [id]
+        // 4. Update the main order status
+        const [result] = await connection.query(
+            "UPDATE fb_new_orders SET status = ? WHERE order_id = ?",
+            [newStatus, id]
         );
-
-        // 2. Calculate the exact grand total of these cancelled items
-        let voidedSubtotal = 0;
-        for (const item of cancelDetails) {
-            voidedSubtotal += (item.quantity * item.price_on_purchase);
-        }
-        const voidedServiceCharge = voidedSubtotal * SERVICE_RATE;
-        const voidedVatAmount = (voidedSubtotal + voidedServiceCharge) * VAT_RATE;
-        const voidedGrandTotal = voidedSubtotal + voidedServiceCharge + voidedVatAmount;
-
-        // 3. Deduct this amount from the main order's total_amount
-        await connection.query(
-            "UPDATE fb_new_orders SET total_amount = GREATEST(0, total_amount - ?) WHERE order_id = ?",
-            [voidedGrandTotal, id]
-        );
-
-        // Update the order status
-       await connection.query(
-        "UPDATE fb_new_orders SET status = ? WHERE order_id = ?",
-        [newStatus, id]
-        );
-
-        if (result.affectedRows === 0) {
-            throw new Error("No active items found to update");
-        }
 
         if (result.affectedRows === 0) {
             throw new Error("Order not found or status unchanged");
