@@ -6,6 +6,20 @@ import apiClient from '../utils/apiClient';
 
 const AuthContext = createContext(null);
 
+// Helper to ensure the user object always has the required fields for the UI
+const formatUser = (decodedToken) => {
+  if (!decodedToken) return null;
+  
+  return {
+    ...decodedToken,
+    // Extract the name from the email (e.g., 'guest' from 'guest@gmail.com') if firstName is missing
+    firstName: decodedToken.firstName || decodedToken.first_name || (decodedToken.email ? decodedToken.email.split('@')[0] : 'Guest'),
+    lastName: decodedToken.lastName || decodedToken.last_name || '',
+    role: decodedToken.role || 'customer',
+    id: decodedToken.id || decodedToken.client_id
+  };
+};
+
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => localStorage.getItem('authToken'));
   const [user, setUser] = useState(() => {
