@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom'; 
 import Snowfall from 'react-snowfall';
 
 // Import Pages
@@ -27,34 +27,34 @@ import GlobalRateLimitHandler from './components/GlobalRateLimitHandler';
 import ProtectedRoute from './components/routing/ProtectedRoute';
 import AuthRoute from './components/routing/AuthRoute';
 
-
-
 function App() {
   const location = useLocation();
-  const navigate = useNavigate();
 
+  // ==========================================
   // --- SSO TOKEN CATCHER ---
+  // ==========================================
   useEffect(() => {
     // 1. Scan the URL for the 'sso_token' parameter
     const searchParams = new URLSearchParams(location.search);
     const ssoToken = searchParams.get('sso_token');
 
     if (ssoToken) {
-      // 2. Save it exactly where your normal F&B login saves it
-      localStorage.setItem('authToken', ssoToken);
+      console.log("SSO Token found! Saving to Local Storage...");
       
-      // 3. Delete the token from the URL for security and a cleaner UI
+      // 2. Save it to Local Storage. 
+      // (Most React apps use 'token', but if your AuthContext uses 'authToken', change it here!)
+      localStorage.setItem('token', ssoToken); 
+      
+      // 3. Clean the URL
       searchParams.delete('sso_token');
-      
-      // 4. Rebuild the URL without the token
       const cleanUrl = searchParams.toString() 
         ? `${location.pathname}?${searchParams.toString()}` 
         : location.pathname;
         
-      // Force a hard reload so AuthContext wakes up and sees the new token
+      // 4. Force a hard reload so AuthContext logs you in immediately
       window.location.replace(cleanUrl);
     }
-  }, [location]); 
+  }, [location]);
 
   // --- SEASONAL LOGIC ---
   // JavaScript months are 0-indexed (0 = Jan, 11 = Dec)
