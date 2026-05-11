@@ -31,9 +31,6 @@ const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const { login } = useAuth();
-  const navigate = useNavigate();
-
   // ==========================================
   // --- BULLETPROOF SSO TOKEN CATCHER ---
   // ==========================================
