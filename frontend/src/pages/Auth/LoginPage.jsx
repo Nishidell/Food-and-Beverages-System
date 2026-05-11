@@ -35,19 +35,29 @@ const LoginPage = () => {
   // --- BULLETPROOF SSO TOKEN CATCHER ---
   // ==========================================
   useEffect(() => {
-    // 1. Check everywhere for the token (handles standard URLs and Hash URLs)
+    // 1. Check standard URLs (e.g., ?token=123 or ?sso_token=123)
     const urlParams = new URLSearchParams(window.location.search);
-    const hashParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
-    const ssoToken = urlParams.get('sso_token') || hashParams.get('sso_token');
+    
+    // 2. Check Hash URLs (e.g., #token=123 or #sso_token=123)
+    // We replace the '#' with '?' so URLSearchParams can easily read it
+    const hashString = window.location.hash.replace('#', '?');
+    const hashParams = new URLSearchParams(hashString);
 
-    if (ssoToken) {
-      console.log("✅ SSO Token Caught on Login Page!");
+    // 3. Cast a wide net: Look for 'token' OR 'sso_token' in either place
+    const capturedToken = 
+      hashParams.get('token') || 
+      hashParams.get('sso_token') || 
+      urlParams.get('token') || 
+      urlParams.get('sso_token');
+
+    if (capturedToken) {
+      console.log("✅ Token Caught! Logging in...");
       
-      // 2. Save it under BOTH common names just to be absolutely sure
-      localStorage.setItem('token', ssoToken);
-      localStorage.setItem('authToken', ssoToken);
+      // 4. Save it under BOTH common names just to be safe
+      localStorage.setItem('token', capturedToken);
+      localStorage.setItem('authToken', capturedToken);
       
-      // 3. Force a complete browser reload and send them to the main menu/dashboard
+      // 5. Clean the URL and force a hard reload to boot up the dashboard
       window.location.href = '/'; 
     }
   }, []);
