@@ -53,11 +53,10 @@ const LoginPage = () => {
     if (capturedToken) {
       console.log("✅ Token Caught! Logging in...");
       
-      // 4. Save it under BOTH common names just to be safe
-      localStorage.setItem('token', capturedToken);
+      // Save it using the exact Key name your F&B system expects
       localStorage.setItem('authToken', capturedToken);
       
-      // 5. Clean the URL and force a hard reload to boot up the dashboard
+      // Clean the URL and force a hard reload to boot up the dashboard
       window.location.href = '/'; 
     }
   }, []);
