@@ -65,39 +65,42 @@ export const getDashboardAnalytics = async (req, res) => {
       orderTypeDistribution,
       peakHours,
     ] = await Promise.all([
-      // 1-4: SALES TRENDS CARDS (Keep these STATIC so they always show the summary)
+      // 1-4: SALES TRENDS CARDS (STATIC SUMMARIES)
+      //  FIX: Changed AS fb_new_orders to AS fb_orders to match React frontend
+      //  FIX: Changed o.status != 'cancelled' to o.status = 'Settled' so unpaid food isn't counted
       safeQuery(
-        `SELECT COUNT(o.order_id) AS fb_new_orders, SUM(o.total_amount) AS sales 
+        `SELECT COUNT(o.order_id) AS fb_orders, SUM(o.total_amount) AS sales 
          FROM fb_new_orders o 
-         WHERE DATE(o.order_date) = CURDATE() AND o.status != 'cancelled' ${typeCondition}`,
+         WHERE DATE(o.order_date) = CURDATE() AND o.status = 'Settled' ${typeCondition}`,
         queryParams, [{ fb_orders: 0, sales: 0 }]
       ),
       safeQuery(
-        `SELECT COUNT(o.order_id) AS fb_new_orders, SUM(o.total_amount) AS sales
+        `SELECT COUNT(o.order_id) AS fb_orders, SUM(o.total_amount) AS sales
          FROM fb_new_orders o 
-         WHERE DATE(o.order_date) = CURDATE() - INTERVAL 1 DAY AND o.status != 'cancelled' ${typeCondition}`,
+         WHERE DATE(o.order_date) = CURDATE() - INTERVAL 1 DAY AND o.status = 'Settled' ${typeCondition}`,
         queryParams, [{ fb_orders: 0, sales: 0 }]
       ),
       safeQuery(
-        `SELECT COUNT(o.order_id) AS fb_new_orders, SUM(o.total_amount) AS sales
+        `SELECT COUNT(o.order_id) AS fb_orders, SUM(o.total_amount) AS sales
          FROM fb_new_orders o 
-         WHERE YEARWEEK(o.order_date, 1) = YEARWEEK(NOW(), 1) AND o.status != 'cancelled' ${typeCondition}`,
+         WHERE YEARWEEK(o.order_date, 1) = YEARWEEK(NOW(), 1) AND o.status = 'Settled' ${typeCondition}`,
         queryParams, [{ fb_orders: 0, sales: 0 }]
       ),
       safeQuery(
-        `SELECT COUNT(o.order_id) AS fb_new_orders, SUM(o.total_amount) AS sales
+        `SELECT COUNT(o.order_id) AS fb_orders, SUM(o.total_amount) AS sales
          FROM fb_new_orders o 
-         WHERE YEAR(o.order_date) = YEAR(NOW()) AND MONTH(o.order_date) = MONTH(NOW()) AND o.status != 'cancelled' ${typeCondition}`,
+         WHERE YEAR(o.order_date) = YEAR(NOW()) AND MONTH(o.order_date) = MONTH(NOW()) AND o.status = 'Settled' ${typeCondition}`,
         queryParams, [{ fb_orders: 0, sales: 0 }]
       ),
 
       // 5. Top Items (Dynamic)
+      //  FIX: Only count items from 'Settled' orders
       safeQuery(
         `SELECT mi.item_name, SUM(od.quantity) AS total_sold, SUM(od.quantity * od.price_on_purchase) AS total_sales 
          FROM fb_new_order_details od
          JOIN fb_menu_items mi ON od.item_id = mi.item_id
          JOIN fb_new_orders o ON od.order_id = o.order_id
-         WHERE o.status != 'cancelled' AND od.item_status != 'cancelled' ${typeCondition} ${dateCondition}
+         WHERE o.status = 'Settled' AND od.item_status != 'cancelled' ${typeCondition} ${dateCondition}
          GROUP BY od.item_id, mi.item_name
          ORDER BY total_sold DESC LIMIT 7`, 
         allParams,
@@ -105,33 +108,31 @@ export const getDashboardAnalytics = async (req, res) => {
       ),
 
       // 6. Payment Methods (Dynamic)
+      //  FIX: Cross-reference 'paid' status with 'Settled' orders
       safeQuery(
         `SELECT p.payment_method, COUNT(p.payment_id) AS transactions, SUM(p.amount) AS total_value 
          FROM fb_new_payments p
          JOIN fb_new_orders o ON p.order_id = o.order_id
-         WHERE p.payment_status = 'paid' AND o.status != 'cancelled' ${typeCondition} ${dateCondition}
+         WHERE p.payment_status = 'paid' AND o.status = 'Settled' ${typeCondition} ${dateCondition}
          GROUP BY p.payment_method`,
-         allParams,
+        allParams,
         []
       ),
       
       // 7. Order Type Distribution
       safeQuery(
-        `SELECT 
-           o.order_type, 
-           COUNT(o.order_id) AS orders, 
-           SUM(o.total_amount) AS total_value 
+        `SELECT o.order_type, COUNT(o.order_id) AS orders, SUM(o.total_amount) AS total_value 
          FROM fb_new_orders o
-         WHERE o.status != 'cancelled' ${typeCondition} ${dateCondition}
+         WHERE o.status = 'Settled' ${typeCondition} ${dateCondition}
          GROUP BY o.order_type`,
         allParams, []
       ),
 
-      // 8. Peak Hours (✅ NOW DYNAMIC)
+      // 8. Peak Hours (Dynamic)
       safeQuery(
         `SELECT HOUR(o.order_date) AS hour, COUNT(o.order_id) AS order_count 
          FROM fb_new_orders o
-         WHERE o.status != 'cancelled' ${typeCondition} ${dateCondition}
+         WHERE o.status = 'Settled' ${typeCondition} ${dateCondition}
          GROUP BY hour ORDER BY order_count DESC LIMIT 1`,
         allParams, []
       ),
