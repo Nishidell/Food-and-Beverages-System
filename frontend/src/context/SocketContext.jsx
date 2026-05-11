@@ -7,7 +7,7 @@ const SocketContext = createContext();
 // ✅ FIX 1: Bulletproof Runtime URL Check
 const SOCKET_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:21917' 
-  : 'https://food-and-beverages-system.onrender.com';
+  : 'https://food-and-beverages-system-backend.onrender.com';
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
