@@ -254,12 +254,16 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
             <div>
               <label style={labelStyle}>Image</label>
               {formData.image_url && (
-              <img 
-                src={formData.image_url.startsWith('http') ? formData.image_url : `${window.location.hostname === 'localhost' ? 'http://localhost:21917' : 'https://food-and-beverages-system.onrender.com'}${formData.image_url}`} 
-                alt="Preview" 
-                style={{ width: '100%', height: '128px', objectFit: 'cover', borderRadius: '0.375rem', margin: '8px 0' }} 
-              />
-            )}
+                <img 
+                  src={
+                    formData.image_url.startsWith('http') 
+                      ? formData.image_url 
+                      : `${window.location.hostname === 'localhost' ? 'http://localhost:21917' : 'https://food-and-beverages-system.onrender.com'}${formData.image_url.startsWith('/') ? '' : '/'}${formData.image_url}`
+                  } 
+                  alt="Preview" 
+                  style={{ width: '100%', height: '128px', objectFit: 'cover', borderRadius: '0.375rem', margin: '8px 0' }} 
+                />
+              )}
               <label htmlFor="image-upload" style={{
                 marginTop: '4px', display: 'flex', justifyContent: 'center', padding: '20px',
                 border: '2px dashed #D1D5DB', borderRadius: '0.375rem', cursor: 'pointer'

@@ -7,16 +7,20 @@ import '../AdminTheme.css';
 import AddItemModal from './AddItemModal';
 import ManageCategoriesModal from './ManageCategoriesModal';
 
+// 1. Use a reliable external placeholder to avoid the Vercel HTML bug
+const FALLBACK_IMAGE = 'https://placehold.co/400x300/e2e8f0/1e293b?text=No+Image';
+
 const getImageUrl = (imagePath) => {
-  if (!imagePath) return '/placeholder-food.png';
-  if (imagePath.startsWith('http')) return imagePath; // Already a full URL
+  if (!imagePath) return FALLBACK_IMAGE;
+  if (imagePath.startsWith('http')) return imagePath; 
   
-  // Dynamic check: Are we on localhost or the live web?
   const BASE_URL = window.location.hostname === 'localhost' 
       ? 'http://localhost:21917' 
       : 'https://food-and-beverages-system.onrender.com';
       
-  return `${BASE_URL}${imagePath}`;
+  // 2. Guarantee a clean path (prevents "comuploads/...")
+  const cleanPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;    
+  return `${BASE_URL}${cleanPath}`;
 };
 
 const MenuManagementTable = () => {
@@ -206,12 +210,16 @@ const MenuManagementTable = () => {
             {filteredItems.map((item) => (
               <tr key={item.item_id}>
                 <td>
-                  {/* ✅ FIX: Use the helper function here */}
                   <img 
                     src={getImageUrl(item.image_url)} 
                     alt={item.item_name}
                     className="w-12 h-12 object-cover rounded-md border border-gray-300"
-                    onError={(e) => { e.target.src = '/placeholder-food.png'; }} 
+                    onError={(e) => { 
+                      // 3. Prevent the infinite loop!
+                      if (e.target.src !== FALLBACK_IMAGE) {
+                        e.target.src = FALLBACK_IMAGE; 
+                      }
+                    }} 
                   />
                 </td>
                 <td className="font-bold">{item.item_name}</td>
