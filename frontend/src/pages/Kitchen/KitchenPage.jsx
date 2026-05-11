@@ -488,8 +488,8 @@ const handleCancelEntireOrder = async (orderId) => {
                                 <p className="text-sm text-gray-500">{formatOrderTime(order.order_date)}</p>
                             </div>
                             
-                            {order.items?.map((item, idx) => {
-                                        const isChecked = checkedItems.includes(item.order_detail_id);
+                           {order.items?.filter(i => i.item_status !== 'served' && i.item_status !== 'cancelled').map((item, idx) => {
+                                const isChecked = checkedItems.includes(item.order_detail_id);
                                         return (
                                             <div key={item.order_detail_id || idx} 
                                                  className={`mb-2 flex items-start gap-3 p-2 rounded-md border transition-all duration-200 ${isChecked ? 'bg-gray-100 border-gray-200' : 'hover:bg-amber-50 border-transparent hover:border-amber-200'}`}

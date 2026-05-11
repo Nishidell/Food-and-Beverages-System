@@ -607,22 +607,16 @@ export const updateOrderStatus = async (req, res) => {
             );
         } // <--- THE BRACKET NOW SAFELY CLOSES HERE!
 
-      // 4. Update the appropriate status table
-        // Kitchen statuses (preparing, ready, served) belong in fb_new_order_details.
-        // Parent statuses (Open, Settled, cancelled) belong in fb_new_orders.
+     // 4. Update the appropriate status table
         if (newStatus === 'cancelled') {
             await connection.query("UPDATE fb_new_orders SET status = 'cancelled' WHERE order_id = ?", [id]);
             await connection.query("UPDATE fb_new_order_details SET item_status = 'cancelled' WHERE order_id = ?", [id]);
         } else {
-            // It's a Kitchen Status. Update the DETAILS table!
+            // ✅ FIX: Added 'served' to the exclusion list so finished food stays finished!
             const [result] = await connection.query(
-                "UPDATE fb_new_order_details SET item_status = ? WHERE order_id = ? AND item_status != 'cancelled'",
+                "UPDATE fb_new_order_details SET item_status = ? WHERE order_id = ? AND item_status NOT IN ('cancelled', 'served')",
                 [newStatus, id]
             );
-
-            if (result.affectedRows === 0) {
-                throw new Error("No active items found to update");
-            }
         }
 
         // Create/Update the notification
