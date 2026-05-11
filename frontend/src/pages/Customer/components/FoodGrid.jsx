@@ -4,15 +4,22 @@ import { Star } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import '../CustomerTheme.css';
 
-// Helper to handle image URLs
+// ✅ UPGRADED: Smart URL Helper with Backslash Fix
+const FALLBACK_IMAGE = 'https://placehold.co/400x300/e2e8f0/1e293b?text=No+Image';
+
 const getImageUrl = (imagePath) => {
-  if (!imagePath) return 'https://via.placeholder.com/400x300.png?text=No+Image';
-  if (imagePath.startsWith('http')) return imagePath;
+  if (!imagePath) return FALLBACK_IMAGE;
+  if (imagePath.startsWith('http')) return imagePath; 
   
-  const BASE_URL = window.location.hostname === 'localhost' 
-      ? 'http://localhost:21917' 
-      : 'https://food-and-beverages-system.onrender.com';
-  return `${BASE_URL}${imagePath}`;
+  // Convert Windows backslashes to web forward slashes
+  const normalizedPath = imagePath.replace(/\\/g, '/');
+  
+  // Dynamically grab your real backend URL
+  let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:21917/api';
+  const baseUrl = apiUrl.replace(/\/api\/?$/, ''); 
+      
+  const cleanPath = normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`;    
+  return `${baseUrl}${cleanPath}`;
 };
 
 const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "customer", isPOS = false }) => {
@@ -31,7 +38,6 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
     const today = new Date();
     today.setHours(0, 0, 0, 0); 
     const expiryDate = new Date(item.promo_expiry_date);
-    
     if (expiryDate < today) {
       return { isActive: false, displayPrice: item.price };
     }
@@ -68,10 +74,16 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
                 >
                     {/* Top Half: The Image */}
                     <div className="h-32 w-full bg-gray-100 overflow-hidden flex justify-center items-center border-b border-gray-100">
+                    {/* ✅ UPGRADED: POS Image with Loop Breaker */}
                     <img 
                         src={getImageUrl(item.image_url)} 
                         alt={item.item_name} 
                         className="w-full h-full object-cover rounded-t-lg"
+                        onError={(e) => { 
+                            if (e.target.src !== FALLBACK_IMAGE) {
+                              e.target.src = FALLBACK_IMAGE; 
+                            }
+                        }} 
                     />
 
                     {isActive && (
@@ -88,15 +100,15 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
                         </span>
                         
                         <div className="mt-0.5 flex flex-wrap justify-center items-center gap-x-1">
-                      {isActive && (
-                          <span className="text-[10px] text-gray-400 line-through">
-                              ₱{parseFloat(originalPrice).toFixed(2)}
-                          </span>
-                      )}
-                      <span className="text-xs font-bold text-amber-700">
-                          ₱{parseFloat(displayPrice).toFixed(2)}
-                      </span>
-                  </div>
+                            {isActive && (
+                                <span className="text-[10px] text-gray-400 line-through">
+                                    ₱{parseFloat(originalPrice).toFixed(2)}
+                                </span>
+                            )}
+                            <span className="text-xs font-bold text-amber-700">
+                                ₱{parseFloat(displayPrice).toFixed(2)}
+                            </span>
+                        </div>
                     </div>
 
                     {/* Sold Out Overlay */}
@@ -113,7 +125,6 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
           <div 
             key={item.item_id} 
             className={`food-card ${!item.is_available ? 'unavailable' : ''} cursor-pointer hover:shadow-xl transition-shadow`}
-            // ✅ 2. POS CHECK: If in POS mode, clicking the card adds to cart. If customer mode, navigate to details.
             onClick={() => {
                 if (isPOS) {
                     if (item.is_available) onAddToCart(itemForCart);
@@ -123,20 +134,26 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
             }}
           >
            
-           <div className="card-image-container relative" onClick={() => onImageClick(getImageUrl(item.image_url))}>
-          {isActive && (
-              <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md z-10">
-                  {discountPercent}% OFF
-              </div>
-          )}
-          <img 
-              src={getImageUrl(item.image_url)} 
-              alt={item.item_name} 
-              className="card-image" 
-          />
-      </div>
-            
-            <div className="card-content">
+          <div className="card-image-container relative" onClick={() => onImageClick(getImageUrl(item.image_url))}>
+            {isActive && (
+                <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md z-10">
+                    {discountPercent}% OFF
+                </div>
+            )}
+            {/* ✅ UPGRADED: Customer Image with Loop Breaker */}
+            <img 
+                src={getImageUrl(item.image_url)} 
+                alt={item.item_name} 
+                className="card-image" 
+                onError={(e) => { 
+                    if (e.target.src !== FALLBACK_IMAGE) {
+                      e.target.src = FALLBACK_IMAGE; 
+                    }
+                }} 
+            />
+          </div>
+             
+          <div className="card-content">
               <h3 className="item-name mb-1">{item.item_name}</h3>
               <div className="card-footer mt-auto">
 
@@ -147,13 +164,12 @@ const FoodGrid = ({ items, onAddToCart, onImageClick, layoutStyle, theme = "cust
                 </span>
             )}
             <span className="price-text text-green-700">₱{parseFloat(displayPrice).toFixed(2)}</span>
-        </div>
+            </div>
                 {item.is_available ? (
                   <button 
                     onClick={(e) => {
                         e.stopPropagation(); 
                         
-                        // ✅ 3. POS CHECK: Bypass auth check if Waiter
                         if (isPOS) {
                             onAddToCart(itemForCart);
                         } else if (!user) {
