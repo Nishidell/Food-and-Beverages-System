@@ -27,7 +27,7 @@ const ProfileDropdown = () => {
     if (!user) return "Guest";
     if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
     if (user.firstName) return user.firstName;
-    return user.role.charAt(0).toUpperCase() + user.role.slice(1);
+    return user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Customer';
   };
   
   // ✅ NEW: Handlers for Guest Actions

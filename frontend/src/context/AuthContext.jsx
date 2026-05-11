@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }) => {
     const savedToken = localStorage.getItem('authToken');
     if (savedToken) {
       try {
-        return jwtDecode(savedToken); 
+       return formatUser(jwtDecode(savedToken)); 
       } catch (error) {
         console.error("Failed to decode token on load", error);
         localStorage.removeItem('authToken');
