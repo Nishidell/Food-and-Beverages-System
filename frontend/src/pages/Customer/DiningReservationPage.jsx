@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Users, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, Users, CheckCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../utils/apiClient';
 import toast from 'react-hot-toast';
@@ -128,19 +128,20 @@ const DiningReservationPage = () => {
         
         {/* Top Navigation Bar */}
         <div className="absolute top-6 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center left-0 right-0">
-          <button 
-            onClick={() => navigate('/')} 
-            className="flex items-center gap-2 text-[#F9A825] hover:text-white transition-colors font-bold"
-          >
-            <ArrowLeft size={24} /> 
-            <span className="hidden sm:inline">Back to Menu</span>
-          </button>
 
           <button 
             // Note for your friend: Add the onClick handler or window.location.href here for the CRS subsystem
             className="bg-[#F9A825] text-[#480c1b] px-5 py-2 rounded-md font-bold hover:bg-white transition-colors shadow-lg"
           >
             CRS Portal
+          </button>
+
+          <button 
+            onClick={() => navigate('/')} 
+            className="flex items-center gap-2 text-[#F9A825] hover:text-white transition-colors font-bold"
+          >
+            <span className="hidden sm:inline">Explore Menu</span>
+            <ArrowRight size={24} /> 
           </button>
         </div>
 
