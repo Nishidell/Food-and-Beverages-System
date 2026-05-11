@@ -202,6 +202,18 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
   };
   const cancelButtonStyle = { ...buttonStyle, backgroundColor: '#E5E7EB', color: '#1F2937' };
 
+  // Smart Preview URL Generator
+  const getPreviewUrl = (path) => {
+      if (!path) return '';
+      if (path.startsWith('http')) return path;
+      
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:21917/api';
+      const baseUrl = apiUrl.replace(/\/api\/?$/, ''); // Gets root server URL
+      const cleanPath = path.replace(/\\/g, '/').replace(/^\//, ''); // Fixes slashes
+      
+      return `${baseUrl}/${cleanPath}`;
+  };
+
   return (
     <div style={{
       position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.75)', 
@@ -255,11 +267,7 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
               <label style={labelStyle}>Image</label>
               {formData.image_url && (
                 <img 
-                  src={
-                    formData.image_url.startsWith('http') 
-                      ? formData.image_url 
-                      : `${window.location.hostname === 'localhost' ? 'http://localhost:21917' : 'https://food-and-beverages-system.onrender.com'}${formData.image_url.startsWith('/') ? '' : '/'}${formData.image_url}`
-                  } 
+                  src={getPreviewUrl(formData.image_url)} 
                   alt="Preview" 
                   style={{ width: '100%', height: '128px', objectFit: 'cover', borderRadius: '0.375rem', margin: '8px 0' }} 
                 />

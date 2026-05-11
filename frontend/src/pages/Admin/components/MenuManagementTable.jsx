@@ -7,20 +7,21 @@ import '../AdminTheme.css';
 import AddItemModal from './AddItemModal';
 import ManageCategoriesModal from './ManageCategoriesModal';
 
-// 1. Use a reliable external placeholder to avoid the Vercel HTML bug
 const FALLBACK_IMAGE = 'https://placehold.co/400x300/e2e8f0/1e293b?text=No+Image';
 
 const getImageUrl = (imagePath) => {
   if (!imagePath) return FALLBACK_IMAGE;
   if (imagePath.startsWith('http')) return imagePath; 
   
-  const BASE_URL = window.location.hostname === 'localhost' 
-      ? 'http://localhost:21917' 
-      : 'https://food-and-beverages-system.onrender.com';
+  // 1. Convert Windows backslashes to web forward slashes
+  const normalizedPath = imagePath.replace(/\\/g, '/');
+  
+  // 2. Dynamically grab your real backend URL (removes the need to hardcode "-backend")
+  let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:21917/api';
+  const baseUrl = apiUrl.replace(/\/api\/?$/, ''); // Strips '/api' from the end
       
-  // 2. Guarantee a clean path (prevents "comuploads/...")
-  const cleanPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;    
-  return `${BASE_URL}${cleanPath}`;
+  const cleanPath = normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`;    
+  return `${baseUrl}${cleanPath}`;
 };
 
 const MenuManagementTable = () => {
