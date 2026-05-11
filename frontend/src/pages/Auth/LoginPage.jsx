@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Mail, ChefHat, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -30,6 +30,31 @@ const LoginPage = () => {
 
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  // ==========================================
+  // --- BULLETPROOF SSO TOKEN CATCHER ---
+  // ==========================================
+  useEffect(() => {
+    // 1. Check everywhere for the token (handles standard URLs and Hash URLs)
+    const urlParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+    const ssoToken = urlParams.get('sso_token') || hashParams.get('sso_token');
+
+    if (ssoToken) {
+      console.log("✅ SSO Token Caught on Login Page!");
+      
+      // 2. Save it under BOTH common names just to be absolutely sure
+      localStorage.setItem('token', ssoToken);
+      localStorage.setItem('authToken', ssoToken);
+      
+      // 3. Force a complete browser reload and send them to the main menu/dashboard
+      window.location.href = '/'; 
+    }
+  }, []);
+  // ==========================================
 
   // 🔗 CONFIG: Your External Register URL
   const EXTERNAL_REGISTER_URL = "https://thecelestiahotel.vercel.app/register"; 
