@@ -82,26 +82,33 @@ export const AuthProvider = ({ children }) => {
     navigate('/');
   };
 
-  // ✅ NEW: URL Token Listener (Method 1: Auto-Login)
-  // Checks if the user arrived via a link like http://localhost:5173/?token=XYZ...
+ // ==========================================
+  // ✅ UPGRADED: Universal URL Token Listener
+  // ==========================================
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlToken = params.get('token');
+    // Check both standard queries and hash fragments
+    const urlParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
+    
+    // Grab the token from whichever format the CRS team used
+    const urlToken = 
+        hashParams.get('token') || hashParams.get('sso_token') || 
+        urlParams.get('token') || urlParams.get('sso_token');
 
     if (urlToken) {
         try {
-            // 1. Verify the token is valid
+            // 1. Verify and decode
             const decoded = jwtDecode(urlToken);
 
-            // 2. Save it immediately
+            // 2. Inject directly into React State and Local Storage
             setToken(urlToken);
             setUser(decoded);
             localStorage.setItem('authToken', urlToken);
 
-            // 3. Clean the URL (Remove the token so it doesn't look messy)
+            // 3. Clean the messy URL string silently
             window.history.replaceState({}, document.title, window.location.pathname);
 
-            // 4. Notify and Redirect
+            // 4. Welcome the guest and load the dashboard!
             toast.success(`Welcome back, ${decoded.firstName || 'Guest'}!`);
             handleRedirect(decoded);
 
@@ -110,7 +117,8 @@ export const AuthProvider = ({ children }) => {
             toast.error("Invalid login link.");
         }
     }
-  }, []); // Run once on mount
+  }, []); 
+  // ==========================================
 
   // Login function
   const login = async (email, password) => {

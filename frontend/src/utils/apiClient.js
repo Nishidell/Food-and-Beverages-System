@@ -1,86 +1,47 @@
-import toast from 'react-hot-toast';
+// utils/apiClient.js
 
-// The base URL for your API
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:21917') + '/api';
-/**
- * A wrapper around the native fetch function that handles:
- * 1. Base URL & Authentication
- * 2. Automatic FormData handling
- * 3. Global Error Handling (401 Session Expired & 429 Rate Limit)
- */
-const apiClient = async (url, options = {}) => {
+// 1. Define your base URL (adjust this to match your actual environment variable if needed)
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:21917/api';
+
+const apiClient = async (endpoint, customOptions = {}) => {
+  // ==========================================
+  // ✅ THE FIX: The Dynamic Token Grab
+  // By placing this INSIDE the function, it checks the pocket 
+  // fresh every single time a network request is made.
+  // ==========================================
   const token = localStorage.getItem('authToken');
-  
-  // Initialize headers if they don't exist in options
-  if (!options.headers) {
-    options.headers = {};
-  }
 
-  // --- 1. FormData Fix ---
-  if (options.body instanceof FormData) {
-    // Let browser set Content-Type for FormData (multipart/form-data)
-    delete options.headers['Content-Type']; 
-  } else if (!options.headers['Content-Type']) {
-    // Default to JSON for everything else
-    options.headers['Content-Type'] = 'application/json';
-  }
+  // 2. Set up default headers
+  const headers = {
+    'Content-Type': 'application/json',
+    ...customOptions.headers,
+  };
 
-  // --- 2. Auth Token ---
+  // 3. If a token was found in the pocket, attach it securely
   if (token) {
-    options.headers['Authorization'] = `Bearer ${token}`;
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
+  // 4. Combine headers with any other options (like method: 'POST', body: ...)
+  const config = {
+    ...customOptions,
+    headers,
+  };
+
+  // 5. Clean up the URL formatting
+  const url = `${API_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+
+  // 6. Make the actual request
   try {
-    const response = await fetch(`${API_URL}${url}`, options);
-
-    // ================================================================
-    // ✅ NEW: GLOBAL RATE LIMIT CHECK (Status 429)
-    // ================================================================
-    if (response.status === 429) {
-      // 1. Dispatch event to the GlobalHandler in App.jsx
-      window.dispatchEvent(new Event('rate-limit-reached'));
-      
-      // 2. Return a safe "dummy" response to prevent the calling component 
-      // from crashing before the UI switches to the RateLimit screen.
-      return { 
-        ok: false, 
-        status: 429, 
-        json: async () => ({ message: "Rate limit reached" }) 
-      };
-    }
-
-    // ================================================================
-    // ⚠️ EXISTING: SESSION EXPIRY CHECK (Status 401)
-    // ================================================================
-    if (response.status === 401) {
-      // Only force logout if the error didn't come from the Login Page itself
-      if (url !== '/auth/login') { 
-        
-        if (token) {
-            localStorage.removeItem('authToken');
-            
-            // Dispatch optional event if you want other components to react
-            window.dispatchEvent(new Event('session-expired')); 
-            toast.error('Your session has expired. Please log in again.');
-            
-            // Slight delay to allow toast to show before redirect
-            setTimeout(() => {
-                 window.location.href = '/login'; 
-            }, 1000);
-        }
-        
-        // If they don't have a token, we just throw the error back to the component
-        // so the MenuPage can fail gracefully (e.g., showing 0 items in the cart) 
-        // without crashing the whole page.
-        throw new Error('Unauthorized or Session expired');
-      }
-    }
-
-    return response;
-
+    const response = await fetch(url, config);
+    
+    // We return the raw response because your AuthContext 
+    // handles the `!response.ok` checks and JSON parsing itself!
+    return response; 
+    
   } catch (error) {
-    console.error('API Client Error:', error);
-    throw error; 
+    console.error("API Client Error:", error);
+    throw error;
   }
 };
 
