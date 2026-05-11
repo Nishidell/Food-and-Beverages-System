@@ -584,7 +584,7 @@ export const updateOrderStatus = async (req, res) => {
                 }
             }
 
-            //  MOVED INSIDE THE CANCELLED BLOCK
+            // ✅ MOVED INSIDE THE CANCELLED BLOCK
             // 1. Fetch the items we are about to cancel (we need their price!)
             const [cancelDetails] = await connection.query(
                 "SELECT quantity, price_on_purchase FROM fb_new_order_details WHERE order_id = ? AND item_status != 'served' AND item_status != 'cancelled'", 
@@ -605,18 +605,21 @@ export const updateOrderStatus = async (req, res) => {
                 "UPDATE fb_new_orders SET total_amount = GREATEST(0, total_amount - ?) WHERE order_id = ?",
                 [voidedGrandTotal, id]
             );
-        }
+        } // <--- THE BRACKET NOW SAFELY CLOSES HERE!
 
-        // 4. Update the main order status
+        // 4. Capitalize the first letter to match MySQL ENUM exactly (e.g., 'served' -> 'Served')
+        const dbFormattedStatus = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+
+        // Update the main order status using the properly capitalized string
         const [result] = await connection.query(
             "UPDATE fb_new_orders SET status = ? WHERE order_id = ?",
-            [newStatus, id]
+            [dbFormattedStatus, id]
         );
 
         if (result.affectedRows === 0) {
             throw new Error("Order not found or status unchanged");
         }
-
+        
         // Create/Update the notification
         await createOrUpdateNotification(id, client_id, newStatus, connection, req);
 
