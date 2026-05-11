@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom'; 
-import { User, ShoppingBag, LogOut, LogIn, UserPlus, Calendar } from 'lucide-react'; // ✅ Added Icons
+import { User, ShoppingBag, LogOut, LogIn, UserPlus, Calendar } from 'lucide-react'; 
 import { useAuth } from '../context/AuthContext';
 import '../pages/Customer/CustomerTheme.css';
 
@@ -23,22 +23,24 @@ const ProfileDropdown = () => {
     };
   }, [dropdownRef]);
 
+  // ✅ UPGRADED: Bulletproof Name Resolver
   const getDisplayName = () => {
     if (!user) return "Guest";
     if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
     if (user.firstName) return user.firstName;
+    // If no name exists (CRS Token), use the first part of their email!
+    if (user.email) return user.email.split('@')[0]; 
     return user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Customer';
   };
   
-  // ✅ NEW: Handlers for Guest Actions
+  // Handlers for Guest Actions
   const handleLogin = () => {
     navigate('/login');
     setIsDropdownOpen(false);
   };
 
   const handleRegister = () => {
-    // Replace the URL below with your actual subsystem link
-    window.location.href = 'https://thecelestiahotel.vercel.app/register'; 
+    window.location.href = 'https://thecelestiahotel.vercel.app/register';
     setIsDropdownOpen(false);
   };
 
@@ -82,7 +84,8 @@ const ProfileDropdown = () => {
           {user ? (
             /* === LOGGED IN VIEW === */
             <>
-              {user.role === 'customer' && (
+              {/* ✅ UPGRADED: Shows for anyone who IS NOT staff, guaranteeing CRS guests see this */}
+              {(!user.position) && (
                 <>
                   <button
                       onClick={handleMyOrders}
