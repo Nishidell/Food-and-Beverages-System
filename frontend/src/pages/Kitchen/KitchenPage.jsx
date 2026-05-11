@@ -155,18 +155,22 @@ const fetchInitialData = async () => {
         });
 
        socket.on('order-status-updated', (data) => {
+            console.log("⚡ LIVE UPDATE RECEIVED:", data); // Proof the backend sent it!
+
             setKitchenOrders(prev => {
                 const { order_id, status } = data;
                 
                 // If it's completely finished, remove it from the active screen
                 if (status === 'served' || status === 'cancelled') {
                     if (status === 'served') setServedCount(c => c + 1);
-                    return prev.filter(o => o.order_id !== order_id);
+                    // ✅ SAFELY MATCH IDs by forcing both to be Strings
+                    return prev.filter(o => String(o.order_id) !== String(order_id)); 
                 }
                 
                 // Otherwise, update the specific order's items
                 return prev.map(o => {
-                    if (o.order_id === order_id) {
+                    // ✅ SAFELY MATCH IDs by forcing both to be Strings
+                    if (String(o.order_id) === String(order_id)) {
                         // Change the status of all active items so our getTicketStatus helper recalculates!
                         const updatedItems = o.items.map(item => 
                             (item.item_status !== 'served' && item.item_status !== 'cancelled') 
