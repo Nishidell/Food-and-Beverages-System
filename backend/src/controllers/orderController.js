@@ -607,19 +607,24 @@ export const updateOrderStatus = async (req, res) => {
             );
         } // <--- THE BRACKET NOW SAFELY CLOSES HERE!
 
-        // 4. Capitalize the first letter to match MySQL ENUM exactly (e.g., 'served' -> 'Served')
-        const dbFormattedStatus = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+      // 4. Update the appropriate status table
+        // Kitchen statuses (preparing, ready, served) belong in fb_new_order_details.
+        // Parent statuses (Open, Settled, cancelled) belong in fb_new_orders.
+        if (newStatus === 'cancelled') {
+            await connection.query("UPDATE fb_new_orders SET status = 'cancelled' WHERE order_id = ?", [id]);
+            await connection.query("UPDATE fb_new_order_details SET item_status = 'cancelled' WHERE order_id = ?", [id]);
+        } else {
+            // It's a Kitchen Status. Update the DETAILS table!
+            const [result] = await connection.query(
+                "UPDATE fb_new_order_details SET item_status = ? WHERE order_id = ? AND item_status != 'cancelled'",
+                [newStatus, id]
+            );
 
-        // Update the main order status using the properly capitalized string
-        const [result] = await connection.query(
-            "UPDATE fb_new_orders SET status = ? WHERE order_id = ?",
-            [dbFormattedStatus, id]
-        );
-
-        if (result.affectedRows === 0) {
-            throw new Error("Order not found or status unchanged");
+            if (result.affectedRows === 0) {
+                throw new Error("No active items found to update");
+            }
         }
-        
+
         // Create/Update the notification
         await createOrUpdateNotification(id, client_id, newStatus, connection, req);
 
