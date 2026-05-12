@@ -21,6 +21,7 @@ import InventoryPage from './pages/Kitchen/InventoryPage.jsx';
 import MyOrdersPage from './pages/Customer/MyOrdersPage';
 import CashierPage from './pages/Kitchen/CashierDashboard.jsx'; 
 import ItemDetailsPage from './pages/Customer/ItemDetailsPage.jsx';
+import GuestRatingPage from './pages/Customer/GuestRatingPage.jsx';
 
 // Import Route Handlers
 import GlobalRateLimitHandler from './components/GlobalRateLimitHandler'; 
@@ -115,6 +116,7 @@ function App() {
           
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/payment-cancel" element={<PaymentCancel />} />
+          <Route path="/guest-rating/:orderId" element={<GuestRatingPage />} />
 
           {/* === PROTECTED ROUTES (Login Required) === */}
           

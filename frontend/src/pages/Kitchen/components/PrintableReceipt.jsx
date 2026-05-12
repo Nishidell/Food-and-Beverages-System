@@ -125,10 +125,14 @@ const PrintableReceipt = ({ tab, details, appliedDiscounts, paxCount, discountAm
                     <p className="mt-2">Thank you for dining with us!</p>
                     <p>Please present this summary to your server.</p>
                     
-                    {/* QR Code for Rating */}
+                    {/* ✅ UPGRADED: Dynamic QR Code targeting the specific order */}
                     <div className="mt-6 mb-2 flex flex-col items-center">
                         <p className="font-bold text-black mb-2 text-[10px] uppercase tracking-wider">Scan to Rate Your Food!</p>
-                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(window.location.origin + '/my-orders?tab=to-rate')}`} alt="QR Code" className="w-24 h-24 mb-1" />
+                        <img 
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(window.location.origin + '/guest-rating/' + tab.order_id)}`} 
+                            alt="QR Code" 
+                            className="w-24 h-24 mb-1" 
+                        />
                         <p className="text-[10px]">We value your feedback</p>
                     </div>
                 </div>
