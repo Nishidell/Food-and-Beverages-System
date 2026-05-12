@@ -22,6 +22,11 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
   const [availableIngredients, setAvailableIngredients] = useState([]);
   const [selectedIngredientId, setSelectedIngredientId] = useState('');
   const [ingredientQuantity, setIngredientQuantity] = useState('');
+  const [ingredientSearch, setIngredientSearch] = useState('');
+
+  const filteredIngredients = availableIngredients.filter(ing => 
+    ing.name.toLowerCase().includes(ingredientSearch.toLowerCase())
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -291,11 +296,22 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
             <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Recipe</h3>
             
             <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-              <div style={{ flex: 3 }}>
+              <div style={{ flex: 3, display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label htmlFor="ingredient-select" style={labelStyle}>Ingredient</label>
+                
+                {/* ✅ ADDED: The new Search Input */}
+                <input 
+                    type="text" 
+                    placeholder="🔍 Search ingredient..." 
+                    value={ingredientSearch}
+                    onChange={(e) => setIngredientSearch(e.target.value)}
+                    style={inputStyle}
+                />
+
+                {/* ✅ UPDATED: Now maps over 'filteredIngredients' instead of all of them */}
                 <select id="ingredient-select" value={selectedIngredientId} onChange={(e) => setSelectedIngredientId(e.target.value)} style={inputStyle}>
                   <option value="" disabled>Select an ingredient</option>
-                  {availableIngredients.map(ing => (
+                  {filteredIngredients.map(ing => (
                     <option key={ing.ingredient_id} value={ing.ingredient_id}>{ing.name} ({ing.unit_of_measurement})</option>
                   ))}
                 </select>

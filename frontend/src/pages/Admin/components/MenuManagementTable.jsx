@@ -158,7 +158,7 @@ const MenuManagementTable = () => {
                  placeholder="Search menu items..."
                  value={searchQuery}
                  onChange={(e) => setSearchQuery(e.target.value)}
-                 className="p-3 rounded-lg border border-gray-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 className="p-3 rounded-lg bg-white text-[#3C2A21] placeholder-gray-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
                  style={{ minWidth: '220px' }}
              />
          </div>
