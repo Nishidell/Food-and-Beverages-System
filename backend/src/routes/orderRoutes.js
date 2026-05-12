@@ -13,7 +13,8 @@ import {
     settleBill,
     addItemsToOrder,
     voidOrderItem,
-    cancelEntireOrder
+    cancelEntireOrder,
+    getRoomDeposit
 } from "../controllers/orderController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
@@ -99,6 +100,8 @@ router.post(
     settleBill
 );
 
+
+router.get('/room/:roomId/deposit', protect, getRoomDeposit);
 // --- 4.5 Admin/Customer Routes ---
 router.post("/", protect, createOrder); // Customer creates own order (checked by role=customer internally or logic)
 router.get("/my-orders", protect, getMyOrders);

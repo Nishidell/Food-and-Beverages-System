@@ -17,6 +17,9 @@ function CashierDashboard() {
     const [amountTendered, setAmountTendered] = useState('');
     const [roomNumber, setRoomNumber] = useState('');
 
+    const [availableDeposit, setAvailableDeposit] = useState(null);
+    const [depositLoading, setDepositLoading] = useState(false);
+
    // --- UPDATED DISCOUNT STATES (Option B: Array Approach) ---
     const [paxCount, setPaxCount] = useState(1); // Total people at the table
     const [appliedDiscounts, setAppliedDiscounts] = useState([]); // The Array of IDs
@@ -195,6 +198,30 @@ function CashierDashboard() {
             toast.error("Network error while settling bill.");
         }
     };
+
+    useEffect(() => {
+        if (paymentMethod === 'Charge to Deposit' && selectedTab?.room_id) {
+            const checkDeposit = async () => {
+                setDepositLoading(true);
+                try {
+                    const res = await apiClient(`/orders/room/${selectedTab.room_id}/deposit`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        setAvailableDeposit(data.deposit);
+                    } else {
+                        setAvailableDeposit(0);
+                    }
+                } catch (e) {
+                    setAvailableDeposit(0);
+                } finally {
+                    setDepositLoading(false);
+                }
+            };
+            checkDeposit();
+        } else {
+            setAvailableDeposit(null);
+        }
+    }, [paymentMethod, selectedTab]);
 
     return (
         <>
@@ -484,17 +511,42 @@ function CashierDashboard() {
                             </div>
                         )}
 
-                        {/* --- DEPOSIT CALCULATOR (Only shows if Charge to Deposit is selected) --- */}
+                        {/* --- DEPOSIT CALCULATOR --- */}
                         {paymentMethod === 'Charge to Deposit' && (
-                        <div className="mb-6 w-full text-left bg-blue-50 p-4 rounded border border-blue-200">
-                            <p className="text-sm text-blue-800 font-bold">
-                                Confirming deduction for {selectedTab.formatted_location}
-                            </p>
-                            <p className="text-xs text-blue-600 mt-2">
-                                The system will automatically find the active guest reservation for this room and deduct ₱{displayTotal.toFixed(2)}.
-                            </p>
-                        </div>
-                         )}
+                            <div className="mb-6 w-full text-left bg-blue-50 p-4 rounded border border-blue-200">
+                                <p className="text-sm text-blue-800 font-bold mb-2">
+                                    Confirming deduction for {selectedTab.formatted_location}
+                                </p>
+                                
+                                {depositLoading ? (
+                                    <p className="text-xs text-blue-600 animate-pulse">Checking deposit balance...</p>
+                                ) : availableDeposit !== null ? (
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-blue-700">Available Deposit:</span>
+                                            <span className="font-bold text-blue-900">₱{availableDeposit.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-blue-700">Bill Amount:</span>
+                                            <span className="font-bold text-red-600">- ₱{displayTotal.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm border-t border-blue-200 pt-1 mt-1">
+                                            <span className="text-blue-800 font-bold">Remaining After Payment:</span>
+                                            <span className={`font-bold ${availableDeposit >= displayTotal ? 'text-green-600' : 'text-red-600'}`}>
+                                                ₱{(availableDeposit - displayTotal).toFixed(2)}
+                                            </span>
+                                        </div>
+                                        {availableDeposit < displayTotal && (
+                                            <p className="text-xs text-red-500 font-bold mt-2 bg-red-100 p-2 rounded">
+                                                ⚠️ Insufficient funds. Guest needs to pay the difference in cash or card.
+                                            </p>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-red-500">Error loading deposit data.</p>
+                                )}
+                            </div>
+                        )}
                         
                         {/* --- ACTION BUTTONS --- */}
                         <div className="flex gap-3 mt-4">
@@ -506,7 +558,8 @@ function CashierDashboard() {
                             onClick={handleSettleBill}
                             disabled={
                                 !paymentMethod || 
-                                (paymentMethod === 'Cash' && (!amountTendered || parseFloat(amountTendered) < displayTotal))
+                                (paymentMethod === 'Cash' && (!amountTendered || parseFloat(amountTendered) < displayTotal)) ||
+                                (paymentMethod === 'Charge to Deposit' && (availableDeposit === null || availableDeposit < displayTotal))
                             }
                             className={`flex-1 py-3 rounded-lg font-bold shadow-md transition-colors ${
                                 !paymentMethod || 

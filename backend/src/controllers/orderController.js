@@ -1393,3 +1393,41 @@ export const cancelEntireOrder = async (req, res) => {
         connection.release();
     }
 };
+
+// @desc    Get active deposit balance for a specific room
+// @route   GET /api/orders/room/:roomId/deposit
+// @access  Private (Staff/Cashier)
+export const getRoomDeposit = async (req, res) => {
+    const { roomId } = req.params;
+    try {
+        // 1. Find the active reservation for this room
+        const [resRows] = await pool.query(`
+            SELECT r.reservation_id 
+            FROM tbl_reservations r
+            JOIN tbl_reservation_rooms br ON r.reservation_id = br.reservation_id
+            WHERE br.room_id = ? 
+            AND CURDATE() BETWEEN r.check_in AND r.check_out
+            AND r.status = 'approved' 
+            LIMIT 1
+        `, [roomId]);
+
+        if (resRows.length === 0) {
+            return res.status(404).json({ message: "No active reservation found for this room." });
+        }
+
+        // 2. Fetch the remaining deposit
+        const [depositRows] = await pool.query(
+            "SELECT remaining_deposit FROM tbl_deposit WHERE reservation_id = ?",
+            [resRows[0].reservation_id]
+        );
+
+        if (depositRows.length === 0) {
+            return res.status(404).json({ message: "No deposit record found." });
+        }
+
+        res.json({ deposit: parseFloat(depositRows[0].remaining_deposit) });
+    } catch (error) {
+        console.error("Error fetching deposit:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
