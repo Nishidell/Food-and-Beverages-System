@@ -9,8 +9,6 @@ import ManageCategoriesModal from './ManageCategoriesModal';
 
 const FALLBACK_IMAGE = 'https://placehold.co/400x300/e2e8f0/1e293b?text=No+Image';
 
-const [searchQuery, setSearchQuery] = useState('');
-
 const getImageUrl = (imagePath) => {
   if (!imagePath) return FALLBACK_IMAGE;
   if (imagePath.startsWith('http')) return imagePath; 
@@ -31,6 +29,7 @@ const MenuManagementTable = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Modal States
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
