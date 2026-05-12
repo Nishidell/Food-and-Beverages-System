@@ -85,25 +85,32 @@ function KitchenPage() {
 const fetchInitialData = async () => {
     setLoading(true);
     try {
-      // 1. OPTIMIZATION: Only fetch today's served orders for the counter
-      // This prevents downloading thousands of old orders just to count today's.
-      const today = new Date().toLocaleDateString('en-CA'); // Formats as YYYY-MM-DD
+      const today = new Date().toLocaleDateString('en-CA'); 
       const servedQueryParams = new URLSearchParams({ startDate: today, endDate: today }).toString();
-
+      
       const [kitchenResponse, servedResponse] = await Promise.all([
         apiClient('/orders/kitchen'),
         apiClient(`/orders/served?${servedQueryParams}`) 
       ]);
 
-      // 2. FAST LOAD: The backend now sends items inside the order!
-      // We can use the response directly. No more looping.
+      // ✅ FIX: The Safety Shield! Check if the user's session expired (401)
+      if (kitchenResponse.status === 401 || servedResponse.status === 401) {
+          toast.error("Session expired. Please log in again.");
+          navigate('/login'); // Instantly kick them to the login screen to prevent crashes
+          return; 
+      }
+
+      if (!kitchenResponse.ok || !servedResponse.ok) {
+          throw new Error("Failed to load orders");
+      }
+
+      // If we pass the shield, we safely know this is an array!
       const ordersList = await kitchenResponse.json();
       setKitchenOrders(ordersList);
 
       const alreadyChecked = [];
       ordersList.forEach(order => {
           order.items?.forEach(item => {
-              // If the database remembers this item is 'ready', put it in the checked array
               if (item.item_status === 'ready') {
                   alreadyChecked.push(item.order_detail_id);
               }
@@ -111,12 +118,14 @@ const fetchInitialData = async () => {
       });
       setCheckedItems(alreadyChecked);
 
-      // 3. Set Served Count
       const servedList = await servedResponse.json();
       setServedCount(servedList.length);
-
+      
     } catch (err) {
-      console.error(err);
+      console.error("Fetch Data Error:", err);
+      if (err.message !== "Session expired. Please log in again.") {
+          toast.error("Failed to load kitchen data.");
+      }
     } finally {
       setLoading(false);
     }
