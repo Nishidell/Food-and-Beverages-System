@@ -38,22 +38,21 @@ const ItemDetailsPage = () => {
   const getImageUrl = (imagePath) => {
     // 1. Check if empty
     if (!imagePath) return 'https://via.placeholder.com/400x300.png?text=No+Image';
-
-    // 2. Check if already absolute (e.g., https://cloudinary...)
+    
+    // 2. Check if already absolute (e.g., Cloudinary or external link)
     if (imagePath.startsWith('http')) return imagePath;
 
-    // 3. Define Base URL
-    const BASE_URL = window.location.hostname === 'localhost' 
-        ? 'http://localhost:21917' 
-        : 'https://food-and-beverages-system.onrender.com';
+    // 3. ✅ CRITICAL FIX: Convert Windows backslashes to web forward slashes
+    const normalizedPath = imagePath.replace(/\\/g, '/');
 
-    // 4. ✅ AUTO-FIX SLASHES: Ensure exactly one slash connects them
-    // Remove trailing slash from Base
-    const cleanBase = BASE_URL.replace(/\/$/, '');
-    // Ensure leading slash on Path
-    const cleanPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+    // 4. Dynamically grab your real backend URL (works on local and live)
+    let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:21917/api';
+    const baseUrl = apiUrl.replace(/\/api\/?$/, ''); // Strips '/api' from the end
 
-    return `${cleanBase}${cleanPath}`;
+    // 5. Ensure exactly one slash connects them
+    const cleanPath = normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`;
+
+    return `${baseUrl}${cleanPath}`;
   };
 
 
