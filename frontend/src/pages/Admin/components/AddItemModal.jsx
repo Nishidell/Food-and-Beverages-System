@@ -14,19 +14,29 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
     price: '',
     image_url: '',
     ingredients: [],
-    // REMOVED: is_promo, promo_discount_percentage, promo_expiry_date
   });
+
   const [uploading, setUploading] = useState(false);
   const isEditMode = Boolean(itemToEdit);
 
   const [availableIngredients, setAvailableIngredients] = useState([]);
   const [selectedIngredientId, setSelectedIngredientId] = useState('');
   const [ingredientQuantity, setIngredientQuantity] = useState('');
+  
+  // NEW STATES FOR THE SEARCHABLE DROPDOWN
   const [ingredientSearch, setIngredientSearch] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+  // DROPDOWN LOGIC
   const filteredIngredients = availableIngredients.filter(ing => 
     ing.name.toLowerCase().includes(ingredientSearch.toLowerCase())
   );
+
+  const handleSelectIngredient = (ingredient) => {
+    setSelectedIngredientId(ingredient.ingredient_id);
+    setIngredientSearch(ingredient.name);
+    setIsDropdownOpen(false);
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -36,6 +46,7 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (!res.ok) throw new Error('Failed to fetch ingredients');
+       
           const data = await res.json();
           setAvailableIngredients(data);
         } catch (err) {
@@ -66,11 +77,9 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
                   quantity_consumed: Math.floor(parseFloat(ing.quantity_consumed || 0)),
                   unit_of_measurement: ing.unit_of_measurement
               })) || [],
-              // REMOVED: Promo fields mapping
             });
           } catch (err) {
             toast.error(err.message);
-            // Fallback if fetch fails
             setFormData({
               item_name: itemToEdit.item_name || '',
               description: itemToEdit.description || '',
@@ -82,7 +91,6 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
           }
         };
         fetchItemDetails();
-        
       } else {
         setFormData({ 
           item_name: '', description: '', category_id: '', price: '', image_url: '', ingredients: []
@@ -90,9 +98,10 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
       }
       setSelectedIngredientId('');
       setIngredientQuantity('');
+      setIngredientSearch('');
+      setIsDropdownOpen(false);
     }
   }, [itemToEdit, isOpen, token]);
-
 
   if (!isOpen) return null;
 
@@ -103,40 +112,34 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
       [id]: value,
     }));
   };
-  
 
   const handleFileUpload = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-
+      
       const uploadFormData = new FormData();
       uploadFormData.append('image', file);
       setUploading(true);
 
       try {
-        // 1. Grab the correct API URL (Localhost or Vercel)
         let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:21917/api';
         if (!API_URL.endsWith('/api')) {
           API_URL = API_URL.replace(/\/$/, '') + '/api';
         }
 
-        // 2. Bypass apiClient and use native fetch so the browser can 
-        // automatically calculate the 'multipart/form-data' boundaries!
         const response = await fetch(`${API_URL}/upload`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}` 
-            // 🚨 Notice we do NOT set Content-Type here!
           },
           body: uploadFormData,
         });
-
+        
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || 'Image upload failed');
-
+        
         setFormData(prevData => ({ ...prevData, image_url: data.image }));
         toast.success('Image uploaded successfully!');
-        
       } catch (error) {
          if (error.message !== 'Session expired') toast.error(error.message);
       } finally {
@@ -151,6 +154,7 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
     }
     const ingredient = availableIngredients.find(ing => ing.ingredient_id === parseInt(selectedIngredientId));
     if (!ingredient) return;
+    
     const isAlreadyAdded = formData.ingredients.some(ing => ing.ingredient_id === ingredient.ingredient_id);
     if (isAlreadyAdded) {
       toast.error(`${ingredient.name} is already in the recipe.`);
@@ -168,8 +172,10 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
         }
       ]
     }));
+    
     setSelectedIngredientId('');
     setIngredientQuantity('');
+    setIngredientSearch(''); 
   };
 
   const handleRemoveIngredientFromRecipe = (ingredientId) => {
@@ -192,29 +198,30 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
     onSave(formData);
   };
 
-  // Styles
   const inputStyle = {
     marginTop: '4px', display: 'block', width: '100%',
     border: '1px solid #D1D5DB', borderRadius: '0.375rem',
     boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', padding: '8px 12px',
   };
+  
   const labelStyle = {
     display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151',
   };
+  
   const buttonStyle = {
     padding: '8px 16px', backgroundColor: '#1D4ED8', color: 'white',
     borderRadius: '0.375rem', border: 'none', cursor: 'pointer'
   };
+  
   const cancelButtonStyle = { ...buttonStyle, backgroundColor: '#E5E7EB', color: '#1F2937' };
 
-  // Smart Preview URL Generator
   const getPreviewUrl = (path) => {
       if (!path) return '';
       if (path.startsWith('http')) return path;
       
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:21917/api';
-      const baseUrl = apiUrl.replace(/\/api\/?$/, ''); // Gets root server URL
-      const cleanPath = path.replace(/\\/g, '/').replace(/^\//, ''); // Fixes slashes
+      const baseUrl = apiUrl.replace(/\/api\/?$/, '');
+      const cleanPath = path.replace(/\\/g, '/').replace(/^\//, '');
       
       return `${baseUrl}/${cleanPath}`;
   };
@@ -296,26 +303,52 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
             <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Recipe</h3>
             
             <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-              <div style={{ flex: 3, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label htmlFor="ingredient-select" style={labelStyle}>Ingredient</label>
+              
+              {/* ✅ THE UPGRADED SEARCHABLE DROPDOWN */}
+              <div style={{ flex: 3, position: 'relative' }}>
+                <label style={labelStyle}>Ingredient</label>
                 
-                {/* ✅ ADDED: The new Search Input */}
                 <input 
                     type="text" 
-                    placeholder="🔍 Search ingredient..." 
+                    placeholder="🔍 Search and select..." 
                     value={ingredientSearch}
-                    onChange={(e) => setIngredientSearch(e.target.value)}
+                    onChange={(e) => {
+                      setIngredientSearch(e.target.value);
+                      setSelectedIngredientId(''); 
+                      setIsDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsDropdownOpen(true)}
+                    onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)} 
                     style={inputStyle}
+                    autoComplete="off"
                 />
 
-                {/* ✅ UPDATED: Now maps over 'filteredIngredients' instead of all of them */}
-                <select id="ingredient-select" value={selectedIngredientId} onChange={(e) => setSelectedIngredientId(e.target.value)} style={inputStyle}>
-                  <option value="" disabled>Select an ingredient</option>
-                  {filteredIngredients.map(ing => (
-                    <option key={ing.ingredient_id} value={ing.ingredient_id}>{ing.name} ({ing.unit_of_measurement})</option>
-                  ))}
-                </select>
+                {/* The Floating List */}
+                {isDropdownOpen && (
+                  <ul style={{
+                    position: 'absolute', zIndex: 50, width: '100%', maxHeight: '200px', overflowY: 'auto',
+                    backgroundColor: 'white', border: '1px solid #D1D5DB', borderRadius: '0.375rem', 
+                    padding: 0, margin: '4px 0 0 0', listStyle: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+                  }}>
+                    {filteredIngredients.length > 0 ? (
+                      filteredIngredients.map(ing => (
+                        <li 
+                          key={ing.ingredient_id} 
+                          onMouseDown={() => handleSelectIngredient(ing)} 
+                          style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #F3F4F6', fontSize: '0.875rem' }}
+                          onMouseOver={(e) => e.target.style.backgroundColor = '#F3F4F6'}
+                          onMouseOut={(e) => e.target.style.backgroundColor = 'white'}
+                        >
+                          {ing.name} <span style={{color: '#6B7280'}}>({ing.unit_of_measurement})</span>
+                        </li>
+                      ))
+                    ) : (
+                      <li style={{ padding: '8px 12px', color: '#6B7280', fontSize: '0.875rem' }}>No ingredients found</li>
+                    )}
+                  </ul>
+                )}
               </div>
+
               <div style={{ flex: 2 }}>
                 <label htmlFor="ingredient-quantity" style={labelStyle}>Quantity</label>
                 <input type="number" id="ingredient-quantity" step="1" min="1" value={ingredientQuantity} onChange={(e) => setIngredientQuantity(e.target.value)} style={inputStyle} placeholder="e.g., 150" />
@@ -350,9 +383,6 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
                 </ul>
               )}
             </div>
-            
-            {/* REMOVED PROMO SECTION FROM HERE */}
-
           </div>
         </form>
         
