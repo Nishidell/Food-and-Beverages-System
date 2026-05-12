@@ -16,23 +16,15 @@ export const getAllRooms = async (req, res) => {
 
 export const getMyActiveRoom = async (req, res) => {
   try {
-    console.log("FULL USER OBJECT:", req.user);
     const client_id = req.user.userId || req.user.id || req.user.client_id;
 
-    // 🕵️ DEBUG LOGS: Uncover the hidden variables
-    console.log("Using Client ID:", client_id);
-    console.log("\n--- 🕵️ DEBUGGING ACTIVE ROOM ---");
-    console.log("1. Token User ID:", client_id);
-    console.log("2. Server Time:", new Date().toString()); // Checks for Timezone issues
-    
-    // 🔍 TEST QUERY: Check if this user has ANY reservations at all (ignoring dates/status)
-    const [allRes] = await pool.query(
-        "SELECT reservation_id, status, check_in, check_out FROM tbl_reservations WHERE client_id = ?", 
-        [client_id]
-    );
-    console.log("3. All Reservations for User:", allRes);
+    // ✅ FIX: Force the server to calculate the exact YYYY-MM-DD for the Philippines
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
 
-    // Main Logic
+    console.log("Using Client ID:", client_id);
+    console.log("Calculated Philippine Date:", todayStr);
+
+    // Main Logic: Replaced CURDATE() with our strictly calculated todayStr
     const sql = `
       SELECT 
         r.room_id, 
@@ -47,15 +39,14 @@ export const getMyActiveRoom = async (req, res) => {
       JOIN tbl_rooms r ON rr.room_id = r.room_id
       WHERE res.client_id = ?
       AND res.status IN ('Approved', 'Checked In', 'Occupied') 
-      AND CURDATE() >= res.check_in 
-      AND CURDATE() <= res.check_out
+      AND ? >= res.check_in 
+      AND ? <= res.check_out
       LIMIT 1; 
     `;
 
-    const [rows] = await pool.query(sql, [client_id]);
-    console.log("4. FINAL MATCH:", rows); 
-    console.log("--------------------------------\n");
-
+    // Pass todayStr twice to replace both CURDATE() checks
+    const [rows] = await pool.query(sql, [client_id, todayStr, todayStr]);
+    
     if (rows.length === 0) {
       return res.status(404).json({ message: "No active room reservation found." });
     }
