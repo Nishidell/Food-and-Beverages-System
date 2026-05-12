@@ -27,29 +27,34 @@ const CartPanel = ({ isOpen, onClose }) => {
       cartRef.current = cart;
   }, [cart]);
 
-  // 2. Fetch Active Room when "Room Dining" is selected
+  // 2. Fetch Active Room ONLY if the user is logged in
   useEffect(() => {
-    {
-        const checkRoom = async () => {
-            setIsFetchingRoom(true);
-            try {
-                const res = await apiClient('/rooms/my-active-room');
-                if (res.ok) {
-                    const data = await res.json();
-                    setActiveRoom(data.room);
-                } else {
-                    setActiveRoom(null);
-                }
-            } catch (error) {
-                console.error("Room check failed", error);
+    const checkRoom = async () => {
+        // ✅ FIX: If there is no user token, don't even ask the backend!
+        if (!user) {
+            setActiveRoom(null);
+            return;
+        }
+
+        setIsFetchingRoom(true);
+        try {
+            const res = await apiClient('/rooms/my-active-room');
+            if (res.ok) {
+                const data = await res.json();
+                setActiveRoom(data.room);
+            } else {
                 setActiveRoom(null);
-            } finally {
-                setIsFetchingRoom(false);
             }
-        };
-        checkRoom();
-    }
-  }, []);
+        } catch (error) {
+            console.error("Room check failed", error);
+            setActiveRoom(null);
+        } finally {
+            setIsFetchingRoom(false);
+        }
+    };
+    
+    checkRoom();
+  }, [user]);
 
   // 4. Calculations
   const subtotal = cart.reduce((total, item) => total + parseFloat(item.price) * item.quantity, 0);
