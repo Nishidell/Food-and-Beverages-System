@@ -24,7 +24,7 @@ export const getMyActiveRoom = async (req, res) => {
     console.log("Using Client ID:", client_id);
     console.log("Calculated Philippine Date:", todayStr);
 
-    // Main Logic: Replaced CURDATE() with our strictly calculated todayStr
+    // Main Logic: Added DATE() wrapper and expanded status checks
     const sql = `
       SELECT 
         r.room_id, 
@@ -38,9 +38,9 @@ export const getMyActiveRoom = async (req, res) => {
       JOIN tbl_reservation_rooms rr ON res.reservation_id = rr.reservation_id
       JOIN tbl_rooms r ON rr.room_id = r.room_id
       WHERE res.client_id = ?
-      AND res.status IN ('Approved', 'Checked In', 'Occupied') 
-      AND ? >= res.check_in 
-      AND ? <= res.check_out
+      AND LOWER(res.status) IN ('approved', 'checked in', 'occupied') 
+      AND ? >= DATE(res.check_in) 
+      AND ? <= DATE(res.check_out)
       LIMIT 1; 
     `;
 
