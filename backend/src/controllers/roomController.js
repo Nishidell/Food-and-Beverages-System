@@ -24,6 +24,21 @@ export const getMyActiveRoom = async (req, res) => {
     console.log("Using Client ID:", client_id);
     console.log("Calculated Philippine Date:", todayStr);
 
+    // 🕵️ GOD MODE SPY CODE: Let's see exactly what is in the database!
+    const [spyRes] = await pool.query(
+        "SELECT reservation_id, status, check_in, check_out FROM tbl_reservations WHERE client_id = ?", 
+        [client_id]
+    );
+    console.log("🕵️ SPY RESERVATIONS:", spyRes);
+
+    if (spyRes.length > 0) {
+        const [spyRooms] = await pool.query(
+            "SELECT * FROM tbl_reservation_rooms WHERE reservation_id = ?", 
+            [spyRes[0].reservation_id]
+        );
+        console.log("🕵️ SPY ROOM ASSIGNMENTS:", spyRooms);
+    }
+
     // Main Logic: Added DATE() wrapper and expanded status checks
     const sql = `
       SELECT 
