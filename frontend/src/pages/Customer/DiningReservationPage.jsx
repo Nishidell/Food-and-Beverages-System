@@ -130,7 +130,7 @@ const DiningReservationPage = () => {
         <div className="absolute top-6 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center left-0 right-0">
 
           <button 
-            onClick={() => navigate('https://thecelestiahotel.vercel.app/register')} 
+            onClick={() => navigate('https://thecelestiahotel.vercel.app/')} 
             className="bg-[#F9A825] text-[#480c1b] px-5 py-2 rounded-md font-bold hover:bg-white transition-colors shadow-lg"
           >
             CRS Portal
