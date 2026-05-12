@@ -63,13 +63,16 @@ const MyOrdersPage = () => {
     window.location.reload(); 
   };
 
-  // --- LOGIC: Filter Items for "To Rate" and "Rated" tabs ---
+ // --- LOGIC: Filter Items for "To Rate" and "Rated" tabs ---
   const getItemsByRatingStatus = (isRated) => {
     const relevantItems = [];
     const seenItemIds = new Set(); 
 
     orders.forEach(order => {
-        if (order.status === 'served' || order.status === 'completed') {
+        // ✅ FIX: Convert to lowercase to be safe, and add 'settled' to the allowed list!
+        const currentStatus = order.status?.toLowerCase();
+        
+        if (currentStatus === 'served' || currentStatus === 'completed' || currentStatus === 'settled') {
             order.items.forEach(item => {
                 const hasRating = item.my_rating !== null;
                 // Unique items only
