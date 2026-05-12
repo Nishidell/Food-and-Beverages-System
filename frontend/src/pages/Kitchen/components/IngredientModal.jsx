@@ -34,6 +34,9 @@ const IngredientModal = ({ isOpen, onClose, onSave, ingredientToEdit }) => {
 
   const isEditMode = Boolean(ingredientToEdit);
 
+  const [displayCost, setDisplayCost] = useState('');
+  const [pricingTier, setPricingTier] = useState('base');
+
 useEffect(() => {
     if (isOpen) {
       if (isEditMode) {
@@ -44,15 +47,17 @@ useEffect(() => {
           reorder_point: Math.floor(parseFloat(ingredientToEdit.reorder_point || 10)), 
           unit_cost: ingredientToEdit.unit_cost || '',
         });
+        // ✅ ADD THIS: Load the existing cost into our visual input
+        setDisplayCost(ingredientToEdit.unit_cost || '');
+        setPricingTier('base');
       } else {
         // Reset for new ingredient
         setFormData({
-          name: '',
-          unit_of_measurement: '',
-          stock_level: 0,
-          reorder_point: 10, 
-          unit_cost: '', 
+          name: '', unit_of_measurement: '', stock_level: 0, reorder_point: 10, unit_cost: '', 
         });
+        // ✅ ADD THIS: Reset visual inputs
+        setDisplayCost('');
+        setPricingTier('base');
       }
     }
   }, [ingredientToEdit, isOpen]);
@@ -67,21 +72,30 @@ useEffect(() => {
 
         // ✅ SMART LOGIC: Auto-suggest threshold based on Unit
         if (id === 'unit_of_measurement') {
+            setPricingTier('base'); // ✅ ADD THIS: Reset the tier if base unit changes
+            
             if (value === 'g' || value === 'ml') {
                 newData.reorder_point = 1000; // Default to 1kg / 1L
             } else if (value === 'pcs') {
                 newData.reorder_point = 10;   // Default to 10 pieces
             }
         }
-
         return newData;
     });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // ✅ DO THE MATH: Divide the entered price by the bulk multiplier
+    let calculatedCost = parseFloat(displayCost || 0);
+    if (pricingTier !== 'base') {
+        calculatedCost = calculatedCost / parseFloat(pricingTier);
+    }
+
     const cleanData = {
       ...formData,
+      unit_cost: calculatedCost, // ✅ OVERWRITE with our calculated raw cost
       stock_level: Math.floor(parseFloat(formData.stock_level || 0)),
       reorder_point: Math.floor(parseFloat(formData.reorder_point || 10))
     };
@@ -132,19 +146,45 @@ useEffect(() => {
 
             {/* --- RIGHT COLUMN --- */}
             <div className="space-y-4">
-              {/* 3. Unit Cost Input */}
+              {/* 3. Unit Cost Input (Smart Calculator) */}
               <div>
-                <label htmlFor="unit_cost" className="block text-sm font-medium text-gray-700">Unit Cost (₱)</label>
-                <div className="relative mt-1">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 font-bold">₱</span>
-                  <input
-                    type="number" id="unit_cost" step="0.01" min="0" value={formData.unit_cost} onChange={handleChange} required
-                    className="block w-full pl-8 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-amber-500 focus:border-amber-500"
-                    placeholder="0.00"
-                  />
+                <label htmlFor="displayCost" className="block text-sm font-medium text-gray-700">Cost (₱)</label>
+                <div className="flex gap-2 mt-1">
+                  <div className="relative flex-1">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 font-bold">₱</span>
+                    <input
+                      type="number" id="displayCost" step="0.01" min="0" 
+                      value={displayCost} 
+                      onChange={(e) => setDisplayCost(e.target.value)} 
+                      required
+                      className="block w-full pl-8 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-amber-500 focus:border-amber-500"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  
+                  {/* Dynamic Dropdown based on base unit */}
+                  {formData.unit_of_measurement && (
+                    <select 
+                      value={pricingTier}
+                      onChange={(e) => setPricingTier(e.target.value)}
+                      className="border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-50 text-sm font-medium text-gray-700 outline-none focus:ring-amber-500 focus:border-amber-500"
+                    >
+                      <option value="base">per {formData.unit_of_measurement}</option>
+                      {formData.unit_of_measurement === 'g' && <option value="1000">per kg</option>}
+                      {formData.unit_of_measurement === 'ml' && <option value="1000">per Liter</option>}
+                      {formData.unit_of_measurement === 'pcs' && <option value="12">per Dozen (12)</option>}
+                      {formData.unit_of_measurement === 'pcs' && <option value="30">per Tray (30)</option>}
+                    </select>
+                  )}
                 </div>
+                
+                {/* Visual Feedback so the clerk knows what the system is doing */}
+                {pricingTier !== 'base' && displayCost > 0 && (
+                   <p className="text-xs text-amber-600 mt-1 font-semibold">
+                      Database saves this as: ₱{(parseFloat(displayCost) / parseFloat(pricingTier)).toFixed(4)} / {formData.unit_of_measurement}
+                   </p>
+                )}
               </div>
-
               {/* 4. Initial Stock */}
               {!isEditMode && (
                 <div>

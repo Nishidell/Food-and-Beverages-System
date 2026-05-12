@@ -16,23 +16,30 @@ export const getAllRooms = async (req, res) => {
 
 export const getMyActiveRoom = async (req, res) => {
   try {
-    console.log("FULL USER OBJECT:", req.user);
     const client_id = req.user.userId || req.user.id || req.user.client_id;
 
-    // 🕵️ DEBUG LOGS: Uncover the hidden variables
+    // ✅ FIX: Force the server to calculate the exact YYYY-MM-DD for the Philippines
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+
     console.log("Using Client ID:", client_id);
-    console.log("\n--- 🕵️ DEBUGGING ACTIVE ROOM ---");
-    console.log("1. Token User ID:", client_id);
-    console.log("2. Server Time:", new Date().toString()); // Checks for Timezone issues
-    
-    // 🔍 TEST QUERY: Check if this user has ANY reservations at all (ignoring dates/status)
-    const [allRes] = await pool.query(
+    console.log("Calculated Philippine Date:", todayStr);
+
+    // 🕵️ GOD MODE SPY CODE: Let's see exactly what is in the database!
+    const [spyRes] = await pool.query(
         "SELECT reservation_id, status, check_in, check_out FROM tbl_reservations WHERE client_id = ?", 
         [client_id]
     );
-    console.log("3. All Reservations for User:", allRes);
+    console.log("🕵️ SPY RESERVATIONS:", spyRes);
 
-    // Main Logic
+    if (spyRes.length > 0) {
+        const [spyRooms] = await pool.query(
+            "SELECT * FROM tbl_reservation_rooms WHERE reservation_id = ?", 
+            [spyRes[0].reservation_id]
+        );
+        console.log("🕵️ SPY ROOM ASSIGNMENTS:", spyRooms);
+    }
+
+    // Main Logic: Added DATE() wrapper and expanded status checks
     const sql = `
       SELECT 
         r.room_id, 
@@ -46,16 +53,15 @@ export const getMyActiveRoom = async (req, res) => {
       JOIN tbl_reservation_rooms rr ON res.reservation_id = rr.reservation_id
       JOIN tbl_rooms r ON rr.room_id = r.room_id
       WHERE res.client_id = ?
-      AND res.status IN ('Approved', 'Checked In', 'Occupied') 
-      AND CURDATE() >= res.check_in 
-      AND CURDATE() <= res.check_out
+      AND LOWER(res.status) IN ('approved', 'checked in', 'occupied') 
+      AND ? >= DATE(res.check_in) 
+      AND ? <= DATE(res.check_out)
       LIMIT 1; 
     `;
 
-    const [rows] = await pool.query(sql, [client_id]);
-    console.log("4. FINAL MATCH:", rows); 
-    console.log("--------------------------------\n");
-
+    // Pass todayStr twice to replace both CURDATE() checks
+    const [rows] = await pool.query(sql, [client_id, todayStr, todayStr]);
+    
     if (rows.length === 0) {
       return res.status(404).json({ message: "No active room reservation found." });
     }

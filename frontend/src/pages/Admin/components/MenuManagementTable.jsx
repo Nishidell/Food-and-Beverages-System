@@ -29,6 +29,7 @@ const MenuManagementTable = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Modal States
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -132,7 +133,11 @@ const MenuManagementTable = () => {
   const openAddItemModal = () => { setEditingItem(null); setIsItemModalOpen(true); };
   const openEditItemModal = (item) => { setEditingItem(item); setIsItemModalOpen(true); };
 
-  const filteredItems = items.filter(item => filterCategory === 'All' || item.category_id == filterCategory);
+  const filteredItems = items.filter(item => {
+    const matchesCategory = filterCategory === 'All' || item.category_id == filterCategory;
+    const matchesSearch = item.item_name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+});
 
   if (loading) return <div className="p-8 text-center text-[#3C2A21]">Loading Menu...</div>;
 
@@ -146,6 +151,17 @@ const MenuManagementTable = () => {
         </div>
 
         <div className="flex gap-4">
+          {/* Search Bar */}
+         <div className="relative flex items-center">
+             <input
+                 type="text"
+                 placeholder="Search menu items..."
+                 value={searchQuery}
+                 onChange={(e) => setSearchQuery(e.target.value)}
+                 className="p-3 rounded-lg bg-white text-[#3C2A21] placeholder-gray-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                 style={{ minWidth: '220px' }}
+             />
+         </div>
             {/* Filter Dropdown */}
             <div className="flex items-center gap-2">
                 <div className="relative">

@@ -85,25 +85,32 @@ function KitchenPage() {
 const fetchInitialData = async () => {
     setLoading(true);
     try {
-      // 1. OPTIMIZATION: Only fetch today's served orders for the counter
-      // This prevents downloading thousands of old orders just to count today's.
-      const today = new Date().toLocaleDateString('en-CA'); // Formats as YYYY-MM-DD
+      const today = new Date().toLocaleDateString('en-CA'); 
       const servedQueryParams = new URLSearchParams({ startDate: today, endDate: today }).toString();
-
+      
       const [kitchenResponse, servedResponse] = await Promise.all([
         apiClient('/orders/kitchen'),
         apiClient(`/orders/served?${servedQueryParams}`) 
       ]);
 
-      // 2. FAST LOAD: The backend now sends items inside the order!
-      // We can use the response directly. No more looping.
+      // ✅ FIX: The Safety Shield! Check if the user's session expired (401)
+      if (kitchenResponse.status === 401 || servedResponse.status === 401) {
+          toast.error("Session expired. Please log in again.");
+          navigate('/login'); // Instantly kick them to the login screen to prevent crashes
+          return; 
+      }
+
+      if (!kitchenResponse.ok || !servedResponse.ok) {
+          throw new Error("Failed to load orders");
+      }
+
+      // If we pass the shield, we safely know this is an array!
       const ordersList = await kitchenResponse.json();
       setKitchenOrders(ordersList);
 
       const alreadyChecked = [];
       ordersList.forEach(order => {
           order.items?.forEach(item => {
-              // If the database remembers this item is 'ready', put it in the checked array
               if (item.item_status === 'ready') {
                   alreadyChecked.push(item.order_detail_id);
               }
@@ -111,12 +118,14 @@ const fetchInitialData = async () => {
       });
       setCheckedItems(alreadyChecked);
 
-      // 3. Set Served Count
       const servedList = await servedResponse.json();
       setServedCount(servedList.length);
-
+      
     } catch (err) {
-      console.error(err);
+      console.error("Fetch Data Error:", err);
+      if (err.message !== "Session expired. Please log in again.") {
+          toast.error("Failed to load kitchen data.");
+      }
     } finally {
       setLoading(false);
     }
@@ -154,20 +163,19 @@ const fetchInitialData = async () => {
             }
         });
 
-       socket.on('order-status-updated', (data) => {
+      socket.on('order-status-updated', (data) => {
             setKitchenOrders(prev => {
                 const { order_id, status } = data;
                 
-                // If it's completely finished, remove it from the active screen
                 if (status === 'served' || status === 'cancelled') {
                     if (status === 'served') setServedCount(c => c + 1);
-                    return prev.filter(o => o.order_id !== order_id);
+                    // ✅ FIX 3: Force String comparison to prevent strict equality mismatch
+                    return prev.filter(o => String(o.order_id) !== String(order_id)); 
                 }
                 
-                // Otherwise, update the specific order's items
                 return prev.map(o => {
-                    if (o.order_id === order_id) {
-                        // Change the status of all active items so our getTicketStatus helper recalculates!
+                    // ✅ FIX 3: Force String comparison
+                    if (String(o.order_id) === String(order_id)) {
                         const updatedItems = o.items.map(item => 
                             (item.item_status !== 'served' && item.item_status !== 'cancelled') 
                                 ? { ...item, item_status: status } 
@@ -189,7 +197,7 @@ const fetchInitialData = async () => {
     };
   }, [socket]);
 
-  const handleUpdateStatus = async (orderId, newStatus) => {
+const handleUpdateStatus = async (orderId, newStatus) => {
     try {
       const response = await apiClient(`/orders/${orderId}/status`, {
         method: 'PUT',
@@ -197,11 +205,20 @@ const fetchInitialData = async () => {
       });
       if (!response.ok) throw new Error('Failed to update status');
       toast.success(`Order #${orderId} marked as ${newStatus}`);
+
+      // Clear the checkboxes for this order locally so they reset for the new stage!
+      setCheckedItems(prev => {
+          const orderToUpdate = kitchenOrders.find(o => String(o.order_id) === String(orderId));
+          if (!orderToUpdate) return prev;
+          
+          const itemIds = orderToUpdate.items.map(i => i.order_detail_id);
+          return prev.filter(id => !itemIds.includes(id));
+      });
+
     } catch (err) {
       toast.error(err.message);
     }
   };
-
   // --- CANCELLATION HANDLERS ---
   const handlePromptCancel = (orderId) => {
       setOrderIdToCancel(orderId);
@@ -268,13 +285,18 @@ const fetchInitialData = async () => {
     };
 
     const filteredOrders = kitchenOrders.filter(order => {
-    const statusMatch = filterStatus === 'All' || order.status?.toLowerCase() === filterStatus.toLowerCase();
+    // ✅ FIX 2: Use the exact Kitchen Ticket Status, not the Parent Payment Status!
+    const ticketStatus = getTicketStatus(order.items);
+    
+    const statusMatch = filterStatus === 'All' || ticketStatus.toLowerCase() === filterStatus.toLowerCase();
     const typeMatch = filterType === 'All Types' || order.order_type?.toLowerCase() === filterType.toLowerCase();
+    
     const orderDateObj = fixDate(order.order_date);
     const orderDatePart = getLocalDatePart(orderDateObj);
 
-    const isActiveTicket = order.status?.toLowerCase() === 'pending' || order.status?.toLowerCase() === 'preparing';
+    const isActiveTicket = ticketStatus === 'pending' || ticketStatus === 'preparing';
     const dateMatch = (orderDatePart >= startDate && orderDatePart <= endDate) || isActiveTicket;
+    
     return statusMatch && typeMatch && dateMatch;
   });
 
@@ -475,8 +497,8 @@ const handleCancelEntireOrder = async (orderId) => {
                                 <p className="text-sm text-gray-500">{formatOrderTime(order.order_date)}</p>
                             </div>
                             
-                            {order.items?.map((item, idx) => {
-                                        const isChecked = checkedItems.includes(item.order_detail_id);
+                           {order.items?.filter(i => i.item_status !== 'served' && i.item_status !== 'cancelled').map((item, idx) => {
+                                const isChecked = checkedItems.includes(item.order_detail_id);
                                         return (
                                             <div key={item.order_detail_id || idx} 
                                                  className={`mb-2 flex items-start gap-3 p-2 rounded-md border transition-all duration-200 ${isChecked ? 'bg-gray-100 border-gray-200' : 'hover:bg-amber-50 border-transparent hover:border-amber-200'}`}

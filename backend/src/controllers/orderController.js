@@ -584,7 +584,7 @@ export const updateOrderStatus = async (req, res) => {
                 }
             }
 
-            //  MOVED INSIDE THE CANCELLED BLOCK
+            // ✅ MOVED INSIDE THE CANCELLED BLOCK
             // 1. Fetch the items we are about to cancel (we need their price!)
             const [cancelDetails] = await connection.query(
                 "SELECT quantity, price_on_purchase FROM fb_new_order_details WHERE order_id = ? AND item_status != 'served' AND item_status != 'cancelled'", 
@@ -605,16 +605,18 @@ export const updateOrderStatus = async (req, res) => {
                 "UPDATE fb_new_orders SET total_amount = GREATEST(0, total_amount - ?) WHERE order_id = ?",
                 [voidedGrandTotal, id]
             );
-        }
+        } // <--- THE BRACKET NOW SAFELY CLOSES HERE!
 
-        // 4. Update the main order status
-        const [result] = await connection.query(
-            "UPDATE fb_new_orders SET status = ? WHERE order_id = ?",
-            [newStatus, id]
-        );
-
-        if (result.affectedRows === 0) {
-            throw new Error("Order not found or status unchanged");
+     // 4. Update the appropriate status table
+        if (newStatus === 'cancelled') {
+            await connection.query("UPDATE fb_new_orders SET status = 'cancelled' WHERE order_id = ?", [id]);
+            await connection.query("UPDATE fb_new_order_details SET item_status = 'cancelled' WHERE order_id = ?", [id]);
+        } else {
+            // ✅ FIX: Added 'served' to the exclusion list so finished food stays finished!
+            const [result] = await connection.query(
+                "UPDATE fb_new_order_details SET item_status = ? WHERE order_id = ? AND item_status NOT IN ('cancelled', 'served')",
+                [newStatus, id]
+            );
         }
 
         // Create/Update the notification

@@ -52,16 +52,28 @@ if (process.env.NODE_ENV !== 'production') {
 const app = express();
 const httpServer = createServer(app);  
 
-// Socket.IO setup
+// 1. ONE MASTER VIP LIST FOR BOTH EXPRESS AND SOCKET.IO
+const allowedOrigins = [
+  'http://localhost:5173',   
+  'http://localhost:21917',  
+  'https://food-and-beverages-system.onrender.com',         // Your Live Backend
+  'https://food-and-beverages-system-backend.onrender.com', // Your Alt Live Backend
+  'https://food-and-beverages-system-6nzo24rxa-nishidells-projects.vercel.app', 
+  'https://food-and-beverages-system.vercel.app'            // Your Live Frontend
+];
+
+// 2. BULLETPROOF SOCKET.IO SETUP
 const io = new Server(httpServer, {  
   cors: {
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:21917',
-      'https://food-and-beverages-system-backend.allowedOriginsonrender.com', // <-- New Backend URL
-      'https://food-and-beverages-system-6nzo24rxa-nishidells-projects.vercel.app',
-      'https://food-and-beverages-system.vercel.app' // <-- Added Clean Vercel URL
-    ],
+    // Dynamically check the master list to prevent trailing slash errors
+    origin: function(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Socket CORS blocked this origin'));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // <-- THIS FIXES THE PREFLIGHT BLOCK
     credentials: true
   }
 });
@@ -71,35 +83,22 @@ app.set('io', io);
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
-
   socket.on('join-role', (role) => {
     socket.join(role);
   });
-
-  socket.on('disconnect', () => {
-  });
+  socket.on('disconnect', () => {});
 });
 
 app.set('trust proxy', 1); 
 
-// CORS Configuration - works for both development and production
-const allowedOrigins = [
-  'http://localhost:5173',   // Frontend Vite dev server
-  'http://localhost:21917',  // Backend (for testing)
-  'https://food-and-beverages-system-backend.onrender.com',
-  'https://food-and-beverages-system-6nzo24rxa-nishidells-projects.vercel.app',
-  'https://food-and-beverages-system.vercel.app'
-];
-
+// 3. EXPRESS CORS SETUP USING THE EXACT SAME MASTER LIST
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, same-origin)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'CORS policy does not allow access from this origin.';
-      return callback(new Error(msg), false);
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
     }
-    return callback(null, true);
+    const msg = 'CORS policy does not allow access from this origin.';
+    return callback(new Error(msg), false);
   },
   credentials: true
 }));
