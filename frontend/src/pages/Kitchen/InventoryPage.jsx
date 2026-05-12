@@ -255,7 +255,7 @@ const InventoryPage = () => {
                 </div>
             </div>
 
-                <div className="flex flex-wrap items-center gap-4 justify-end">
+                <div className="flex items-center gap-3 justify-end flex-nowrap shrink-0 overflow-visible">
                    {/* ✅ UPDATED: Static Width Search Bar (No Expansion) */}
                     <div className="relative group">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#3C2A21] opacity-70 group-focus-within:opacity-100 transition-opacity">
@@ -277,7 +277,7 @@ const InventoryPage = () => {
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
                             className="kitchen-select-primary appearance-none pr-10" 
-                            style={{ minWidth: '160px' }}
+                            style={{ minWidth: '140px' }}
                         >
                             <option value="All">All Status</option>
                             <option value="Low Stock">Low Stock</option>
