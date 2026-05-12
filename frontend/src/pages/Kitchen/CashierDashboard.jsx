@@ -4,6 +4,7 @@ import apiClient from '../../utils/apiClient';
 import PrintableReceipt from './components/PrintableReceipt'; 
 import toast from 'react-hot-toast';
 import { FaPrint, FaReceipt, FaMoneyBillWave } from 'react-icons/fa';
+import { useSocket } from '../../context/SocketContext';
 
 function CashierDashboard() {
     const [unpaidTabs, setUnpaidTabs] = useState([]);
@@ -24,25 +25,40 @@ function CashierDashboard() {
     const [tempDiscountType, setTempDiscountType] = useState('Senior/PWD');
     const [tempDiscountId, setTempDiscountId] = useState('');
 
+    const { socket } = useSocket();
+
     // Fetch the unpaid tabs when the page loads
+   // ✅ Pull the fetch function OUTSIDE the useEffect so sockets can trigger it
+    const fetchUnpaidTabs = async () => {
+        try {
+            const response = await apiClient('/orders/unpaid');
+            if (!response.ok) throw new Error('Failed to fetch tabs');
+            const data = await response.json();
+            setUnpaidTabs(data);
+        } catch (error) {
+            console.error("Error:", error);
+            toast.error("Failed to load active tabs");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ✅ Upgraded useEffect with Socket Listeners
     useEffect(() => {
-        const fetchUnpaidTabs = async () => {
-            try {
-                const response = await apiClient('/orders/unpaid');
-                if (!response.ok) throw new Error('Failed to fetch tabs');
-                
-                const data = await response.json();
-                setUnpaidTabs(data);
-            } catch (error) {
-                console.error("Error:", error);
-                toast.error("Failed to load active tabs");
-            } finally {
-                setLoading(false);
+        fetchUnpaidTabs(); // Run once on load
+
+        if (socket) {
+            socket.on('new-order', fetchUnpaidTabs);
+            socket.on('order-status-updated', fetchUnpaidTabs);
+        }
+
+        return () => {
+            if (socket) {
+                socket.off('new-order', fetchUnpaidTabs);
+                socket.off('order-status-updated', fetchUnpaidTabs);
             }
         };
-        fetchUnpaidTabs();
-    }, []);
-
+    }, [socket]);
     // Handle clicking a tab on the left
     const handleTabClick = async (tab) => {
         setSelectedTab(tab);

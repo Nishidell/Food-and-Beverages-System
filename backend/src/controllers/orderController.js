@@ -242,7 +242,7 @@ export const createOrder = async (req, res) => {
 
         // Check if the user already has an unpaid tab
         const [existingOrders] = await connection.query(
-            "SELECT * FROM fb_new_orders WHERE client_id = ? AND payment_status = 'unpaid' LIMIT 1",
+            "SELECT * FROM fb_new_orders WHERE client_id = ? AND payment_status = 'unpaid' AND status != 'cancelled' LIMIT 1",
             [client_id]
         );
 
