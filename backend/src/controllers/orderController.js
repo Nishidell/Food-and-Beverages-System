@@ -463,6 +463,7 @@ export const getOrderById = async (req, res) => {
         // 2. Fetch Items & Calculate Subtotals on the fly!
         const [items] = await pool.query(
             `SELECT 
+                mi.item_id,             /* ✅ ADDED THIS LINE */
                 mi.item_name, 
                 od.quantity, 
                 od.price_on_purchase AS price,
@@ -474,7 +475,7 @@ export const getOrderById = async (req, res) => {
                 od.item_status
             FROM fb_new_order_details od 
             JOIN fb_menu_items mi ON od.item_id = mi.item_id 
-            WHERE od.order_id = ? AND od.item_status != 'cancelled'`, // Ignore voided items on the receipt
+            WHERE od.order_id = ? AND od.item_status != 'cancelled'`,
             [id]
         );
 

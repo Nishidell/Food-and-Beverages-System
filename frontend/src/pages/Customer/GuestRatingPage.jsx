@@ -29,7 +29,12 @@ const GuestRatingPage = () => {
                 // Initialize empty ratings for each item
                 const initialRatings = {};
                 data.items.forEach(item => {
-                    initialRatings[item.item_id] = { value: 0, comment: '' };
+                    // ✅ Use order_detail_id to ensure every row is independent
+                    initialRatings[item.order_detail_id] = { 
+                        item_id: item.item_id, // Keep this for the actual submission
+                        value: 0, 
+                        comment: '' 
+                    };
                 });
                 setRatings(initialRatings);
             } catch (err) {
