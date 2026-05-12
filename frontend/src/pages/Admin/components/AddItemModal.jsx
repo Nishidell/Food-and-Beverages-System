@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { X, UploadCloud, PlusCircle, Trash2 } from 'lucide-react';
+import { X, UploadCloud, PlusCircle, Trash2, Search } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import apiClient from '../../../utils/apiClient';
 
@@ -304,24 +304,34 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories = [], itemToEdit }) 
             
             <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
               
-              {/* ✅ THE UPGRADED SEARCHABLE DROPDOWN */}
+             {/* ✅ THE UPGRADED SEARCHABLE DROPDOWN */}
               <div style={{ flex: 3, position: 'relative' }}>
                 <label style={labelStyle}>Ingredient</label>
                 
-                <input 
-                    type="text" 
-                    placeholder="🔍 Search and select..." 
-                    value={ingredientSearch}
-                    onChange={(e) => {
-                      setIngredientSearch(e.target.value);
-                      setSelectedIngredientId(''); 
-                      setIsDropdownOpen(true);
-                    }}
-                    onFocus={() => setIsDropdownOpen(true)}
-                    onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)} 
-                    style={inputStyle}
-                    autoComplete="off"
-                />
+                {/* Wrapper for the Icon + Input */}
+                <div style={{ position: 'relative' }}>
+                    {/* The Icon */}
+                    <div style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF', pointerEvents: 'none', marginTop: '2px' }}>
+                        <Search size={16} />
+                    </div>
+                    
+                    {/* The Input */}
+                    <input 
+                        type="text" 
+                        placeholder="Search and select..." 
+                        value={ingredientSearch}
+                        onChange={(e) => {
+                          setIngredientSearch(e.target.value);
+                          setSelectedIngredientId(''); 
+                          setIsDropdownOpen(true);
+                        }}
+                        onFocus={() => setIsDropdownOpen(true)}
+                        onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)} 
+                        /* Added paddingLeft: '32px' so text doesn't hit the icon */
+                        style={{ ...inputStyle, paddingLeft: '32px' }}
+                        autoComplete="off"
+                    />
+                </div>
 
                 {/* The Floating List */}
                 {isDropdownOpen && (
