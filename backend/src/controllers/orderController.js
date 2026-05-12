@@ -1033,9 +1033,11 @@ if (payment_method === 'Charge to Deposit') {
         SELECT r.reservation_id 
         FROM tbl_reservations r
         JOIN tbl_reservation_rooms br ON r.reservation_id = br.reservation_id
+        JOIN tbl_deposit d ON r.reservation_id = d.reservation_id
         WHERE br.room_id = ? 
-        AND CURDATE() BETWEEN r.check_in AND r.check_out
-        AND r.status = 'approved' 
+        AND d.status = 'collected'
+        AND r.check_out >= CURDATE()
+        ORDER BY r.check_in DESC
         LIMIT 1
     `, [room_id]);
 
@@ -1400,29 +1402,21 @@ export const cancelEntireOrder = async (req, res) => {
 export const getRoomDeposit = async (req, res) => {
     const { roomId } = req.params;
     try {
-        // 1. Find the active reservation for this room
-        const [resRows] = await pool.query(`
-            SELECT r.reservation_id 
+        // Find the deposit directly by joining the rooms and deposit tables
+        const [depositRows] = await pool.query(`
+            SELECT d.remaining_deposit
             FROM tbl_reservations r
             JOIN tbl_reservation_rooms br ON r.reservation_id = br.reservation_id
+            JOIN tbl_deposit d ON r.reservation_id = d.reservation_id
             WHERE br.room_id = ? 
-            AND CURDATE() BETWEEN r.check_in AND r.check_out
-            AND r.status = 'approved' 
+            AND d.status = 'collected'
+            AND r.check_out >= CURDATE()
+            ORDER BY r.check_in DESC
             LIMIT 1
         `, [roomId]);
 
-        if (resRows.length === 0) {
-            return res.status(404).json({ message: "No active reservation found for this room." });
-        }
-
-        // 2. Fetch the remaining deposit
-        const [depositRows] = await pool.query(
-            "SELECT remaining_deposit FROM tbl_deposit WHERE reservation_id = ?",
-            [resRows[0].reservation_id]
-        );
-
         if (depositRows.length === 0) {
-            return res.status(404).json({ message: "No deposit record found." });
+            return res.status(404).json({ message: "No active deposit found for this room." });
         }
 
         res.json({ deposit: parseFloat(depositRows[0].remaining_deposit) });
